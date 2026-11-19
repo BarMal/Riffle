@@ -43,6 +43,11 @@
     <string name="stream_empty_today">Nothing planned today. Enjoy the quiet.</string>
     <string name="stream_empty_shortcuts">This app has no shortcuts.</string>
     <string name="stream_pair_removed">Pair removed</string>
+    <string name="stream_pair_open_side_by_side">Open side by side</string>
+    <string name="stream_pair_swap_sides">Swap sides</string>
+    <string name="stream_pair_change_first">Change first app</string>
+    <string name="stream_pair_change_second">Change second app</string>
+    <string name="stream_pair_remove">Remove</string>
     <string name="stream_pair_cancel">Cancel</string>
     <string name="stream_pair_new">New pair</string>
     <string name="stream_pair_choose_app">Choose an app</string>

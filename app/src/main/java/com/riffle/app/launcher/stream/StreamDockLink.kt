@@ -130,6 +130,19 @@ internal class PageQuickActions(
     val actions: List<QuickAction>,
     val env: StreamEnvironment,
     val onLaunch: (QuickAction) -> Unit,
+    /** The Pairs page's own chips ("New pair", "Cancel"): not shortcuts, so they carry their own action. */
+    val chips: List<QuickChip> = emptyList(),
+) {
+    /** Nothing to offer: no shortcut and no chip. */
+    val isEmpty: Boolean get() = actions.isEmpty() && chips.isEmpty()
+}
+
+/** One chip of the Pairs page's quick actions: a glyph, its text and what a tap does. */
+internal class QuickChip(
+    val id: String,
+    val label: String,
+    val glyph: androidx.compose.ui.graphics.vector.ImageVector,
+    val onClick: () -> Unit,
 )
 
 /**

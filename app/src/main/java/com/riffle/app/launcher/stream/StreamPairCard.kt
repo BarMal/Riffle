@@ -14,15 +14,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -30,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
+import com.riffle.app.launcher.LocalGlassCardInks
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.core.domain.launcher.stream.AppPairContent
 import com.riffle.core.domain.launcher.stream.PairCardKind
@@ -57,25 +63,37 @@ internal fun PairCard(
     callbacks: StreamCallbacks,
     modifier: Modifier = Modifier,
 ) {
+    val menu = rememberPairMenu(content, callbacks)
     val place = LocalStripPlace.current
     val strip: () -> Float = { place?.let { (it.index - it.position()).coerceIn(0f, 1f) } ?: 0f }
-    StreamCardSurface(content.id.value, content.first?.app, content.first?.icon, env, modifier) { sourceModifier ->
-        Box(modifier = sourceModifier.fillMaxSize().pairCardSemantics(content)) {
+    StreamCardSurface(
+        content.id.value,
+        content.first?.app,
+        content.first?.icon,
+        env,
+        modifier,
+        blendApp = content.second?.app,
+    ) { sourceModifier ->
+        Box(modifier = sourceModifier.fillMaxSize().pairCardSemantics(content, menu.actions)) {
             // The card in full while it is in front, its miniature once it is behind: cross-faded in the draw phase.
             Column(
                 modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 1f - strip() },
             ) {
                 Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    PairHalf(content, secondHalf = false, env, callbacks, Modifier.weight(1f))
-                    PairHalf(content, secondHalf = true, env, callbacks, Modifier.weight(1f))
+                    PairHalf(content, secondHalf = false, env, callbacks, menu, Modifier.weight(1f))
+                    PairHalf(content, secondHalf = true, env, callbacks, menu, Modifier.weight(1f))
                 }
                 PairHint(content)
             }
+            menu.Menu()
             Row(
                 modifier =
-                    Modifier.fillMaxWidth().padding(
-                        top = StreamHeaderTopPadding,
-                    ).graphicsLayer { alpha = strip() },
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = StreamHeaderTopPadding)
+                        .graphicsLayer { alpha = strip() }
+                        // The strip's words are the card's: assistive technology reads the card, not its miniature.
+                        .clearAndSetSemantics {},
             ) {
                 PairStripHalf(content.first, content.kind, env, Modifier.weight(1f))
                 PairStripHalf(content.second, content.kind, env, Modifier.weight(1f))
@@ -91,6 +109,7 @@ private fun PairHalf(
     secondHalf: Boolean,
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
+    menu: PairMenu,
     modifier: Modifier,
 ) {
     val app = if (secondHalf) content.second else content.first
@@ -106,11 +125,36 @@ private fun PairHalf(
             content.kind == PairCardKind.DRAFT -> stringResource(R.string.stream_pair_choose_first)
             else -> null
         }
-    Column(
-        modifier = modifier.fillMaxHeight().streamClickable(tap, label).padding(horizontal = RiffleSpacing.s),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
+    // Each half is read on its own app's end of the blend: its ink (see GlassCardInks), not the card's one.
+    val inks = LocalGlassCardInks.current
+    val ink =
+        if (inks == null) {
+            LocalContentColor.current
+        } else if (secondHalf) {
+            inks.end
+        } else {
+            inks.start
+        }
+    CompositionLocalProvider(LocalContentColor provides ink) {
+        Column(
+            modifier =
+                modifier.fillMaxHeight().pairClickable(tap, label, menu).padding(horizontal = RiffleSpacing.s),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            PairHalfContent(content, secondHalf, app, env)
+        }
+    }
+}
+
+@Composable
+private fun PairHalfContent(
+    content: AppPairContent,
+    secondHalf: Boolean,
+    app: PairSide?,
+    env: StreamEnvironment,
+) {
+    run {
         when {
             content.kind == PairCardKind.NEW && secondHalf -> Unit
             content.kind == PairCardKind.NEW -> NewPairMark()
@@ -217,12 +261,16 @@ private const val PLACEHOLDER_ALPHA = 0.6f
 
 /** The card as one node: "<first> and <second>, pair. Opens side by side" (a draft and the New card say less). */
 @Composable
-private fun Modifier.pairCardSemantics(content: AppPairContent): Modifier {
+private fun Modifier.pairCardSemantics(
+    content: AppPairContent,
+    actions: List<CustomAccessibilityAction>,
+): Modifier {
     val spoken = pairSpokenText(content)
     return if (content.kind == PairCardKind.SAVED) {
         semantics(mergeDescendants = true) {
             contentDescription = spoken
             role = Role.Button
+            customActions = actions
         }
     } else {
         this

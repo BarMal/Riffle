@@ -23,6 +23,7 @@ import com.riffle.core.domain.launcher.stream.MediaQueueEntry
 import com.riffle.core.domain.launcher.stream.NotificationAction
 import com.riffle.core.domain.launcher.stream.NotificationContent
 import com.riffle.core.domain.launcher.stream.NotificationMessage
+import com.riffle.core.domain.launcher.stream.PairsSection
 import com.riffle.core.domain.launcher.stream.RecentAppAction
 import com.riffle.core.domain.launcher.stream.RecentAppContent
 import com.riffle.core.domain.launcher.stream.RelativeAge
@@ -419,7 +420,7 @@ internal object StreamFixtures {
             when (section) {
                 StreamSection.NOW -> listOf(group(StreamGroupKeys.NOW, null, listOf(media)))
                 // The Pairs page is built from the stored pairs, not delivered by a source.
-                StreamSection.PAIRS -> emptyList()
+                StreamSection.PAIRS -> PairsSection.result(emptyList(), null) { null }.groups
                 StreamSection.NOTIFICATIONS ->
                     listOf(
                         group("chat:personal", "Chat", listOf(chatNotification, chatNotificationTwo), total = 5),

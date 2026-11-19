@@ -107,6 +107,7 @@ private val LeadImageHeight = 112.dp
  * source can be reported from there.
  */
 @Composable
+@Suppress("LongParameterList")
 internal fun StreamCardSurface(
     key: String,
     app: StreamAppRef?,
@@ -114,10 +115,14 @@ internal fun StreamCardSurface(
     env: StreamEnvironment,
     modifier: Modifier = Modifier,
     weight: GlassWeight = GlassWeight.Regular,
+    /** A second app the card's ground blends into, from [app]'s colour (a Pairs card); null: one colour. */
+    blendApp: StreamAppRef? = null,
     body: @Composable (Modifier) -> Unit,
 ) {
     val identity = remember(app, icon, env.installedApps) { env.identityFor(app, icon) }
     val appColor = rememberAppIconColor(identity, env.appIconLoader)
+    val blendIdentity = remember(blendApp, env.installedApps) { blendApp?.let { env.identityFor(it, null) } }
+    val blendColor = rememberAppIconColor(blendIdentity, env.appIconLoader)
     GlassSurface(
         modifier = modifier,
         weight = weight,
@@ -128,7 +133,13 @@ internal fun StreamCardSurface(
         // from the content, not a coloured outline. The top-edge glow setting is the edge tint's strip, drawn too.
         spotlight = true,
         spotlightLocal = true,
-        cardTint = GlassCardTint(appColor, env.cardSettings.cardTintPercent, env.cardSettings.cardTopGlow),
+        cardTint =
+            GlassCardTint(
+                appColor,
+                env.cardSettings.cardTintPercent,
+                env.cardSettings.cardTopGlow,
+                blendTo = blendColor.takeIf { blendApp != null },
+            ),
     ) {
         val color = rememberGlassSpotlightColor(identity = identity, appIconLoader = env.appIconLoader)
         val source = CardSpotlightSource(LocalGlassSpotlight.current, key, color)

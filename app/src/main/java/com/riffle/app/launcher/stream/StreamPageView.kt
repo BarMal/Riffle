@@ -154,7 +154,13 @@ internal fun StreamPageView(
                     quick?.onLaunch?.invoke(action)
                     true
                 }
-            }
+            } +
+                quick?.chips.orEmpty().map { chip ->
+                    CustomAccessibilityAction(chip.label) {
+                        chip.onClick()
+                        true
+                    }
+                }
         }
     // A side Dock holds the quick actions in a strip under the stack: a page that has some keeps the strip's room under
     // its stack (the strip is the lowest element and stands on the Dock body's bottom edge); a page that has none keeps

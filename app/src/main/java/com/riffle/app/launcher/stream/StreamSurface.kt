@@ -152,6 +152,8 @@ internal fun StreamSurface(
     splitAvailable: Boolean = true,
     /** The layout the owner just removed: the Stream says so, with Undo ([onRestorePair]). */
     removedPair: RemovedPair? = null,
+    /** The Pairs page's quick-action chips (New pair, or Cancel while a draft is in front); empty on every page. */
+    pairChips: List<QuickChip> = emptyList(),
     onRestorePair: (RemovedPair) -> Unit = {},
 ) {
     val openCards = dockLink?.openCards ?: remember { OpenCardHolder() }
@@ -237,8 +239,8 @@ internal fun StreamSurface(
     // Each page's quick actions as its row needs them: built when the page's actions change, not on a recomposition.
     val latestCallbacksForQuick by rememberUpdatedState(surfaceCallbacks)
     val quickByPage =
-        remember(pages, env.imageLoader, env.appIconLoader, env.installedApps) {
-            pages.filter { page -> page.quickActions.isNotEmpty() }.associate { page ->
+        remember(pages, env.imageLoader, env.appIconLoader, env.installedApps, pairChips) {
+            pages.filter { page -> page.quickActions.isNotEmpty() || page.hasPairChips(pairChips) }.associate { page ->
                 page.key to
                     PageQuickActions(
                         pageKey = page.key,
@@ -246,6 +248,7 @@ internal fun StreamSurface(
                         actions = page.quickActions,
                         env = env,
                         onLaunch = { action -> latestCallbacksForQuick.onAction(action.shortcut, StreamAction.Open) },
+                        chips = pairChips.takeIf { page.section == StreamSection.PAIRS }.orEmpty(),
                     )
             }
         }
@@ -638,3 +641,6 @@ private fun DockLinkEffects(
         dockLink.optionHandled(pending.id)
     }
 }
+
+private fun StreamPage.hasPairChips(chips: List<QuickChip>): Boolean =
+    section == StreamSection.PAIRS && chips.isNotEmpty()

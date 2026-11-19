@@ -3,6 +3,9 @@ package com.riffle.app.launcher.stream
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -276,6 +279,7 @@ internal fun StreamDestination(
         },
         splitAvailable = splitAvailable,
         removedPair = pairsController.removed,
+        pairChips = rememberPairChips(pairsController),
         onRestorePair = pairsController::restore,
         liveAppSlots = liveAppSlots,
         dockLink = host.dock,
@@ -379,4 +383,19 @@ internal fun rememberStreamSectionResults(
         }
     }
     return results.value
+}
+
+/** "New pair", or "Cancel" while a draft is in front (it replaces New pair): the Pairs page's quick actions. */
+@Composable
+private fun rememberPairChips(controller: PairsController): List<QuickChip> {
+    val draft = controller.draft
+    val new = stringResource(R.string.stream_pair_new)
+    val cancel = stringResource(R.string.stream_pair_cancel)
+    return remember(draft != null, new, cancel) {
+        if (draft == null) {
+            listOf(QuickChip("pair-new", new, Icons.Filled.Add) { controller.edit(PairEdit.NewPair) })
+        } else {
+            listOf(QuickChip("pair-cancel", cancel, Icons.Filled.Close) { controller.edit(PairEdit.DiscardDraft) })
+        }
+    }
 }
