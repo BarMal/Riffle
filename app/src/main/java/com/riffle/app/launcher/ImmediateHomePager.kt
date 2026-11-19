@@ -212,17 +212,11 @@ internal fun ImmediateWorkspacePager(
             while (true) {
                 val pages = latestLayout.pages
                 val current = pages.indexOfFirst { it.id == latestSession?.targetPageId }
-                val page = pages.getOrNull(current + edgeSide)?.takeIf { current >= 0 }
-                if (page == null) {
-                    // Past the last page: offer a new one (the layout then has it, and the next turn goes there).
-                    if (edgeSide > 0 && current >= 0 && HomeDragPages.offersNewPage(pages, current)) {
-                        latestNewPage()
-                        delay(tuning.pageRepeatMillis.toLong())
-                        continue
-                    }
-                    break
-                }
-                latestTarget(page.id)
+                val next = pages.getOrNull(current + edgeSide)?.takeIf { current >= 0 }
+                // Past the last page a new one is offered (the layout then has it, and the next turn goes there).
+                val offer = next == null && edgeSide > 0 && current >= 0 && HomeDragPages.offersNewPage(pages, current)
+                if (next == null && !offer) break
+                if (next != null) latestTarget(next.id) else latestNewPage()
                 delay(tuning.pageRepeatMillis.toLong())
             }
         }

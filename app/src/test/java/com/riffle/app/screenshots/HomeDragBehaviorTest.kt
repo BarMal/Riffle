@@ -21,6 +21,8 @@ import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.applyEdit
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
+import com.riffle.core.domain.launcher.home.HomePageEditResult
+import com.riffle.core.domain.launcher.home.HomePageEngine
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -223,11 +225,13 @@ class HomeDragBehaviorTest {
     ): com.riffle.core.domain.launcher.LauncherShellState {
         val isPageAction =
             action is LauncherShellAction.AddHomePage || action is LauncherShellAction.DiscardEmptyHomePage
-        if (!isPageAction) return this
-        val result = com.riffle.core.domain.launcher.home.HomePageEngine().applyEdit(action, homeLayout)
         val updated =
-            (result as? com.riffle.core.domain.launcher.home.HomePageEditResult.Updated)?.layout ?: return this
-        return copy(homeLayout = updated, homeLayoutSet = homeLayoutSet.withActiveLayout(updated))
+            (HomePageEngine().applyEdit(action, homeLayout) as? HomePageEditResult.Updated)?.layout
+        return if (isPageAction && updated != null) {
+            copy(homeLayout = updated, homeLayoutSet = homeLayoutSet.withActiveLayout(updated))
+        } else {
+            this
+        }
     }
 
     private fun holdAtTheTrailingEdge() {
