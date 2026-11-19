@@ -65,7 +65,7 @@ The Dock has two gestures along the axis across its run, in opposite directions 
 | Gesture | Direction | Result |
 | --- | --- | --- |
 | **Pull** | Away from the edge (a bottom dock pulls up, a top dock down, a left dock right, a right dock left) | The Library, tracking the finger, from anywhere on the Dock and from Home or the Stream. **Only while the Library switch is on: it defaults off** (Settings > Features), and with it off the pull claims nothing, so the drag falls through to what is underneath |
-| **Slide** | Along the Dock's run (sideways on a top or bottom Dock, up and down on a side Dock), starting on the contextual row, with the Stream showing | Changes the stack: the tile under the finger becomes the open page as the finger enters it. See "Slide along the Dock" below |
+| **Hold, then slide** | Press and hold the contextual row (the long-press timeout), then slide along the Dock's run (sideways on a top or bottom Dock, up and down on a side Dock), with the Stream showing | Changes the stack: the tile under the finger becomes the open page as the finger enters it. A plain drag along the row only scrolls it. See "Hold, then slide along the Dock" below |
 | **Press** | Toward the edge (a bottom dock is pressed down), then release | Toggles Home and the contextual mode (the Stream): opens the Stream on the last page, or on the page of the live app / now playing icon the press started on; from the Stream returns Home |
 
 - **Claim.** One finger on the dock body, past touch slop, before the long-press timeout. The drag is a pull when it leads
@@ -127,19 +127,24 @@ The Dock has two gestures along the axis across its run, in opposite directions 
   Library" and Ctrl + Shift + the arrow. Switching page: the tiles are focusable 48 dp targets with a spoken name and a
   click action ("Show Today"), and the pager's custom actions "Previous page" and "Next page". Page options: the tile's
   long-press menu (its own long-click action for assistive technology).
-- **Slide along the Dock (design canvas round 12).** With the Stream showing, a drag that starts on the Dock's contextual
-  row and leads along its run, past touch slop (`DockScrub.claims`), scrubs: the tile under the finger becomes the open page
-  as the finger enters it (with a few dp of hysteresis at the tile boundaries, `DockScrub.tileAt`), the ring moves to it, and
-  the Stream lands on that page with the landing a tap on the tile makes (the latest target wins when several tiles are
-  crossed quickly). One `DETENT` tick per tile entered, through the same tick wrapper as hold to choose ("Light ticks"
-  applies). Pair tiles and pinned apps with no page are passed over (no tick). Releasing leaves the current page showing:
-  nothing opens, the Dock does not collapse. The row holds more tiles than fit: within 24 dp of an end, while tiles are hidden
-  that way, it scrolls toward that end at the hold-to-choose pace (300 dp/s) and the tiles passing under the finger keep
-  becoming current; a fling (a lift with velocity) scrolls the row by inertia without changing the page past the tile last
-  entered. A tap still jumps to a page, a long-press still opens a tile's menu, and a drag across the run is still the press or
-  the pull. It reuses `DockChoiceState` (one selection that follows the finger) and the Dock's one pointer loop (`dockPullInput`).
-  Draw-phase only: scrubbing recomposes no tile (the choice mark is drawn in the draw phase). Equivalents are unchanged (the
-  tiles, "Previous page" and "Next page"); there is nothing gesture-only.
+- **Hold, then slide along the Dock (design canvas round 12; the hold is the owner's decision after trying the plain
+  slide: "the dock is scrollable, but also the dock is the scroll for the cards").** With the Stream showing, a plain drag
+  along the contextual row scrolls the row (the drag, then a fling by inertia), changes no page and ticks nothing. A press on
+  the row held for the platform's long-press timeout, within touch slop (`DockScrub.armed`), arms the scrub: one `DETENT`
+  light haptic and the choice mark on the tile under the finger. Sliding along the run past touch slop (`DockScrub.claims`)
+  scrubs: the tile under the finger becomes the open page as the finger enters it (with a few dp of hysteresis at the tile
+  boundaries, `DockScrub.tileAt`), the ring moves to it, and the Stream lands on that page with the landing a tap on the
+  tile makes (the latest target wins when several tiles are crossed quickly). One `DETENT` tick per tile entered, through the
+  same tick wrapper as hold to choose ("Light ticks" applies). Pair tiles and pinned apps with no page are passed over (no
+  tick). Releasing leaves the current page showing: nothing opens, the Dock does not collapse. The row holds more tiles than
+  fit: within 24 dp of an end, while tiles are hidden that way, a sliding finger scrolls it toward that end at the
+  hold-to-choose pace (300 dp/s) and the tiles passing under the finger keep becoming current.
+  **Menu unless it moves**: the hold is also the tile's long-press menu. Hold without moving: the menu opens and the mark
+  goes at the lift. Hold then move past slop: the menu closes and the scrub starts (the rule is `HoldMenuRule`, shared with
+  the Home drag). A tap still jumps to a page, and a drag across the run is still the press or the pull. It reuses
+  `DockChoiceState` (one selection that follows the finger) and the Dock's one pointer loop (`dockPullInput`). Draw-phase
+  only: scrubbing recomposes no tile (the choice mark is drawn in the draw phase). Equivalents are unchanged (the tiles,
+  "Previous page" and "Next page"); there is nothing gesture-only.
 - **Expanded postures.** The P6 split and its divider are gone (dock modes U2): the press opens the Stream in a column attached
   to the Dock, as folded, with Home beside and under it.
 - **Library pull (P7).** Unchanged: the sheet rises from the Dock's edge as the finger moves, 1:1, while what is under it

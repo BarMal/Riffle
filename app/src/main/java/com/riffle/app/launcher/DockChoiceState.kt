@@ -101,11 +101,28 @@ internal class DockChoiceState {
         private set
 
     /**
-     * Whether a slide along the Dock is scrubbing the stack (the Stream shows; the tile under the finger is the current
-     * page). Not choosing: the selection only follows the finger, nothing opens on the lift.
+     * Whether a hold on the Dock's contextual row has armed the scrub (the Stream shows; the tile under the finger is
+     * the current page and wears the choice mark). Not choosing: the selection only follows the finger, nothing opens
+     * on the lift.
      */
     var scrubbing: Boolean by mutableStateOf(false)
         private set
+
+    /** Whether the armed finger has slid past touch slop: the scrub proper, which scrolls the row at an end. */
+    var sliding: Boolean by mutableStateOf(false)
+        private set
+
+    /**
+     * How many times the open menus have been told to close: the hold's menu is closed when the finger moves past
+     * slop (the scrub, a reorder drag). A menu closes when this changes while it is open.
+     */
+    var menuDismissals: Int by mutableStateOf(0)
+        private set
+
+    /** Closes the menu the hold opened: the finger moved. */
+    fun dismissMenus() {
+        menuDismissals += 1
+    }
 
     private var scrubbedKey: String? = null
 
@@ -117,9 +134,6 @@ internal class DockChoiceState {
 
     /** Called with the key of the tile the scrub entered, after its tick: the Stream shows that tile's page. */
     var onScrubTo: (String) -> Unit = {}
-
-    /** Scrolls the row by inertia from a release with this velocity (px per second), set by the row. */
-    var flingRowBy: ((Float) -> Unit)? = null
 
     /** Whether the row has tiles hidden toward its start (-1) or its end (+1); set by the row. */
     var canScrollRowTo: ((Int) -> Boolean)? = null
@@ -145,6 +159,7 @@ internal class DockChoiceState {
             val env = environment
             val viewport = rowViewport
             if (env == null || viewport == null || !isChoosingNotCancelling) return 0
+            if (scrubbing && !sliding) return 0
             val alongRun = env.pull.unitY != 0f
             if (scrubbing) {
                 val canScroll = canScrollRowTo ?: return 0
@@ -185,16 +200,30 @@ internal class DockChoiceState {
         onTick()
     }
 
-    /** A slide along the Dock begins scrubbing with the finger at [position] (the gesture's own coordinates). */
-    fun beginScrub(position: Offset) {
+    /**
+     * A hold on the contextual row arms the scrub with the finger at [position] (the gesture's own coordinates): one
+     * light tick, and the choice mark on the tile under the finger (which becomes the current page when it is not
+     * already). Sliding is what scrubs from here ([startSliding]).
+     */
+    fun armScrub(position: Offset) {
         val env = environment ?: return
         edgeScrolled = false
         cancelling = false
+        sliding = false
         scrubbing = true
         scrubbedKey = null
         finger = env.toRoot(position)
-        selectedKey = env.scrubPages(env.entryBounds().keys).ringed
-        reselect(env, tickOnSelect = true)
+        val ringed = env.scrubPages(env.entryBounds().keys).ringed
+        selectedKey = ringed
+        reselectScrub(env, tickOnSelect = true, tickOnly = false)
+        onTick()
+    }
+
+    /** The armed finger moved past touch slop: the hold's menu closes and the scrub slides. */
+    fun startSliding() {
+        if (!scrubbing || sliding) return
+        sliding = true
+        dismissMenus()
     }
 
     /** The finger is at [position] (the gesture's own coordinates). */
@@ -202,7 +231,7 @@ internal class DockChoiceState {
         position: Offset,
         tickOnSelect: Boolean = true,
     ) {
-        if (!choosing && !scrubbing) return
+        if (!choosing && !(scrubbing && sliding)) return
         val env = environment ?: return
         finger = env.toRoot(position)
         reselect(env, tickOnSelect)
@@ -227,7 +256,7 @@ internal class DockChoiceState {
 
     /** What is under the finger may have changed (an entry moved): look again. */
     fun refresh() {
-        if (!choosing && !scrubbing) return
+        if (!choosing && !(scrubbing && sliding)) return
         val env = environment ?: return
         reselect(env, tickOnSelect = true)
     }
@@ -236,6 +265,7 @@ internal class DockChoiceState {
     fun end() {
         choosing = false
         scrubbing = false
+        sliding = false
         selectedKey = null
         cancelling = false
     }
@@ -245,7 +275,7 @@ internal class DockChoiceState {
         tickOnSelect: Boolean,
     ) {
         if (scrubbing) {
-            reselectScrub(env, tickOnSelect)
+            reselectScrub(env, tickOnSelect, tickOnly = true)
             return
         }
         val alongRun = env.pull.unitY != 0f
@@ -276,6 +306,7 @@ internal class DockChoiceState {
     private fun reselectScrub(
         env: Environment,
         tickOnSelect: Boolean,
+        tickOnly: Boolean,
     ) {
         val alongRun = env.pull.unitY != 0f
         val bounds = env.entryBounds()
@@ -297,7 +328,8 @@ internal class DockChoiceState {
         val previous = selectedKey
         selectedKey = next
         if (tickOnSelect && DockChoice.shouldTick(previous, next)) {
-            onTick()
+            // Arming ticks once itself (the hold's haptic): landing on another tile then is not a second tick.
+            if (tickOnly) onTick()
             scrubbedKey = next
             next?.let(onScrubTo)
         }
@@ -456,20 +488,16 @@ internal fun DockChoiceFrames(choice: DockChoiceState) {
 internal fun DockChoiceRowRegistration(
     choice: DockChoiceState?,
     scrollBy: (Float) -> Float,
-    flingBy: (Float) -> Unit = {},
     canScrollTo: (Int) -> Boolean = { false },
 ) {
     if (choice == null) return
     val latest = rememberUpdatedState(scrollBy)
-    val latestFling = rememberUpdatedState(flingBy)
     val latestCan = rememberUpdatedState(canScrollTo)
     DisposableEffect(choice) {
         choice.scrollRowBy = { delta -> latest.value(delta) }
-        choice.flingRowBy = { velocity -> latestFling.value(velocity) }
         choice.canScrollRowTo = { direction -> latestCan.value(direction) }
         onDispose {
             choice.scrollRowBy = null
-            choice.flingRowBy = null
             choice.canScrollRowTo = null
             choice.rowViewport = null
         }

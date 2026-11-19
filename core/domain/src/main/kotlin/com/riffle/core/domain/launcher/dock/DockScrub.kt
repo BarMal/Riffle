@@ -1,15 +1,20 @@
 package com.riffle.core.domain.launcher.dock
 
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
+import com.riffle.core.domain.launcher.gestures.HoldMenuRule
 import kotlin.math.abs
-import kotlin.math.hypot
 
 /**
- * Sliding along the Dock to change stack (ADR 0003, The Dock is the handle): while the Stream shows, a drag that starts
- * on the Dock's contextual row and leads along its run scrubs. The tile under the finger becomes the current one as the
- * finger enters it, and the Stream shows that page at once.
+ * Hold, then slide along the Dock to change stack (ADR 0003, The Dock is the handle): while the Stream shows, a press
+ * on the Dock's contextual row that is held for the long-press timeout arms the scrub, and sliding along the run from
+ * there scrubs. A plain drag along the row is not a scrub: it scrolls the row, as the Dock always did. The tile under
+ * the finger becomes the current one as the finger enters it, and the Stream shows that page at once.
  *
- * Everything that decides anything is here and pure: whether a drag is a scrub ([claims]), which tile the finger is on
+ * Holding without moving is the tile's own long-press menu; moving past touch slop after the hold closes that menu and
+ * starts the scrub ([HoldMenuRule], the rule the Home drag shares).
+ *
+ * Everything that decides anything is here and pure: whether a press has armed the scrub ([armed]), whether the slide
+ * from it is a scrub ([claims]), which tile the finger is on
  * with a little hysteresis at the tile boundaries so it does not flicker ([tileAt]), and which way holding near an end
  * of the row scrolls it ([edgeDirection]). Ticks are [DockChoice.shouldTick]'s, and the pace of the edge scroll is
  * [DockChoice.edgeScrollDp]'s: the scrub reuses hold to choose's selection.
@@ -22,8 +27,21 @@ object DockScrub {
     const val EDGE_ZONE_DP: Float = 24f
 
     /**
-     * Whether a drag of ([dx], [dy]) px from where the finger landed is a scrub: it left touch slop
-     * ([touchSlopPx]) and leads along the run of a Dock pulled in [pull], more than it leads across it.
+     * Whether a press that has been down [heldMillis] has armed the scrub: it was held for the platform's long-press
+     * timeout ([longPressMillis]) and has stayed within touch slop ([touchSlopPx]) of where it landed ([travelPx]).
+     * A finger that moved before the hold is a scroll, a pull or a press, never a scrub.
+     */
+    fun armed(
+        heldMillis: Long,
+        longPressMillis: Long,
+        travelPx: Float,
+        touchSlopPx: Float,
+    ): Boolean = heldMillis >= longPressMillis && !HoldMenuRule.leavesMenu(travelPx, 0f, touchSlopPx)
+
+    /**
+     * Whether a slide of ([dx], [dy]) px from where the armed finger rests is a scrub: it left touch slop
+     * ([touchSlopPx], which also closes the tile's menu) and leads along the run of a Dock pulled in [pull], more than
+     * it leads across it.
      */
     fun claims(
         pull: DockPullDirection,
@@ -31,7 +49,7 @@ object DockScrub {
         dy: Float,
         touchSlopPx: Float,
     ): Boolean {
-        if (hypot(dx, dy) < touchSlopPx) return false
+        if (!HoldMenuRule.leavesMenu(dx, dy, touchSlopPx)) return false
         val along = abs(dx * pull.unitY - dy * pull.unitX)
         val across = abs(pull.along(dx, dy))
         return along > across

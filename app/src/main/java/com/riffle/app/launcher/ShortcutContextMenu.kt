@@ -6,9 +6,12 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -141,6 +144,7 @@ internal fun RiffleContextMenu(
     offset: DpOffset = DpOffset.Zero,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    CloseWhenTheHoldMoves(expanded = expanded, onDismissRequest = onDismissRequest)
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
@@ -241,3 +245,25 @@ private fun ShortcutContextSurface.dockManagementItems(shortcut: AppShortcutItem
 
 internal val AppShortcut.contextMenuLabel: String
     get() = longLabel ?: shortLabel
+
+/**
+ * "The menu unless it moves" for the Dock: a long-press opens the menu, and when the same press then moves past touch
+ * slop (the scrub in the contextual mode, a reorder drag in Home mode) the Dock tells its open menus to close
+ * ([DockChoiceState.dismissMenus]).
+ */
+@Composable
+private fun CloseWhenTheHoldMoves(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+) {
+    val dismissals = LocalDockChoice.current?.menuDismissals ?: return
+    val latestExpanded = rememberUpdatedState(expanded)
+    val latestDismiss = rememberUpdatedState(onDismissRequest)
+    var seen by remember { mutableIntStateOf(dismissals) }
+    LaunchedEffect(dismissals) {
+        if (dismissals != seen) {
+            seen = dismissals
+            if (latestExpanded.value) latestDismiss.value()
+        }
+    }
+}
