@@ -13,7 +13,6 @@ import com.riffle.app.launcher.DockDynamicEntryIntent
 import com.riffle.app.launcher.DockInteractions
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AppStageId
-import com.riffle.core.domain.launcher.cards.CardsStageSelector
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
 import org.junit.Rule
@@ -114,7 +113,7 @@ class DockScreenshotTest {
     ): DockDynamicEntry {
         val stageId = AppStageId(packageName = app.identity.packageName, profileId = app.identity.profile.id)
         return DockDynamicEntry(
-            key = CardsStageSelector.stageEntryKey(stageId),
+            key = "stage:${app.identity.packageName.value}",
             label = app.label,
             identity = app.identity,
             badgeCount = badgeCount,
@@ -126,7 +125,7 @@ class DockScreenshotTest {
 
     private val allNotificationsEntry =
         DockDynamicEntry(
-            key = CardsStageSelector.ALL_ENTRY_KEY,
+            key = "stage:all",
             label = "All notifications",
             identity = null,
             badgeCount = ScreenshotFixtures.notificationGroups.sumOf { group -> group.count },

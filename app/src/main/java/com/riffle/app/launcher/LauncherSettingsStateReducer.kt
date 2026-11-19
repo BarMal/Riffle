@@ -279,12 +279,6 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
-                is LauncherShellAction.DismissDockPressHint ->
-                    state.withLauncherSettings(
-                        settings = state.launcherSettings.copy(hints = HintSettings(dockPressSeen = true)),
-                        launcherSettingsRepository = launcherSettingsRepository,
-                    )
-
                 is LauncherShellAction.ShowHintsAgain ->
                     state.withLauncherSettings(
                         settings = state.launcherSettings.copy(hints = HintSettings()),

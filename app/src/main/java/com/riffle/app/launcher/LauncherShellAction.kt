@@ -80,8 +80,6 @@ sealed interface LauncherShellAction {
 
     data object OpenSearch : LauncherShellAction
 
-    data object OpenNotifications : LauncherShellAction
-
     data object OpenSettings : LauncherShellAction
 
     /** Opens the Stream over Home (a gesture bound to `OPEN_STREAM`, the Dock's "Open Stream" action). */
@@ -527,12 +525,6 @@ sealed interface LauncherShellAction {
     data class SetSimpleMode(
         val enabled: Boolean,
     ) : LauncherShellAction
-
-    /**
-     * The press hint's old stored flag: set by builds before the hint system (read as "retired" still), no longer
-     * sent by anything. Kept so what was stored and the action's handling stay as they were.
-     */
-    data object DismissDockPressHint : LauncherShellAction
 
     /** Settings > Home > Show hints again: the stored press-hint flag is cleared (the other hints are onboarding's). */
     data object ShowHintsAgain : LauncherShellAction

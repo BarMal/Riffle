@@ -33,7 +33,6 @@ class LauncherScreenProtectionTest {
         assertTrue(launcherScreenProtected(state(protect = true, destination = ShellDestination.HOME)))
         assertTrue(launcherScreenProtected(state(protect = true, destination = ShellDestination.APP_DRAWER)))
         assertTrue(launcherScreenProtected(state(protect = true, destination = ShellDestination.SEARCH)))
-        assertTrue(launcherScreenProtected(state(protect = true, destination = ShellDestination.NOTIFICATIONS)))
         assertFalse(launcherScreenProtected(state(protect = true, destination = ShellDestination.SETTINGS)))
     }
 

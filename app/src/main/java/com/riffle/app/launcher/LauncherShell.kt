@@ -374,20 +374,6 @@ private fun LauncherDestination(
                 hints = LocalHintsHost.current.takeUnless { state.shouldShowSetupCard },
             )
 
-        ShellDestination.NOTIFICATIONS ->
-            NotificationOverviewSurface(
-                groups = state.notificationGroupsByApp,
-                categoryCounts = state.notificationCountsByCategory,
-                notificationAccessStatus = state.notificationAccessStatus,
-                presentation =
-                    NotificationOverviewPresentation(
-                        apps = state.installedApps,
-                        appIconLoader = appIconLoader,
-                        reducedMotion = state.launcherSettings.motion.reducedMotion,
-                    ),
-                onAction = settingsPageActionRouter.onAction,
-            )
-
         ShellDestination.SETTINGS ->
             CompositionLocalProvider(
                 LocalStreamLayoutRepository provides stream?.layouts,

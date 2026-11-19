@@ -4,7 +4,6 @@ enum class ShellNavigationAction {
     OpenHome,
     OpenAppDrawer,
     OpenSearch,
-    OpenNotifications,
     OpenSettings,
     OpenStream,
 }
