@@ -15,6 +15,8 @@ internal val LauncherShellAction.isIconSettingsAction: Boolean
             is LauncherShellAction.SetAppIconOverride,
             is LauncherShellAction.SetAppLabelOverride,
             is LauncherShellAction.RestoreIconOverrides,
+            // Opening the sheet is answered by the shell before it gets here; stored settings are not touched.
+            is LauncherShellAction.OpenChangeIcon,
             LauncherShellAction.ResetIconChanges,
             -> true
 

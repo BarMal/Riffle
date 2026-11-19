@@ -17,7 +17,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -39,12 +38,11 @@ import com.riffle.app.launcher.icons.AppIconPipeline
 import com.riffle.app.launcher.icons.InstalledIconPack
 import com.riffle.app.launcher.icons.LocalAppIconLoader
 import com.riffle.app.launcher.icons.LocalAppIconPipeline
+import com.riffle.app.launcher.icons.rememberLoaded
 import com.riffle.core.domain.launcher.icons.IconShape
 import com.riffle.core.domain.launcher.icons.IconStyleSettings
 import com.riffle.core.domain.launcher.icons.LegacyIconHandling
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 internal const val ICONS_PREVIEW_TEST_TAG = "icons-preview"
 internal const val ICONS_RESET_TEST_TAG = "icons-reset"
@@ -190,8 +188,8 @@ private fun IconPackChoice(
 ) {
     val pipeline = rememberPipeline()
     val listVersion = pipeline.packs.packListVersion
-    val packs by produceState(emptyList<InstalledIconPack>(), pipeline, listVersion) {
-        value = withContext(Dispatchers.Default) { pipeline.packs.installedPacks() }
+    val packs by rememberLoaded(emptyList<InstalledIconPack>(), pipeline, listVersion) {
+        pipeline.packs.installedPacks()
     }
     val missing = selected != null && packs.none { it.packageName == selected }
     androidx.compose.foundation.layout.Column(
@@ -210,11 +208,8 @@ private fun IconPackChoice(
             onSelect(null)
         }
         packs.forEach { pack ->
-            val icon by produceState<ImageBitmap?>(null, pipeline, pack.packageName) {
-                value =
-                    withContext(Dispatchers.Default) {
-                        pipeline.packs.packIcon(pack.packageName)?.toBitmap(PACK_ICON_PX, PACK_ICON_PX)?.asImageBitmap()
-                    }
+            val icon by rememberLoaded<ImageBitmap?>(null, pipeline, pack.packageName) {
+                pipeline.packs.packIcon(pack.packageName)?.toBitmap(PACK_ICON_PX, PACK_ICON_PX)?.asImageBitmap()
             }
             IconPackRow(label = pack.label, icon = icon, selected = pack.packageName == selected) {
                 onSelect(pack.packageName)

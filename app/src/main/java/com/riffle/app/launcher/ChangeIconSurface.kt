@@ -28,7 +28,6 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -52,6 +51,7 @@ import com.riffle.app.launcher.icons.AppIconPipeline
 import com.riffle.app.launcher.icons.ChangeIconTarget
 import com.riffle.app.launcher.icons.InstalledIconPack
 import com.riffle.app.launcher.icons.LocalAppIconPipeline
+import com.riffle.app.launcher.icons.rememberLoaded
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.icons.IconPackDrawableRef
 import com.riffle.core.domain.launcher.icons.IconStyleSettings
@@ -86,8 +86,8 @@ internal fun ChangeIconSurface(
     val context = LocalContext.current
     val pipeline = LocalAppIconPipeline.current ?: remember(context) { AppIconPipeline.shared(context) }
     val override = style.overrideFor(target.identity)
-    val packs by produceState(emptyList<InstalledIconPack>(), pipeline, pipeline.packs.packListVersion) {
-        value = withContext(Dispatchers.Default) { pipeline.packs.installedPacks() }
+    val packs by rememberLoaded(emptyList<InstalledIconPack>(), pipeline, pipeline.packs.packListVersion) {
+        pipeline.packs.installedPacks()
     }
     var browsing by remember(packs) {
         mutableStateOf(
@@ -264,12 +264,11 @@ private fun PackIconCell(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val icon by produceState<ImageBitmap?>(null, pipeline, ref) {
-        value =
-            withContext(Dispatchers.Default) {
-                pipeline.packs.drawable(ref.packPackage, ref.drawableName)?.toBitmap(ICON_CELL_PX, ICON_CELL_PX)
-                    ?.asImageBitmap()
-            }
+    val icon by rememberLoaded<ImageBitmap?>(null, pipeline, ref) {
+        pipeline.packs.drawable(
+            ref.packPackage,
+            ref.drawableName,
+        )?.toBitmap(ICON_CELL_PX, ICON_CELL_PX)?.asImageBitmap()
     }
     val description = stringResource(R.string.change_icon_choice_description, ref.drawableName)
     Box(

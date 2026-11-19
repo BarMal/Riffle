@@ -110,6 +110,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SetAppIconOverride,
         is LauncherShellAction.SetAppLabelOverride,
         is LauncherShellAction.RestoreIconOverrides,
+        is LauncherShellAction.OpenChangeIcon,
         LauncherShellAction.ResetIconChanges,
         is LauncherShellAction.SelectWallpaperScrollMode,
         is LauncherShellAction.SelectFullscreenHomeEnabled,

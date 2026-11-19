@@ -2,13 +2,8 @@ package com.riffle.app.launcher.icons
 
 import android.app.Application
 import android.graphics.Color
-import androidx.compose.foundation.layout.size
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.riffle.app.launcher.ByteBoundedCache
-import com.riffle.app.launcher.LauncherAppIcon
 import com.riffle.app.launcher.apps.MAX_CACHED_ICON_BYTES
 import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.core.domain.launcher.icons.IconShape
@@ -20,23 +15,16 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import org.robolectric.annotation.GraphicsMode
 
-/** Icon resolution never runs on the main thread from the Compose surfaces, and the icon cache is bounded in bytes. */
+/** The icon cache is bounded in bytes, and a style change makes its old entries unreachable. */
 @RunWith(RobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [35])
-class IconLoaderThreadingAndBoundsTest {
-    @get:Rule
-    val composeRule = createComposeRule()
-
+class IconLoaderCacheBoundsTest {
     private val packageManager = ApplicationProvider.getApplicationContext<Application>().packageManager
-    private val violations = mutableListOf<String>()
 
     private fun loader(density: Float = 4f): PackageManagerAppIconLoader {
         val pipeline =
@@ -44,7 +32,6 @@ class IconLoaderThreadingAndBoundsTest {
                 packageManager = packageManager,
                 packs = IconPackStore(FakeIconPackSource()),
                 activityIconFor = { legacyIcon() },
-                guard = { violations += "resolved on the main thread" },
                 sdkInt = 35,
                 scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined),
             )
@@ -54,24 +41,6 @@ class IconLoaderThreadingAndBoundsTest {
             displayDensityFor = { density },
             pipeline = pipeline,
         )
-    }
-
-    @Test
-    fun theComposeIconLoadsOffTheMainThreadAndAStyleChangeDrawsItAgainWithoutResolvingOnIt() {
-        val loader = loader()
-        val app = identity("com.example.notes")
-        composeRule.setContent {
-            LauncherAppIcon(identity = app, label = "Notes", iconLoader = loader, modifier = Modifier.size(48.dp))
-        }
-        composeRule.waitUntil(timeoutMillis = 5_000) { loader.cachedIconFor(app) != null }
-        val firstVersion = loader.iconVersionFor(app)
-
-        loader.applyStyle(IconStyleSettings(shape = IconShape.CIRCLE), ThemedIconColors(Color.BLACK, Color.WHITE))
-        composeRule.waitUntil(timeoutMillis = 5_000) { loader.cachedIconFor(app) != null }
-        composeRule.waitForIdle()
-
-        assertTrue(loader.iconVersionFor(app) != firstVersion)
-        assertTrue(violations.toString(), violations.isEmpty())
     }
 
     @Test

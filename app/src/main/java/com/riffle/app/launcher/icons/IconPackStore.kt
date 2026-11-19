@@ -239,11 +239,8 @@ internal class PackageManagerIconPackSource(
         file: String,
     ): List<AppFilterTag>? {
         val context = contextFor(packPackage) ?: return null
-        val bytes =
-            context.assets.open(file).use { input ->
-                input.readNBytes(IconPackAppFilter.MAX_XML_CHARS + 1)
-            }
-        return if (bytes.size > IconPackAppFilter.MAX_XML_CHARS) null else IconPackAppFilter.tagsOf(String(bytes))
+        val bytes = context.assets.open(file).use { input -> readBounded(input, IconPackAppFilter.MAX_XML_CHARS) }
+        return bytes?.let { IconPackAppFilter.tagsOf(String(it)) }
     }
 
     override fun drawable(
@@ -278,3 +275,22 @@ internal class PackageManagerIconPackSource(
             )
     }
 }
+
+/** All of [input], or null when it holds more than [max] bytes: a pack's file is never read past the bound. */
+private fun readBounded(
+    input: java.io.InputStream,
+    max: Int,
+): ByteArray? {
+    val out = java.io.ByteArrayOutputStream()
+    val buffer = ByteArray(READ_CHUNK)
+    var total = 0
+    while (total <= max) {
+        val read = input.read(buffer)
+        if (read < 0) return out.toByteArray()
+        total += read
+        out.write(buffer, 0, read)
+    }
+    return null
+}
+
+private const val READ_CHUNK = 8192
