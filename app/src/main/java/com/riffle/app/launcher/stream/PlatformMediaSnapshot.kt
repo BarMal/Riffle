@@ -57,9 +57,9 @@ internal fun PlatformMediaSnapshot.toMediaSessionInfo(nowElapsed: Long): MediaSe
             (positionMillis + advanced).let { if (duration != null) it.coerceAtMost(duration) else it }
         }
     // The tracks after the one playing; when the active one is unknown the queue is taken from its top. A queue that
-    // cannot be skipped into is not shown: its cards could not be played, and a card that does nothing is worse.
+    // cannot be skipped into is still shown, as read-only "Up next" cards (no Play): they say what is coming.
     val canSkipToItem = actions and PlaybackState.ACTION_SKIP_TO_QUEUE_ITEM != 0L
-    val upcoming = if (canSkipToItem) queue.drop(activeQueueIndex + 1).filter { it.queueId >= 0L } else emptyList()
+    val upcoming = queue.drop(activeQueueIndex + 1).filter { it.queueId >= 0L }
     return MediaSessionInfo(
         packageName = packageName,
         title = title?.takeIf(String::isNotBlank),
@@ -69,6 +69,7 @@ internal fun PlatformMediaSnapshot.toMediaSessionInfo(nowElapsed: Long): MediaSe
         positionMillis = position,
         durationMillis = duration,
         controls = controls,
+        queuePlayable = canSkipToItem,
         queue =
             upcoming.filter { !it.title.isNullOrBlank() }
                 .take(MediaItemExt.MAX_QUEUE)

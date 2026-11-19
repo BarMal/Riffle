@@ -111,6 +111,27 @@ class MediaQueueStackTest {
     }
 
     @Test
+    fun aReadOnlyQueueCardHasNoPlayAndIsNotAButtonButIsStillSpoken() {
+        show(MediaQueueFixtures.readOnly, capture = false)
+        stackAction("Next card")()
+        composeRule.onNodeWithText("Second Track").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Play").assertCountEquals(0)
+        composeRule.onNodeWithText("Up next").assertIsDisplayed()
+        composeRule.captureScreen()
+        val card =
+            SemanticsMatcher("the read-only queue card") { node ->
+                node.config.getOrNull(SemanticsProperties.ContentDescription).orEmpty()
+                    .any { it == "Up next, Second Track by Example Band" }
+            }
+        val config = composeRule.onNode(card).fetchSemanticsNode().config
+        val labels = config.getOrNull(SemanticsActions.CustomActions).orEmpty().map { it.label }
+        assertTrue("no Play: $labels", "Play" !in labels)
+        // The track's header is not a button either: pressing it does nothing.
+        composeRule.onNodeWithText("Second Track").performClick()
+        assertEquals(emptyList<Pair<StreamContent, StreamAction>>(), actions)
+    }
+
+    @Test
     fun theOpenPlayerCardNoLongerHoldsAnUpNextList() {
         show(MediaQueueFixtures.withQueue, capture = false)
         composeRule.onNodeWithText("Morning Light").performClick()
@@ -206,6 +227,9 @@ internal object MediaQueueFixtures {
         actions = setOf(MediaAction.PLAY_QUEUE_ITEM),
         queueItem = MediaQueueItem(queueId, position),
     )
+
+    /** The same queue from a player that cannot skip to a track: cards with nothing to press. */
+    val readOnly get() = withQueue.map { if (it.queueItem != null) it.copy(actions = emptySet()) else it }
 
     val withQueue =
         listOf(
