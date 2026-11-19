@@ -196,6 +196,7 @@ class HomeDragPushTest {
         assertEquals(HomeDragTuning(1.2f, 0.15f, 100, 1000, 300), wild)
         assertTrue(HomeDragTuning().asText().contains("ring=0.75"))
     }
+
     private fun hostedWidget(
         name: String,
         host: Int,

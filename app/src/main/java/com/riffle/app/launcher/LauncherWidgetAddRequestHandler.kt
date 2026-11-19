@@ -16,7 +16,9 @@ class LauncherWidgetAddRequestHandler(
     private val deleteHostedWidgetId: (HostedWidgetId) -> Unit,
     private val completeGlanceAdd: (LauncherShellAction.AddGlanceWidgetToHome) -> HostedWidgetAddCompletionResult =
         { HostedWidgetAddCompletionResult.Rejected },
-    private val completeGlanceStackAdd: (LauncherShellAction.AddGlanceWidgetToStack) -> HostedWidgetAddCompletionResult =
+    private val completeGlanceStackAdd: (
+        LauncherShellAction.AddGlanceWidgetToStack,
+    ) -> HostedWidgetAddCompletionResult =
         { HostedWidgetAddCompletionResult.Rejected },
 ) {
     fun handle(action: LauncherShellAction.RequestAddWidget): LauncherWidgetAddHandlingResult {

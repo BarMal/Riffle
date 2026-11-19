@@ -11,7 +11,7 @@ import com.riffle.core.domain.launcher.home.WidgetItem
 import com.riffle.core.domain.launcher.home.WidgetStackEngine
 import com.riffle.core.domain.launcher.home.WidgetStackResult
 
-/** Applies a widget stack edit (ADR 0003, Amendment 14) to Home; an edit the rules refuse leaves the state as it was. */
+/** Applies a widget stack edit (ADR 0003, Amendment 14) to Home; one the rules refuse changes nothing. */
 internal fun LauncherShellState.withWidgetStackEdit(
     action: LauncherShellAction,
     engine: WidgetStackEngine,
@@ -28,7 +28,11 @@ internal fun LauncherShellState.withWidgetStackEdit(
                 engine.addMember(
                     homeLayout,
                     action.itemId,
-                    StackedWidget(action.hostedWidgetId, action.label.ifBlank { DEFAULT_LABEL }, action.resizeConstraints),
+                    StackedWidget(
+                        action.hostedWidgetId,
+                        action.label.ifBlank { DEFAULT_LABEL },
+                        action.resizeConstraints,
+                    ),
                 )
             is LauncherShellAction.AddGlanceWidgetToStack ->
                 engine.addMember(

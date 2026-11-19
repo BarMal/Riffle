@@ -152,7 +152,10 @@ class WidgetStackEditorTest {
         show(layoutWith(neighbour(10, 2, 0), neighbour(11, 0, 2), neighbour(12, 2, 2)))
 
         composeRule.onNodeWithContentDescription("Move Notes out to Home").assertIsNotEnabled()
-        assertEquals(4, composeRule.onAllNodesWithText("No room on this page to move it out.").fetchSemanticsNodes().size)
+        assertEquals(
+            4,
+            composeRule.onAllNodesWithText("No room on this page to move it out.").fetchSemanticsNodes().size,
+        )
         composeRule.onNodeWithTag(WIDGET_STACK_EDITOR_TEST_TAG).captureRoboImage()
     }
 
@@ -161,7 +164,11 @@ class WidgetStackEditorTest {
         var confirmed = 0
         composeRule.setContent {
             ScreenshotBackdrop {
-                ConfirmRemoveWidgetStackDialog(widgetCount = 4, onConfirm = { confirmed++ }, onDismiss = { dismissed++ })
+                ConfirmRemoveWidgetStackDialog(
+                    widgetCount = 4,
+                    onConfirm = { confirmed++ },
+                    onDismiss = { dismissed++ },
+                )
             }
         }
         composeRule.waitForIdle()
@@ -169,7 +176,10 @@ class WidgetStackEditorTest {
         composeRule.onNodeWithTag(WIDGET_STACK_REMOVE_CONFIRM_TEST_TAG).performClick()
 
         assertEquals(1, confirmed)
-        assertEquals(1, composeRule.onAllNodesWithText("The 4 widgets in it are removed from Home.").fetchSemanticsNodes().size)
+        assertEquals(
+            1,
+            composeRule.onAllNodesWithText("The 4 widgets in it are removed from Home.").fetchSemanticsNodes().size,
+        )
     }
 
     private companion object {

@@ -137,22 +137,23 @@ class LauncherBackupWorkspaceDataTest {
 
     @Test
     fun aWidgetStackSurvivesTheBackupWithItsMembersAndNoHostIds() {
-        val withStack = poolWithWidget().let { state ->
-            val deviceClass = state.pools.keys.single()
-            val pool = state.pools.getValue(deviceClass)
-            val widget = pool.items.getValue(PoolItemId("widget-1")) as PoolWidget
-            val provider = widget.provider
-            val stacked =
-                widget.copy(
-                    stack =
-                        listOf(
-                            PoolStackMember("Clock", provider = provider, hostedId = HostedWidgetId(77)),
-                            PoolStackMember("Timer", provider = provider, hostedId = HostedWidgetId(78)),
-                        ),
-                    shown = 1,
-                )
-            state.copy(pools = mapOf(deviceClass to pool.copy(items = mapOf(stacked.id to stacked))))
-        }
+        val withStack =
+            poolWithWidget().let { state ->
+                val deviceClass = state.pools.keys.single()
+                val pool = state.pools.getValue(deviceClass)
+                val widget = pool.items.getValue(PoolItemId("widget-1")) as PoolWidget
+                val provider = widget.provider
+                val stacked =
+                    widget.copy(
+                        stack =
+                            listOf(
+                                PoolStackMember("Clock", provider = provider, hostedId = HostedWidgetId(77)),
+                                PoolStackMember("Timer", provider = provider, hostedId = HostedWidgetId(78)),
+                            ),
+                        shown = 1,
+                    )
+                state.copy(pools = mapOf(deviceClass to pool.copy(items = mapOf(stacked.id to stacked))))
+            }
 
         val json = exportWith(FakePort(set = workspaceSet(), rules = exclusions(), pool = withStack))
         assertFalse(JSONObject(json).getJSONObject("pool").toString().contains("\"host\""))
@@ -177,7 +178,9 @@ class LauncherBackupWorkspaceDataTest {
         val document =
             base.copy(
                 homeLayoutSet =
-                    HomeLayoutSet.fromLayout(layout.copy(pages = listOf(layout.selectedPage.copy(items = listOf(stack))))),
+                    HomeLayoutSet.fromLayout(
+                        layout.copy(pages = listOf(layout.selectedPage.copy(items = listOf(stack)))),
+                    ),
             )
 
         val decoded = decodeLauncherBackupDocument(encodeLauncherBackupDocument(document))

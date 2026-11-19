@@ -13,15 +13,15 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertWidthIsAtLeast
+import androidx.compose.ui.test.down
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.moveBy
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.down
-import androidx.compose.ui.test.up
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.test.up
 import androidx.compose.ui.unit.dp
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.riffle.app.launcher.HOME_WIDGET_STACK_DOTS_TEST_TAG
@@ -247,8 +247,11 @@ class WidgetStackTest {
     @Test
     fun theAccessibilityActionsMoveOneWidgetAndOpenTheEditor() {
         show()
+
         fun perform(label: String) =
-            composeRule.onNodeWithTag(HOME_WIDGET_STACK_TEST_TAG).fetchSemanticsNode().config[SemanticsActions.CustomActions]
+            composeRule.onNodeWithTag(
+                HOME_WIDGET_STACK_TEST_TAG,
+            ).fetchSemanticsNode().config[SemanticsActions.CustomActions]
                 .first { it.label == label }.action()
 
         composeRule.runOnUiThread { perform("Next widget") }

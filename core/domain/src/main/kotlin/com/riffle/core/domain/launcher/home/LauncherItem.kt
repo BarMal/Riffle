@@ -42,10 +42,10 @@ data class WidgetItem(
     /** Set for one of Riffle's own glance widgets: drawn by the app, never bound through the widget host. */
     val glance: GlanceWidgetKind? = null,
     /**
-     * A stack (ADR 0003, Amendment 14): every widget that shares this item's slot, in order, the first being this item's
-     * own widget. Empty for a plain widget; otherwise two or more members ([WidgetStackEngine] keeps it so). The item's
-     * own [appWidgetId], [label] and [glance] are the first member's and [resizeConstraints] is what every member
-     * permits, so code that does not know about stacks still reads a consistent widget.
+     * A stack (ADR 0003, Amendment 14): every widget that shares this item's slot, in order, the first being this
+     * item's own widget. Empty for a plain widget; otherwise two or more members ([WidgetStackEngine] keeps it so).
+     * The item's own [appWidgetId], [label] and [glance] are the first member's and [resizeConstraints] is what every
+     * member permits, so code that does not know about stacks still reads a consistent widget.
      */
     val stack: List<StackedWidget> = emptyList(),
     /** The member a stack shows (the last one shown), an index into [members]. Not stored for a plain widget. */

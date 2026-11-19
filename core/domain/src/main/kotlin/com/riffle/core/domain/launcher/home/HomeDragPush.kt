@@ -73,8 +73,8 @@ data class HomeDragPlan(
  * whole folder icon) is where a drop lands on top. Pure; never throws; nothing here mutates the page.
  *
  * Rules, in the order they apply:
- * 1. A dragged app inside another app's dead zone (or over a folder's icon), or a dragged widget inside the dead zone of
- *    a widget or stack of the same span: [HomeDragPlan.dropOn], nothing pushed.
+ * 1. A dragged app inside another app's dead zone (or over a folder's icon), or a dragged widget inside the dead
+ *    zone of a widget or stack of the same span: [HomeDragPlan.dropOn], nothing pushed.
  * 2. Otherwise every other item whose centre (a widget: the nearest point of its span) is inside the ring is pushed,
  *    closest first, plus every item that stands where the dragged item would land. An item already pushed by the
  *    previous plan stays pushed out to the ring plus [HomeDragTuning.HYSTERESIS] (no jitter at the boundary).
@@ -154,9 +154,9 @@ object HomeDragPush {
     }
 
     /**
-     * The widget of the same span whose dead zone the pointer is in: its span inset by the dead-zone radius on every side
-     * (the centre of its area, as an app's dead zone is the centre of its cell), so a drag only passing over it still
-     * pushes it. A widget of another span never stacks; it is pushed as before.
+     * The widget of the same span whose dead zone the pointer is in: its span inset by the dead-zone radius on every
+     * side (the centre of its area, as an app's dead zone is the centre of its cell), so a drag only passing over it
+     * still pushes it. A widget of another span never stacks; it is pushed as before.
      */
     private fun stackTarget(
         others: List<LauncherItem>,

@@ -57,11 +57,6 @@ import com.riffle.core.domain.launcher.home.WidgetStackEngine
 import com.riffle.core.domain.launcher.home.WidgetStackRejection
 import com.riffle.core.domain.launcher.home.WidgetStackResult
 
-/** The app icon of the app a stack's widget comes from; null when it has none to show (the row shows an initial). */
-internal fun interface WidgetStackMemberIcons {
-    fun iconFor(member: StackedWidget): ImageBitmap?
-}
-
 /** The stack of [itemId] on a Home page of this layout, or null (it was removed, or is a lone widget again). */
 internal fun HomeLayout.widgetStack(itemId: LauncherItemId?): WidgetItem? =
     itemId?.let { id -> pages.flatMap { it.items }.filterIsInstance<WidgetItem>().firstOrNull { it.id == id } }
@@ -96,7 +91,11 @@ private fun Context.iconOfWidgetApp(member: StackedWidget): ImageBitmap? =
             } else {
                 AppWidgetManager.getInstance(this).getAppWidgetInfo(member.appWidgetId.value)?.provider?.packageName
             }
-        packageName?.let { packageManager.getApplicationIcon(it).toBitmap(STACK_ICON_PX, STACK_ICON_PX).asImageBitmap() }
+        packageName?.let {
+            packageManager.getApplicationIcon(
+                it,
+            ).toBitmap(STACK_ICON_PX, STACK_ICON_PX).asImageBitmap()
+        }
     }.getOrNull()
 
 /**
@@ -181,9 +180,10 @@ private fun StackMemberRow(
     val count = stack.members.size
     val position = stringResource(R.string.widget_stack_row_position, index + 1, count)
     Column(
-        modifier = Modifier.fillMaxWidth().testTag(WIDGET_STACK_EDITOR_ROW_TEST_TAG).semantics {
-            stateDescription = position
-        },
+        modifier =
+            Modifier.fillMaxWidth().testTag(WIDGET_STACK_EDITOR_ROW_TEST_TAG).semantics {
+                stateDescription = position
+            },
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

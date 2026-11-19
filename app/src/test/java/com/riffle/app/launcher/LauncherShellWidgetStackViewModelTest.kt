@@ -55,7 +55,8 @@ class LauncherShellWidgetStackViewModelTest {
     private fun stackOf(vararg members: StackedWidget): WidgetItem =
         widget(members.first().appWidgetId.value, 0, 0).restacked(members.toList(), shown = 0)
 
-    private fun LauncherShellViewModel.items() = state.value.homeLayout.selectedPage.items.filterIsInstance<WidgetItem>()
+    private fun LauncherShellViewModel.items() =
+        state.value.homeLayout.selectedPage.items.filterIsInstance<WidgetItem>()
 
     @Test
     fun aWidgetDroppedOnAnotherOfTheSameSpanMakesAStackAndDeletesNothing() {
@@ -97,7 +98,11 @@ class LauncherShellWidgetStackViewModelTest {
     @Test
     fun removingOneWidgetFromAStackDeletesOnlyItsHostIdAndTwoLeftStayAStack() {
         val stack =
-            stackOf(StackedWidget(HostedWidgetId(1), "One"), StackedWidget(HostedWidgetId(2), "Two"), StackedWidget(HostedWidgetId(3), "Three"))
+            stackOf(
+                StackedWidget(HostedWidgetId(1), "One"),
+                StackedWidget(HostedWidgetId(2), "Two"),
+                StackedWidget(HostedWidgetId(3), "Three"),
+            )
         val vm = viewModel(layoutOf(stack))
 
         vm.onHomeShortcutEdited(LauncherShellAction.RemoveStackedWidget(stack.id, 1))
@@ -147,7 +152,11 @@ class LauncherShellWidgetStackViewModelTest {
         val vm = viewModel(layoutOf(widget(1, 0, 0)))
 
         vm.onHomeShortcutEdited(
-            LauncherShellAction.AddGlanceWidgetToStack(LauncherItemId("widget:1"), GlanceWidgetKind.TOP_STORY, "Top story"),
+            LauncherShellAction.AddGlanceWidgetToStack(
+                LauncherItemId("widget:1"),
+                GlanceWidgetKind.TOP_STORY,
+                "Top story",
+            ),
         )
 
         assertEquals(GlanceWidgetKind.TOP_STORY, vm.items().single().shownMember.glance)

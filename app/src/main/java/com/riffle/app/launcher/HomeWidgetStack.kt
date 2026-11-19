@@ -42,13 +42,6 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-/** What a stack needs to know of the Home around it: which way the pages scroll, and reduced motion. */
-internal data class WidgetStackPresentation(
-    /** Whether Home's pages scroll up and down; the stack then swipes sideways, so it never meets the pager. */
-    val pagesScrollVertically: Boolean = false,
-    val reducedMotion: Boolean = false,
-)
-
 /**
  * A widget stack on Home (ADR 0003, Amendment 14): several widgets of one span in one slot, one shown at a time.
  *
@@ -63,7 +56,7 @@ internal data class WidgetStackPresentation(
  *   lambdas, never by composition.
  */
 @Composable
-@Suppress("LongMethod", "LongParameterList")
+@Suppress("LongMethod", "LongParameterList", "CyclomaticComplexMethod")
 internal fun HomeWidgetStack(
     widget: WidgetItem,
     isEditing: Boolean,

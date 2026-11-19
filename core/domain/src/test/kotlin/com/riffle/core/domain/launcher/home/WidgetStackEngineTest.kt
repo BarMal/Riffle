@@ -35,8 +35,7 @@ class WidgetStackEngineTest {
             standard.copy(pages = listOf(page), selectedPageId = page.id)
         }
 
-    private fun HomeLayout.widget(id: String) =
-        pages.flatMap { it.items }.first { it.id.value == id } as WidgetItem
+    private fun HomeLayout.widget(id: String) = pages.flatMap { it.items }.first { it.id.value == id } as WidgetItem
 
     private fun Any.updated() = assertIs<WidgetStackResult.Updated>(this).layout
 
@@ -78,10 +77,11 @@ class WidgetStackEngineTest {
 
     @Test
     fun aWidgetDroppedOnAnExistingStackExtendsIt() {
-        val layout = layoutOf(widget(3, 2, 2)).let { base ->
-            val page = base.selectedPage.copy(items = stackOf(2).selectedPage.items + base.selectedPage.items)
-            base.copy(pages = listOf(page))
-        }
+        val layout =
+            layoutOf(widget(3, 2, 2)).let { base ->
+                val page = base.selectedPage.copy(items = stackOf(2).selectedPage.items + base.selectedPage.items)
+                base.copy(pages = listOf(page))
+            }
 
         val result = engine.stackOnto(layout, LauncherItemId("widget:3"), LauncherItemId("widget:1")).updated()
 
@@ -116,9 +116,12 @@ class WidgetStackEngineTest {
             WidgetStackRejection.STACK_FULL,
             assertIs<WidgetStackResult.Rejected>(engine.addMember(full, LauncherItemId("widget:1"), extra)).reason,
         )
-        val dropped = layoutOf(widget(50, 2, 2)).let { base ->
-            base.copy(pages = listOf(base.selectedPage.copy(items = full.selectedPage.items + base.selectedPage.items)))
-        }
+        val dropped =
+            layoutOf(widget(50, 2, 2)).let { base ->
+                base.copy(
+                    pages = listOf(base.selectedPage.copy(items = full.selectedPage.items + base.selectedPage.items)),
+                )
+            }
         assertFalse(engine.canStack(dropped.widget("widget:1"), dropped.widget("widget:50")))
     }
 
@@ -141,8 +144,12 @@ class WidgetStackEngineTest {
     fun aGlanceWidgetStacksLikeAnAppWidget() {
         val layout = layoutOf(widget(1, 0, 0))
         val glance =
-            StackedWidget(GlanceWidgets.UNBOUND_HOST_ID, "Now playing", GlanceWidgetKind.NOW_PLAYING.resizeConstraints,
-                GlanceWidgetKind.NOW_PLAYING)
+            StackedWidget(
+                GlanceWidgets.UNBOUND_HOST_ID,
+                "Now playing",
+                GlanceWidgetKind.NOW_PLAYING.resizeConstraints,
+                GlanceWidgetKind.NOW_PLAYING,
+            )
 
         val stacked = engine.addMember(layout, LauncherItemId("widget:1"), glance).updated().widget("widget:1")
 

@@ -4,9 +4,9 @@ import com.riffle.core.domain.launcher.glance.GlanceWidgetKind
 import com.riffle.core.domain.launcher.glance.GlanceWidgets
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
-import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.WidgetItem
 import com.riffle.core.domain.launcher.home.WidgetStackEngine
 import com.riffle.core.domain.launcher.home.WidgetStackResult
@@ -17,7 +17,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
-/** A widget stack in the placed-items pool (ADR 0003, Amendment 14): stored, decoded, validated, edited and released. */
+/** A widget stack in the placed-items pool (ADR 0003, Amendment 14): stored, validated, edited and released. */
 class PoolWidgetStackTest {
     private val member2 = PoolStackMember("Second", provider = provider, hostedId = HostedWidgetId(12))
     private val glanceMember =

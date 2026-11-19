@@ -49,6 +49,7 @@ import com.riffle.core.domain.launcher.home.WidgetStackEngine
 import kotlin.math.roundToInt
 
 @Composable
+@Suppress("LongParameterList")
 @OptIn(ExperimentalFoundationApi::class)
 internal fun HomeWidgetPlaceholder(
     widget: WidgetItem,
@@ -336,32 +337,33 @@ internal fun widgetPlaceholderContextMenuItems(
     contextSurface: ShortcutContextSurface = ShortcutContextSurface.HOME,
     text: SettingsText,
 ): List<ShortcutContextMenuItem> {
-    return widget.stackMenuItems(contextSurface, text) + listOf(
-        ShortcutContextMenuItem(
-            label = text.text(R.string.menu_make_wider),
-            action = widget.resizeAction(columnsDelta = 1, rowsDelta = 0),
-            enabled = widget.canResize(columnsDelta = 1, rowsDelta = 0, grid = grid, pageItems = pageItems),
-        ),
-        ShortcutContextMenuItem(
-            label = text.text(R.string.menu_make_narrower),
-            action = widget.resizeAction(columnsDelta = -1, rowsDelta = 0),
-            enabled = widget.canResize(columnsDelta = -1, rowsDelta = 0, grid = grid, pageItems = pageItems),
-        ),
-        ShortcutContextMenuItem(
-            label = text.text(R.string.menu_make_taller),
-            action = widget.resizeAction(columnsDelta = 0, rowsDelta = 1),
-            enabled = widget.canResize(columnsDelta = 0, rowsDelta = 1, grid = grid, pageItems = pageItems),
-        ),
-        ShortcutContextMenuItem(
-            label = text.text(R.string.menu_make_shorter),
-            action = widget.resizeAction(columnsDelta = 0, rowsDelta = -1),
-            enabled = widget.canResize(columnsDelta = 0, rowsDelta = -1, grid = grid, pageItems = pageItems),
-        ),
-        ShortcutContextMenuItem(
-            label = contextSurface.widgetRemoveLabel(text),
-            action = widget.removeActionFor(contextSurface),
-        ),
-    )
+    return widget.stackMenuItems(contextSurface, text) +
+        listOf(
+            ShortcutContextMenuItem(
+                label = text.text(R.string.menu_make_wider),
+                action = widget.resizeAction(columnsDelta = 1, rowsDelta = 0),
+                enabled = widget.canResize(columnsDelta = 1, rowsDelta = 0, grid = grid, pageItems = pageItems),
+            ),
+            ShortcutContextMenuItem(
+                label = text.text(R.string.menu_make_narrower),
+                action = widget.resizeAction(columnsDelta = -1, rowsDelta = 0),
+                enabled = widget.canResize(columnsDelta = -1, rowsDelta = 0, grid = grid, pageItems = pageItems),
+            ),
+            ShortcutContextMenuItem(
+                label = text.text(R.string.menu_make_taller),
+                action = widget.resizeAction(columnsDelta = 0, rowsDelta = 1),
+                enabled = widget.canResize(columnsDelta = 0, rowsDelta = 1, grid = grid, pageItems = pageItems),
+            ),
+            ShortcutContextMenuItem(
+                label = text.text(R.string.menu_make_shorter),
+                action = widget.resizeAction(columnsDelta = 0, rowsDelta = -1),
+                enabled = widget.canResize(columnsDelta = 0, rowsDelta = -1, grid = grid, pageItems = pageItems),
+            ),
+            ShortcutContextMenuItem(
+                label = contextSurface.widgetRemoveLabel(text),
+                action = widget.removeActionFor(contextSurface),
+            ),
+        )
 }
 
 /**

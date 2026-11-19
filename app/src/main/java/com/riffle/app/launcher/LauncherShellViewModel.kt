@@ -580,7 +580,6 @@ class LauncherShellViewModel(
             )
 
         deleteRemovedHomeHostedWidget(
-            action = action,
             previousState = previousState,
             currentState = mutableState.value,
             removedHostedWidgetIds = removedHostedWidgetIds,
@@ -689,7 +688,7 @@ private fun LauncherShellState.withGlanceWidgetAdded(
         is WidgetEditResult.Rejected -> this
     }
 
-@Suppress("CyclomaticComplexMethod")
+@Suppress("CyclomaticComplexMethod", "LongMethod")
 private fun reduceHomeShortcutEdit(
     previousState: LauncherShellState,
     action: LauncherShellAction,
@@ -792,7 +791,6 @@ private fun reduceHomeShortcutEdit(
     }
 
 private fun deleteRemovedHomeHostedWidget(
-    action: LauncherShellAction,
     previousState: LauncherShellState,
     currentState: LauncherShellState,
     removedHostedWidgetIds: List<HostedWidgetId>,

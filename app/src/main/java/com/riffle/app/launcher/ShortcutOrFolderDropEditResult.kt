@@ -21,14 +21,14 @@ internal fun applyShortcutOrFolderDropEdit(
         is LauncherShellAction.MoveHomeShortcutToCell ->
             stackedByDrop(layout, action)
                 ?: folderEngine
-                .createFolderFromDropOnSelectedPage(
-                    layout = layout,
-                    sourceItemId = action.itemId,
-                    targetCell = action.cell,
-                    installedApps = installedApps,
-                    fallbackLabel = action.folderLabel,
-                )
-                ?.toShortcutOrFolderDropEditResult()
+                    .createFolderFromDropOnSelectedPage(
+                        layout = layout,
+                        sourceItemId = action.itemId,
+                        targetCell = action.cell,
+                        installedApps = installedApps,
+                        fallbackLabel = action.folderLabel,
+                    )
+                    ?.toShortcutOrFolderDropEditResult()
                 ?: shortcutEngine.applyEdit(action = action, layout = layout).toShortcutOrFolderDropEditResult()
 
         is LauncherShellAction.MoveHomeItemToPage ->

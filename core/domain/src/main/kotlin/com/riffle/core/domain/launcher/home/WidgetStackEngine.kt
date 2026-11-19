@@ -12,10 +12,11 @@ import kotlin.math.hypot
  * the item's [WidgetItem.resizeConstraints] is what [constraintsOf] says every member permits, kept in step by
  * [restacked].
  */
+@Suppress("TooManyFunctions", "ReturnCount")
 class WidgetStackEngine(
     private val gridPlacementEngine: GridPlacementEngine = GridPlacementEngine(),
 ) {
-    /** Whether [dragged] (a lone widget) may be dropped on [target] (a widget or a stack): same span, room, no repeat. */
+    /** Whether [dragged] (a lone widget) may be dropped on [target] (a widget or stack): same span, room, no repeat. */
     fun canStack(
         target: WidgetItem,
         dragged: WidgetItem,
