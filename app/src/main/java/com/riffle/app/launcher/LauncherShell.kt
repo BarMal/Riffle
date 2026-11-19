@@ -31,6 +31,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.app.launcher.exclusions.ExclusionsSettingsController
+import com.riffle.app.launcher.icons.ChangeIconController
+import com.riffle.app.launcher.icons.LocalAppIconLoader
+import com.riffle.app.launcher.icons.LocalChangeIconController
 import com.riffle.app.launcher.onboarding.LocalWalkthroughLauncher
 import com.riffle.app.launcher.onboarding.OnboardingHost
 import com.riffle.app.launcher.onboarding.OnboardingLayer
@@ -53,6 +56,8 @@ import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.icons.IconStyleSettings
+import com.riffle.core.domain.launcher.icons.withAppLabelOverrides
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
 import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
 import com.riffle.core.domain.launcher.stream.StreamSourceIds
@@ -76,12 +81,27 @@ fun LauncherShell(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val storedState by viewModel.state.collectAsState()
+    // "Change icon" is opened from the long-press menus of every surface: the shell answers it with one sheet.
+    val changeIcon = remember { ChangeIconController() }
+    val handleAction: (LauncherShellAction) -> Unit =
+        remember(onAction, changeIcon) {
+            { action ->
+                if (action is LauncherShellAction.OpenChangeIcon) {
+                    changeIcon.open(action.identity, action.label)
+                } else {
+                    onAction(action)
+                }
+            }
+        }
     // The one place the platform's animation state meets the stored preference; every surface below
     // reads the resolved `launcherSettings.motion.reducedMotion`.
     val systemReducedMotion = rememberSystemReducedMotion()
     val state =
         remember(storedState, systemReducedMotion) {
-            storedState.withSystemReducedMotion(systemReducedMotion)
+            // The names the user gave single apps are applied to what is drawn, not to what is stored.
+            storedState.withSystemReducedMotion(
+                systemReducedMotion,
+            ).withAppLabelOverrides(storedState.launcherSettings.icons)
         }
     // The sources load once; until they have, the dock pull is inert and onboarding waits.
     val workspaceVersion by (sources?.workspaceVersion ?: NoWorkspaceVersion).collectAsState()
@@ -98,6 +118,8 @@ fun LauncherShell(
             LocalWalkthroughLauncher provides onboarding?.controller?.let { controller -> controller::rerun },
             LocalHintsHost provides remember(onboarding) { onboarding?.controller?.let(HintsHost::of) },
             LocalSavedHomeLayouts provides viewModel.savedHomeLayouts,
+            LocalAppIconLoader provides appIconLoader,
+            LocalChangeIconController provides changeIcon,
             LocalBeforeImportCopies provides beforeImport,
         ) {
             LauncherShellContent(
@@ -107,7 +129,7 @@ fun LauncherShell(
                 appIconLoader = appIconLoader,
                 widgetRenderers = widgetRenderers,
                 adaptiveStageWindowLayout = adaptiveStageWindowLayout,
-                onAction = onAction,
+                onAction = handleAction,
                 onSetupCardDismissed = viewModel::onSetupCardDismissed,
                 onDockEditFeedbackDismissed = viewModel::onDockEditFeedbackDismissed,
                 onHomeHeldAnItem = {
@@ -201,11 +223,6 @@ fun LauncherShellContent(
 
     LauncherShellBackHandling(state = state, onAction = onAction)
 
-    PreloadLauncherAppIcons(
-        identities = state.appIconPreloadIdentities(),
-        iconLoader = appIconLoader,
-    )
-
     RiffleLauncherTheme(
         themeMode = state.launcherSettings.appearance.themeMode,
         themeAccent = state.launcherSettings.appearance.themeAccent,
@@ -215,6 +232,11 @@ fun LauncherShellContent(
         reducedTransparency = state.launcherSettings.appearance.reducedTransparency,
         liquidGlass = state.launcherSettings.resolveLiquidGlass(),
     ) {
+        SyncIconStyle(iconLoader = appIconLoader, style = state.launcherSettings.icons)
+        PreloadLauncherAppIcons(
+            identities = state.appIconPreloadIdentities(),
+            iconLoader = appIconLoader,
+        )
         val usesSystemWallpaper = state.launcherSettings.appearance.wallpaper.source == WallpaperSource.SYSTEM
         val rootModifier =
             if (usesSystemWallpaper) {
@@ -258,6 +280,7 @@ fun LauncherShellContent(
                 )
             }
             HomeFillOverlay(state = state, onAction = onAction, onHomeHeldAnItem = onHomeHeldAnItem)
+            ChangeIconOverlay(style = state.launcherSettings.icons, onAction = onAction)
             state.dockEditRejectionReason?.let { reason ->
                 DockEditRejectionMessage(
                     reason = reason,
@@ -270,6 +293,18 @@ fun LauncherShellContent(
                 )
             }
         }
+    }
+}
+
+/** The "Change icon" sheet, over whatever is showing, while the shell has been asked for it. */
+@Composable
+private fun ChangeIconOverlay(
+    style: IconStyleSettings,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    val controller = LocalChangeIconController.current ?: return
+    controller.target?.let { target ->
+        ChangeIconSurface(target = target, style = style, onAction = onAction, onDismiss = controller::close)
     }
 }
 

@@ -23,6 +23,10 @@ class ShortcutContextMenuTest {
         assertEquals(
             listOf(
                 ShortcutContextMenuItem("App info", LauncherShellAction.OpenAppInfo(shortcut.appIdentity)),
+                ShortcutContextMenuItem(
+                    "Change icon",
+                    LauncherShellAction.OpenChangeIcon(shortcut.appIdentity, shortcut.label),
+                ),
                 ShortcutContextMenuItem("Hide app", LauncherShellAction.HideApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Uninstall", LauncherShellAction.UninstallApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem(
@@ -52,7 +56,7 @@ class ShortcutContextMenuTest {
         assertFalse(items.any { it.label == "Move to Dock" })
         assertEquals(
             ShortcutContextMenuItem("Move to Home", LauncherShellAction.MoveDockItemToHome(shortcut.id)),
-            items[3],
+            items[4],
         )
         assertEquals(
             ShortcutContextMenuItem("Remove from Dock", LauncherShellAction.RemoveDockShortcut(shortcut.id)),
@@ -89,6 +93,10 @@ class ShortcutContextMenuTest {
         assertEquals(
             listOf(
                 ShortcutContextMenuItem("App info", LauncherShellAction.OpenAppInfo(shortcut.appIdentity)),
+                ShortcutContextMenuItem(
+                    "Change icon",
+                    LauncherShellAction.OpenChangeIcon(shortcut.appIdentity, shortcut.label),
+                ),
                 ShortcutContextMenuItem("Hide app", LauncherShellAction.HideApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Uninstall", LauncherShellAction.UninstallApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem(

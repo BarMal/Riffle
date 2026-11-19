@@ -27,6 +27,10 @@ class HomeFolderContextMenuTest {
             listOf(
                 ShortcutContextMenuItem("App info", LauncherShellAction.OpenAppInfo(shortcut.appIdentity)),
                 ShortcutContextMenuItem(
+                    "Change icon",
+                    LauncherShellAction.OpenChangeIcon(shortcut.appIdentity, shortcut.label),
+                ),
+                ShortcutContextMenuItem(
                     label = "Move up",
                     action =
                         LauncherShellAction.MoveAppInFolder(

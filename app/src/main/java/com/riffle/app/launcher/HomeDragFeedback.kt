@@ -172,16 +172,20 @@ internal fun HomeGhostIcon(
     outline: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val version = iconLoader.iconVersionFor(identity)
     var ghost by remember(identity, iconLoader) {
-        mutableStateOf(iconLoader.cachedIconFor(identity)?.let { HomeDragGhosts.forIcon(identity, it) })
+        mutableStateOf(iconLoader.cachedIconFor(identity)?.let { HomeDragGhosts.forIcon(identity, it, version) })
     }
-    LaunchedEffect(identity, iconLoader) {
-        if (ghost == null) {
-            ghost =
+    LaunchedEffect(identity, iconLoader, version) {
+        val cached = iconLoader.cachedIconFor(identity)
+        ghost =
+            if (cached != null) {
+                HomeDragGhosts.forIcon(identity, cached, version)
+            } else {
                 withContext(Dispatchers.Default) {
-                    iconLoader.iconFor(identity)?.let { HomeDragGhosts.forIcon(identity, it) }
+                    iconLoader.iconFor(identity)?.let { HomeDragGhosts.forIcon(identity, it, version) }
                 }
-        }
+            }
     }
     val baked = ghost
     if (baked != null) {

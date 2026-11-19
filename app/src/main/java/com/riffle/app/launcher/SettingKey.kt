@@ -341,6 +341,36 @@ enum class SettingKey(
         R.string.setting_appearance_typography,
         R.string.setting_appearance_typography_keywords,
     ),
+    ICONS_SHAPE(
+        SettingsPage.APPEARANCE_ICONS,
+        R.string.setting_icons_shape,
+        R.string.setting_icons_shape_keywords,
+    ),
+    ICONS_LEGACY(
+        SettingsPage.APPEARANCE_ICONS,
+        R.string.setting_icons_legacy,
+        R.string.setting_icons_legacy_keywords,
+    ),
+    ICONS_THEMED(
+        SettingsPage.APPEARANCE_ICONS,
+        R.string.setting_icons_themed,
+        R.string.setting_icons_themed_keywords,
+    ),
+    ICONS_THEME_ALL(
+        SettingsPage.APPEARANCE_ICONS,
+        R.string.setting_icons_theme_all,
+        R.string.setting_icons_theme_all_keywords,
+    ),
+    ICONS_PACK(
+        SettingsPage.APPEARANCE_ICONS,
+        R.string.setting_icons_pack,
+        R.string.setting_icons_pack_keywords,
+    ),
+    ICONS_RESET(
+        SettingsPage.APPEARANCE_ICONS,
+        R.string.setting_icons_reset,
+        R.string.setting_icons_reset_keywords,
+    ),
     GESTURE_ONE_FINGER_UP(
         SettingsPage.GESTURES,
         R.string.setting_gesture_one_finger_up,

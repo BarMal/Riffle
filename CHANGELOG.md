@@ -11,6 +11,16 @@ installing. Entries are in the order they were built; where a later one changes 
 
 ### Added
 
+- Icon styles ([ADR 0003](docs/architecture/adr/0003-places-and-views.md), Amendment 19): **one icon pipeline** now draws
+  every app icon (Home, Dock, folders, Library, search, Stream and pair cards, the widget stack editor, the Floating dock,
+  Settings), keyed by a style version in a cache bounded by bytes. **Settings > Appearance > Icons** adds an icon shape
+  (System default, Circle, Squircle, Rounded square, Square, Teardrop) with legacy icons fitted on a plate or left as they
+  are, **themed icons** (where an app ships a monochrome layer, Android 13 and later; "Theme all icons" generates one for
+  the rest, off by default), **icon packs** (the common appfilter format, read once per version off the main thread) and
+  **Reset icon changes** with Undo, with a live preview strip. **Change icon** in an app's long-press menu picks an icon
+  from the current or another pack (searchable, paged) or resets it, and renames the app; choices are stored as a
+  reference to the pack and the drawable, included in backups and kept when the pack is not installed. With everything at
+  its default nothing is drawn differently. Not run on a device: real icon packs and real adaptive icons need one.
 - Follow-ups from the last batches ([ADR 0003](docs/architecture/adr/0003-places-and-views.md), Amendment 18):
   **a widget that could not be bound can be set up from its placeholder** (tap it, "Set up widget" in its menu, an
   accessibility action, or its row in Edit stack): it runs the widget picker's own bind, permission and configure flow

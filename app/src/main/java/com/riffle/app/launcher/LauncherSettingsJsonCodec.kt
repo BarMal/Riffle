@@ -85,6 +85,7 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
         .put("haptics", encodeHaptics(settings.haptics))
         .put("hints", encodeHints(settings.hints))
         .put("home", encodeHomeBehaviour(settings.home))
+        .put("icons", encodeIconStyle(settings.icons))
         .put("diagnostics", encodeDiagnostics(settings.diagnostics))
         .put("layout", encodeLayoutSettings(settings.layout))
         .put("liquidGlass", encodeLiquidGlass(settings.liquidGlass))
@@ -134,6 +135,7 @@ private fun decodeLauncherSections(
         haptics = json.guarded("haptics", defaults.haptics, JSONObject::toHaptics),
         hints = json.guarded("hints", defaults.hints, JSONObject::toHints),
         home = json.guarded("home", defaults.home, JSONObject::toHomeBehaviour),
+        icons = json.guarded("icons", defaults.icons, JSONObject::toIconStyle),
         diagnostics = json.optJSONObject("diagnostics").toDiagnostics(),
         layout = json.guarded("layout", defaults.layout, JSONObject::toLayoutSettings),
         liquidGlass = json.guarded("liquidGlass", defaults.liquidGlass, JSONObject::toLiquidGlass),

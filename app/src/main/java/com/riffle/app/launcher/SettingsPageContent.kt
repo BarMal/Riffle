@@ -73,7 +73,9 @@ internal fun SettingsPageContent(
             SettingsPage.CALENDAR_FEEDS -> SettingsIcsFeedsPageContent()
             SettingsPage.STREAM_TASKS -> SettingsStreamTasksPageContent()
             SettingsPage.STREAM_FEEDS -> SettingsStreamFeedsPageContent(state = state, onAction = onAction)
-            SettingsPage.APPEARANCE -> SettingsAppearancePageContent(state = state, onAction = onAction)
+            SettingsPage.APPEARANCE ->
+                SettingsAppearancePageContent(state = state, onPageSelected = onPageSelected, onAction = onAction)
+            SettingsPage.APPEARANCE_ICONS -> SettingsIconsPageContent(state = state, onAction = onAction)
             SettingsPage.GESTURES -> SettingsGesturesPageContent(state = state, onAction = onAction)
             SettingsPage.MOTION -> SettingsMotionPageContent(state = state, onAction = onAction)
             SettingsPage.PRIVACY -> SettingsPrivacyPageContent(state = state, onAction = onAction)
@@ -267,6 +269,7 @@ private fun SettingsFloatingDockPageContent(
 @Composable
 private fun SettingsAppearancePageContent(
     state: SettingsSurfaceState,
+    onPageSelected: (SettingsPage) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val appearance = state.settings.appearance
@@ -287,6 +290,7 @@ private fun SettingsAppearancePageContent(
         ThemeCornerStyleSetting(selectedStyle = appearance.themeCornerStyle, onAction = onAction)
         ThemeTypographySetting(selectedTypography = appearance.themeTypography, onAction = onAction)
     }
+    SettingsIconsRow(icons = state.settings.icons, onOpen = { onPageSelected(SettingsPage.APPEARANCE_ICONS) })
 }
 
 @Composable
