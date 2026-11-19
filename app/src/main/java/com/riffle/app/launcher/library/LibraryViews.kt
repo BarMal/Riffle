@@ -52,6 +52,7 @@ import com.riffle.app.launcher.glassSpotlightSource
 import com.riffle.app.launcher.launcherIconSize
 import com.riffle.app.launcher.launcherPanelContentColor
 import com.riffle.app.launcher.launcherPanelSurfaceColor
+import com.riffle.app.launcher.libraryHomeDrag
 import com.riffle.app.launcher.rememberGlassSpotlightColor
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
@@ -163,6 +164,7 @@ private fun LibraryTileIcon(
                     key = app.drawerKey,
                     color = rememberGlassSpotlightColor(app.identity, context.appIconLoader),
                 )
+                .libraryHomeDrag(app, state.homeDrag) { menuOpen.value = false }
                 .combinedClickable(
                     onClick = { context.onAction(LauncherShellAction.LaunchApp(app.identity)) },
                     onLongClick = {

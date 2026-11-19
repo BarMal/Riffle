@@ -13,6 +13,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
@@ -24,6 +25,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
@@ -297,6 +299,8 @@ private fun HomeDestinationContent(
     val searchOpen = state.destination == ShellDestination.SEARCH
     // Once the Library's sheet covers Home or the Stream they are invisible, so assistive technology skips them too.
     val covered = shownLibrary && !pull.isLibraryTransitioning
+    // An app carried from the Library to Home: the Library has closed to the finger, and Home is what it is dropped on.
+    val shownLibraryForHome = shownLibrary && !dockHost.libraryDragActive.value
     val coveredSemantics = if (covered) Modifier.clearAndSetSemantics {} else Modifier
     var rootSize by remember { mutableStateOf(IntSize.Zero) }
     // The Stream's column and the fade of Home's grid beneath it (see StreamColumn and GridFadeField). Folded, the same
@@ -389,7 +393,7 @@ private fun HomeDestinationContent(
                                     dockHost = dockHost,
                                     dockPosition = plan.edges.edgeFor(plan.currentMode.modeSurface),
                                     surfaceModifier =
-                                        pull.homeModifier(libraryShown = shownLibrary).then(coveredSemantics),
+                                        pull.homeModifier(libraryShown = shownLibraryForHome).then(coveredSemantics),
                                     handleHidden = presentation.handleHidden,
                                     appIconLoader = appIconLoader,
                                     haptics = haptics,
@@ -400,7 +404,7 @@ private fun HomeDestinationContent(
                                     state = plan.stateFor(plan.currentMode),
                                     dockEdge = plan.edges.edgeFor(plan.currentMode.modeSurface),
                                     surfaceModifier =
-                                        pull.homeModifier(libraryShown = shownLibrary).then(coveredSemantics),
+                                        pull.homeModifier(libraryShown = shownLibraryForHome).then(coveredSemantics),
                                     dockHost = dockHost,
                                     presentation = presentation,
                                     appIconLoader = appIconLoader,
@@ -696,6 +700,7 @@ private fun LibraryHomeSurface(
     val insets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets().asPaddingValues()
     val libraryState = remember(state) { state.libraryState() }
     val latestOnAction = rememberUpdatedState(onAction)
+    DisposableEffect(dockHost) { onDispose { dockHost.libraryDragActive.value = false } }
     val close: () -> Unit = {
         latestOnAction.value(
             if (libraryState.overStream) LauncherShellAction.OpenStream else LauncherShellAction.OpenHome,
@@ -713,6 +718,18 @@ private fun LibraryHomeSurface(
                 latestOnAction.value(action)
                 if (action.closesLibrary()) close()
             },
+            // A held app can be carried to Home (not while the Library is over the Stream: no Home is showing).
+            homeDrag =
+                if (libraryState.overStream) {
+                    null
+                } else {
+                    LibraryHomeDrag(
+                        externalDrag = { dockHost.externalDrag },
+                        active = dockHost.libraryDragActive,
+                        onFinished = close,
+                        slopDp = state.launcherSettings.home.dragTuning.coerced().libraryDragSlopDp,
+                    )
+                },
         )
     if (search) {
         // Search rises from the Dock (the handle above it, or the Dock's own action), field on the Dock's edge. Its
@@ -744,7 +761,15 @@ private fun LibraryHomeSurface(
     }
     // The Library's one "Show as" menu: the sheet's own space opens it, and so does the margin around the sheet.
     val showAs = remember { PressMenuState() }
-    Box(modifier = Modifier.fillMaxSize().zIndex(HOME_CONTENT_Z_INDEX)) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .zIndex(HOME_CONTENT_Z_INDEX)
+                // Carrying an app to Home, the Library has closed: it stays composed (it holds the finger) and draws
+                // nothing. Read in the draw phase.
+                .graphicsLayer { alpha = if (dockHost.libraryDragActive.value) 0f else 1f },
+    ) {
         // The room around the sheet belongs to it, all the way to the edges of the window (under the system bars and
         // beside the Dock's own room too): a tap there closes the Library instead of reaching what is under, and a
         // long-press there is the sheet's menu.

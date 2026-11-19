@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -109,15 +110,39 @@ private fun HostedHomeWidget(
 ) {
     val isContextMenuExpanded = remember(widget.id) { mutableStateOf(false) }
 
-    HostedWidgetFrame(widget = widget, widgetViewFactory = widgetViewFactory) {
-        WidgetGestureLayer(
-            widget = widget,
-            dragState = dragState,
-            workspaceActions = workspaceActions,
-            onStationaryLongPress = { isContextMenuExpanded.value = true },
-            onMenuDismiss = { isContextMenuExpanded.value = false },
-        )
+    // A platform widget keeps its own taps and scrolls: Home watches from above the view (never over it) and takes
+    // the press only at the long press, which lifts it and opens its menu. An edit covers it with the gesture layer.
+    val actionsLabel = stringResource(R.string.widget_actions_description, widget.label)
+    val lift =
+        if (!isEditing && dragState != null && workspaceActions != null) {
+            Modifier
+                .homeItemDrag(
+                    enabled = true,
+                    item = widget,
+                    dragState = dragState,
+                    actions = workspaceActions,
+                    onStationaryLongPress = { isContextMenuExpanded.value = true },
+                    onMenuDismiss = { isContextMenuExpanded.value = false },
+                    passive = true,
+                )
+                .semantics {
+                    onLongClick(label = actionsLabel) {
+                        isContextMenuExpanded.value = true
+                        true
+                    }
+                }
+        } else {
+            Modifier
+        }
+    HostedWidgetFrame(widget = widget, widgetViewFactory = widgetViewFactory, modifier = lift) {
         if (isEditing) {
+            WidgetGestureLayer(
+                widget = widget,
+                dragState = dragState,
+                workspaceActions = workspaceActions,
+                onStationaryLongPress = { isContextMenuExpanded.value = true },
+                onMenuDismiss = { isContextMenuExpanded.value = false },
+            )
             WidgetEditHandles(
                 widget = widget,
                 grid = dragState?.grid,
@@ -151,6 +176,7 @@ private fun HostedHomeWidget(
 internal fun HostedWidgetFrame(
     widget: WidgetItem,
     widgetViewFactory: HomeWidgetViewFactory,
+    modifier: Modifier = Modifier,
     overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -167,7 +193,7 @@ internal fun HostedWidgetFrame(
 
     // The widget's frame: Regular glass in the launcher's card shape, behind the hosted view.
     GlassSurface(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().then(modifier),
         weight = GlassWeight.Regular,
         shape = LocalLauncherCardShape.current,
         tint = MaterialTheme.colorScheme.surfaceContainerHighest,

@@ -123,15 +123,58 @@ class DockPinnedDragTest {
         val start = itemBounds(0).center
         holdThenDrag(start, listOf(start + Offset(0f, -60f), target))
 
-        val move = actions.filterIsInstance<LauncherShellAction.MoveDockItemToHome>().singleOrNull()
-        assertTrue(actions.toString(), move != null)
-        assertEquals(pinned[0].id, move!!.itemId)
-        assertEquals(shell.homeLayout.selectedPage.id, move.pageId)
+        // Changed on purpose: a Dock item carried onto Home is a Home drag (push ring, folder hold, spill), so it
+        // drops as a DropExternalHomeItem from the Dock rather than a MoveDockItemToHome.
+        val drop = actions.filterIsInstance<LauncherShellAction.DropExternalHomeItem>().singleOrNull()
+        assertTrue(actions.toString(), drop != null)
+        assertEquals(com.riffle.app.launcher.ExternalHomeDragSource.Dock(pinned[0].id), drop!!.source)
+        assertEquals(shell.homeLayout.selectedPage.id, drop.targetPageId)
         val grid = shell.homeLayout.selectedPage.grid
         assertEquals(
             "the last cell of the grid",
             com.riffle.core.domain.launcher.home.GridCell(grid.columns - 1, grid.rows - 1),
-            move.cell,
+            drop.cell,
+        )
+    }
+
+    @Test
+    fun aPinnedItemHeldOverAnAppOfHomeOffersTheFolderLikeAnyHomeDrag() {
+        show()
+        val firstApp = shell.homeLayout.selectedPage.items.first()
+        val firstLabel = (firstApp as com.riffle.core.domain.launcher.home.AppShortcutItem).label
+        val target = composeRule.onNodeWithText(firstLabel).fetchSemanticsNode().boundsInRoot.center
+        val start = itemBounds(0).center
+        holdThenDrag(start, listOf(start + Offset(0f, -60f), target))
+
+        val drop = actions.filterIsInstance<LauncherShellAction.DropExternalHomeItem>().singleOrNull()
+        assertTrue(actions.toString(), drop != null)
+        assertEquals(firstApp.id, drop!!.dropOnItemId)
+    }
+
+    @Test
+    fun aPinnedItemCarriedByHomeShowsTheRemoveTargetAndDroppingOnItUnpinsIt() {
+        show()
+        val start = itemBounds(0).center
+        mainRoot().performTouchInput {
+            down(start)
+            advanceEventTime(HOLD_MILLIS)
+        }
+        composeRule.mainClock.advanceTimeBy(HOLD_MILLIS)
+        mainRoot().performTouchInput { moveTo(start + Offset(0f, -90f), delayMillis = 16) }
+        composeRule.waitForIdle()
+        val target =
+            composeRule.onNodeWithTag(com.riffle.app.launcher.HOME_REMOVE_TARGET_TEST_TAG)
+                .fetchSemanticsNode().boundsInRoot.center
+        mainRoot().performTouchInput {
+            moveTo(target, delayMillis = 16)
+            up()
+        }
+        composeRule.waitForIdle()
+
+        assertEquals(
+            actions.toString(),
+            listOf(LauncherShellAction.RemoveDockShortcut(pinned[0].id)),
+            actions.filterIsInstance<LauncherShellAction.RemoveDockShortcut>(),
         )
     }
 
@@ -143,6 +186,7 @@ class DockPinnedDragTest {
         holdThenDrag(start, listOf(start + Offset(0f, -60f), Offset(start.x, 2f)))
 
         assertTrue(actions.toString(), actions.none { it is LauncherShellAction.MoveDockItemToHome })
+        assertTrue(actions.toString(), actions.none { it is LauncherShellAction.DropExternalHomeItem })
         assertTrue(actions.toString(), actions.none { it is LauncherShellAction.MoveDockShortcutToIndex })
     }
 

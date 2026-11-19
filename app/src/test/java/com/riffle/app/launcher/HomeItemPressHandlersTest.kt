@@ -53,4 +53,28 @@ class HomeItemPressHandlersTest {
 
         assertEquals(listOf("shortcut context menu", "folder context menu"), events)
     }
+
+    @Test
+    fun editingTapTogglesTheSelectionWhenTheGridOffersOne() {
+        val events = mutableListOf<String>()
+
+        homeShortcutPressHandlers(
+            isEditing = true,
+            onShowContextMenu = { events += "shortcut context menu" },
+            onLaunch = { events += "launch" },
+            onToggleSelection = { events += "toggle shortcut" },
+        ).also { handlers ->
+            handlers.onTap()
+            handlers.onLongPress()
+        }
+        homeFolderPressHandlers(
+            isEditing = true,
+            onShowContextMenu = { events += "folder context menu" },
+            onOpenFolder = { events += "open folder" },
+            onToggleSelection = { events += "toggle folder" },
+        ).onTap()
+
+        // The long press is still the menu.
+        assertEquals(listOf("toggle shortcut", "shortcut context menu", "toggle folder"), events)
+    }
 }

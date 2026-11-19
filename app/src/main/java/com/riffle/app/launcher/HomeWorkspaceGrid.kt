@@ -46,11 +46,12 @@ import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.LauncherItem
+import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.WidgetItem
 
-@Suppress("LongMethod")
+@Suppress("LongMethod", "CyclomaticComplexMethod")
 @Composable
 internal fun WorkspaceGrid(
     page: LauncherPage,
@@ -144,7 +145,12 @@ internal fun WorkspaceGrid(
                                     cellSizePx = cellSizePx,
                                     page = page,
                                     visibleItem = visibleItem,
-                                    isDragSource = source != null,
+                                    isDragSource =
+                                        source != null ||
+                                            (
+                                                activeDragSession?.group?.any { it.id == visibleItem?.id } == true &&
+                                                    visibleItem?.id != null
+                                            ),
                                     landing = landing,
                                     willMakeFolder =
                                         activeDragSession?.plan?.dropOn.let { it != null && it == visibleItem?.id },
@@ -153,6 +159,7 @@ internal fun WorkspaceGrid(
                                             ?.takeIf { preview -> preview.targetPageId == page.id }
                                             ?.takeIf { preview -> preview.cell == cell },
                                     isEditing = gridState.isEditing,
+                                    selection = gridState.selection,
                                     presentation = presentation,
                                     appIconLoader = appIconLoader,
                                     actions = actions,
@@ -234,6 +241,7 @@ private fun RowScope.HomeGridCell(
     willMakeFolder: Boolean,
     widgetPickerDragPreview: WidgetPickerDragPlacementPreview?,
     isEditing: Boolean,
+    selection: Set<LauncherItemId>,
     presentation: HomeGridPresentation,
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
@@ -324,6 +332,8 @@ private fun RowScope.HomeGridCell(
                                     isEditing = isEditing,
                                     isDragSource = isDragSource,
                                     willStack = willMakeFolder && folderState.armed,
+                                    isSelected = item.id in selection,
+                                    selection = selection,
                                 ),
                             presentation = presentation,
                             appIconLoader = appIconLoader,
@@ -374,8 +384,10 @@ private fun HomeGridItem(
                         cellSizePx = state.cellSizePx,
                         grid = state.grid,
                         pageItems = state.pageItems,
+                        selection = state.selection,
                     ),
                 isEditing = state.isEditing,
+                isSelected = state.isSelected,
                 isDragSource = state.isDragSource,
                 modifier = state.dragSourceModifier,
                 presentation =
@@ -402,8 +414,10 @@ private fun HomeGridItem(
                             cellSizePx = state.cellSizePx,
                             grid = state.grid,
                             pageItems = state.pageItems,
+                            selection = state.selection,
                         ),
                     isEditing = state.isEditing,
+                    isSelected = state.isSelected,
                     presentation =
                         HomeFolderPresentation(
                             notificationCount = presentation.notificationGroupsByApp.notificationCountFor(item),
@@ -482,6 +496,7 @@ private fun HomeShortcut(
     shortcut: AppShortcutItem,
     dragState: HomeItemDragState,
     isEditing: Boolean,
+    isSelected: Boolean,
     isDragSource: Boolean,
     modifier: Modifier,
     presentation: HomeShortcutPresentation,
@@ -499,6 +514,7 @@ private fun HomeShortcut(
             isEditing = isEditing,
             onShowContextMenu = { isContextMenuExpanded.value = true },
             onLaunch = { actions.onAction(shortcut.launchAction()) },
+            onToggleSelection = { actions.onAction(LauncherShellAction.ToggleHomeSelection(shortcut.id)) },
         )
     val longClickLabel =
         if (isEditing) {
@@ -517,11 +533,13 @@ private fun HomeShortcut(
                         interactionSource = pressInteractionSource,
                         policy = pressMotionPolicy,
                     )
+                    .selectionSemantics(isEditing, isSelected)
                     .combinedClickable(
                         enabled = true,
                         interactionSource = pressInteractionSource,
                         indication = pressIndication,
                         onClick = pressHandlers.onTap,
+                        onClickLabel = selectionClickLabel(isEditing, isSelected),
                         onLongClickLabel = longClickLabel,
                     )
                     .homeItemDrag(
@@ -557,6 +575,8 @@ private fun HomeShortcut(
                         count = presentation.notificationCount,
                         modifier = Modifier.align(Alignment.TopEnd),
                     )
+                } else if (isSelected) {
+                    SelectionBadge(modifier = Modifier.align(Alignment.TopEnd))
                 }
             }
             WallpaperReadableLabel(
@@ -585,6 +605,8 @@ internal data class HomeGridState(
     val selectedPageIndex: Int,
     val dragSession: HomeDragSession?,
     val widgetPickerDragPreview: WidgetPickerDragPlacementPreview? = null,
+    /** The ticked apps and folders of the page being edited. */
+    val selection: Set<LauncherItemId> = emptySet(),
 )
 
 internal data class HomeGridItemState(
@@ -599,6 +621,9 @@ internal data class HomeGridItemState(
     val isDragSource: Boolean,
     /** Whether a widget held over this one would make a stack with it, after the hold: it wears the outline. */
     val willStack: Boolean = false,
+    /** Whether this item is ticked (multi-select in Edit page), and every ticked item of the page. */
+    val isSelected: Boolean = false,
+    val selection: Set<LauncherItemId> = emptySet(),
 ) {
     val dragSourceModifier: Modifier = Modifier
 }

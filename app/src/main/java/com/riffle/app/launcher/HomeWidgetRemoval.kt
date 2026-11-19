@@ -27,6 +27,13 @@ internal fun HomeLayout.selectedPageHostedWidgetIdsForItem(itemId: LauncherItemI
         ?.hostIds
         .orEmpty()
 
+/** The host ids of the widget [itemId] on the selected page, else on any page (the page a drop removed it from). */
+internal fun HomeLayout.hostedWidgetIdsForItem(itemId: LauncherItemId): List<HostedWidgetId> =
+    selectedPageHostedWidgetIdsForItem(itemId).ifEmpty {
+        pages.asSequence().flatMap { it.items.asSequence() }.filterIsInstance<WidgetItem>()
+            .firstOrNull { it.id == itemId }?.hostIds.orEmpty()
+    }
+
 internal fun HomeLayout.selectedPageHostedWidgetIds(): List<HostedWidgetId> =
     selectedPage.items
         .filterIsInstance<WidgetItem>()

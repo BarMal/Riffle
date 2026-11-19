@@ -70,6 +70,7 @@ private fun AppDrawerIcon(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .libraryHomeDrag(state.app, state.homeDrag) { isMenuExpanded.value = false }
                 .combinedClickable(
                     onClick = { onAction(LauncherShellAction.LaunchApp(state.app.identity)) },
                     onLongClick = {
@@ -146,4 +147,5 @@ internal fun InstalledApp.drawerRowState(
                 },
         showInlineActions = showInlineActions,
         haptics = context.haptics,
+        homeDrag = context.homeDragFor(this),
     )

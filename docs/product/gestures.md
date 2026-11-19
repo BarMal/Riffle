@@ -149,9 +149,10 @@ The Dock has two gestures along the axis across its run, in opposite directions 
   the Dock lifts it and reorders the run, with the same scale and shadow lift the edit mode had; the run scrolls at its ends
   while the finger is held there. Hold without moving: the item's menu opens (and stays), as today. Hold, then move past
   touch slop: the menu closes and the item is dragged (`HoldMenuRule`, the rule the Home drag and the scrub share; the
-  Dock closes menus through `DockChoiceState.dismissMenus`). Dragged away from the Dock's edge by more than its own size
-  and dropped on a Home page it is **moved** (not copied) to the free cell under the finger, else to the page's first free
-  cell; dropped where no Home page lies under the finger it returns. A Home item dropped on the Dock is **moved** into it
+  Dock closes menus through `DockChoiceState.dismissMenus`). Carried onto Home it is a Home drag (ADR 0003, Amendment 15;
+  "Dragging on Home", "To and from the Dock"): dropped on a Home page it is **moved** (not copied) to the cell under the
+  finger, with the push ring, the folder hold and the spill; dropped where no Home page, Dock or Remove target lies under
+  the finger it returns. A Home item dropped on the Dock is **moved** into it
   at the slot it hovers, between the pinned items whose centres the finger has passed (`dockInsertionIndexAmong`), under
   the existing capacity rule (a full Dock refuses and the item stays). The drag sits on the icon, inside its click handling
   (`LocalDockSlotDrag`): a tap detector with a long-click consumes the press after the hold, which would end a drag held
@@ -430,7 +431,12 @@ means no default binding, so nothing happens unless the user binds the gesture.
 | Grid / workspace | 1-finger horizontal | Page pager (owns) | – |
 | Widget stack, dots strip | 1-finger along the stack's axis (across the pager's) | **Stack switch** (owns): one widget on; a fling moves one at most | the Next widget and Previous widget actions |
 | Widget stack, body, Riffle's own widget shown | 1-finger along the stack's axis | Stack switch (owns) | same |
-| Widget stack, body, platform widget shown | 1-finger | The widget's (or Home's, where the widget takes nothing): the stack does not claim it | same |
+| Widget stack, body, platform widget shown | 1-finger tap, swipe or scroll | The widget's (or Home's, where the widget takes nothing): the stack does not claim it and Home's layer does not cover it | same |
+| Widget stack or lone widget, platform widget shown | long-press held still | Home lifts it and opens its menu (watched from the initial pass; nothing consumed before) | same |
+| Hosted platform widget | tap, scroll | The widget's own (Home's layer is not over it) | same |
+| Library, app | long-press, then move past the drag distance | Dismisses the app's menu and carries the app to Home as a new item (owns) | – |
+| Home, Remove target | drop | Removes the lifted item (a stack asks first); a group asks once | – |
+| Home, Edit page, app or folder | tap | Ticks or unticks it (multi-select); long-press is still its menu | – |
 | Grid / workspace | 1-finger vertical | Home (up: unbound, down: Search, which opens the Library with its field focused); a swipe that starts on a stack and moves along its axis is the stack's | – |
 | Grid / workspace | long-press + drag | Item drag (owns) | – |
 | Search results (card stack) | tap | A strip with quick actions or a notification comes to the front; a strip with only a name opens; the front card opens | Enter and the IME's search action open the front card |
@@ -524,8 +530,8 @@ outline of its span); the lifted icon follows the finger, slightly enlarged, abo
 
 - **Push ring.** Around the finger there is a tight ring (0.75 cell by default). An app whose cell centre is inside the ring
   but outside its dead zone is pushed to the nearest free cell away from the finger (whole spans for widgets, never off the
-  page; a full page refuses the push and the item stays and blocks; no overflow to another page, as a collision is rejected
-  today). Pushed items are a preview: moving away puts them back, and nothing is committed until the drop. The ring has
+  page; a full page refuses the push and the item stays and blocks, and the drop then spills: see "Spill when the page is
+  full"). Pushed items are a preview: moving away puts them back, and nothing is committed until the drop. The ring has
   hysteresis (an item already pushed stays pushed 0.12 cell further out) and one light detent when the pushed set changes.
 - **Dead zone = drop on top.** The centre of another app's cell (0.30 cell by default) is a dead zone: it is not pushed; after
   the folder hold (250 ms) it shows "will make a folder" (the target icon scales down inside a folder outline). Dropping
@@ -541,8 +547,12 @@ outline of its span); the lifted icon follows the finger, slightly enlarged, abo
   trailing edge on the last page (which has items), the drag offers an empty page after it (`HomeDragPages`); it is created
   for the drag, kept when the item is dropped on it and discarded (`DiscardEmptyHomePage`) when the drag is cancelled or
   ends elsewhere. The page dots show the page the drag is over.
-- **To and from the Dock.** An app or folder dragged below the grid onto the Dock is pinned at the slot it hovers; a pinned
-  item dragged out is placed on the Home page and cell under the finger (see "Pinned items" above). Both are moves.
+- **To and from the Dock.** An app or folder dragged below the grid onto the Dock is pinned at the slot it hovers (the
+  Dock's capacity rule decides whether it fits). A pinned item dragged in the Dock wears the same ghost treatment (the
+  outline at the slot it would take, and the dimmed icon in its slot while the finger is away) and, once the hold has
+  moved, Home carries the drag: the lifted item follows the finger, and over Home's pages it gets the push ring, the
+  folder hold, the spill and the Remove target like any Home drag (`HomeExternalDrag`; a release on Home is
+  `DropExternalHomeItem`). Released over the Dock it is the Dock's own reorder. Both directions are moves.
 - **Across pages.** After a page turn the dead zone works on the new page as on the first: a drop on top of one of its
   items moves the dragged item to that page's first free cell and makes the folder there (or adds it to the folder); a
   full page refuses and the item stays. The suggested folder name is a string resource.
@@ -555,7 +565,43 @@ outline of its span); the lifted icon follows the finger, slightly enlarged, abo
   (another page) the item just lands.
 - **Frame stability.** Composition never reads the finger's place: the lifted icon and the edge hold read it in the layout
   phase, and a cell recomposes only when its own item, landing marker or folder state changes.
-- **Cancel.** A drop with no valid landing (a blocker that cannot move) does nothing: the item stays where it was.
+- **Spill when the page is full.** A drop whose landing cell is held by items the push cannot move (the page is full)
+  no longer does nothing. The displaced app or folder goes to the first free cell of the next Home page, and the dropped
+  item takes the cell; when a widget or a stack is in the way nothing is displaced (a widget or stack is never moved
+  unless it is the dragged item) and the dropped item itself goes to the next page. With no room on any later page a new
+  page is added after the last Home page. Nothing is lost (`HomeSpill`, `:core:domain`; the plan names the cell as
+  `HomeDragPlan.spillLanding`). Holding at the trailing edge on the last page already offers an empty page to drop on
+  (see "Edges").
+- **Drag from the Library.** In every Library View (Categories, A to Z, Grid, Paged) a long-press on an app opens its menu
+  as before; moving past the drag distance (12 dp by default, Developer options > Drag tuning) dismisses the menu, hides
+  the Library and carries the app as a Home drag of a **new** item: the lifted icon, the push ring, the folder hold, the
+  edge page turns and a drop on the Dock (the app is added to the Dock) all work. Released without moving, the menu stays.
+  A drop outside the grid, the Dock and Remove adds nothing; the Library is closed either way. An app that Home already
+  shows is not offered (the rule "Add to Home" has: "Added to Home"); work and private apps follow what Add to Home allows.
+  Not offered while the Library is over the Stream (no Home is showing). The press is watched from the initial pass, so the
+  tap, the menu and the list's scroll are untouched until the drag starts.
+- **Drop to remove.** While anything on Home or in the Dock is lifted a glass **Remove** target (56 dp high, at least
+  144 dp wide) shows at the top of the screen (at the bottom when the Dock is on the top edge), grows while the finger is
+  over it and ticks once on entering. Dropping on it removes the item exactly as the menu's "Remove from Home" does: no
+  confirmation for an app, a shortcut, a folder or a widget (as the menu has none), the stack asks first, and there is no
+  Undo (the menu has none); a Dock item is unpinned. Nothing is uninstalled. The target is not offered for a Library app
+  (it is not on Home). It is drawn in the draw phase: moving recomposes nothing and entering it recomposes it once.
+- **Multi-select in Edit page.** In "Edit page" a tap on an app or folder ticks it (a check badge; the selection state is
+  announced; the bar says "N selected"); the bar offers **Select all on this page**, **Clear**, **Remove from Home**
+  (asked once, with an Undo in a snackbar) and **Make a folder** (apps only), so nothing needs dragging. Dragging any
+  ticked item lifts the group as one stacked ghost with the count: it drops from the drop cell onward in reading order
+  (spilling to the next pages as above), into a folder as every app when it is dropped on one (a selection that holds a
+  folder cannot be dropped into one), and on Remove it asks once (the same confirmation and Undo). The ticked items
+  stay as dimmed ghosts where they were. Widgets and stacks are not selectable. The long press on an item is still its
+  menu. A selection only counts on the page being edited and goes with the mode (`HomeSelection`, `:core:domain`).
+  There is no "Move to page" action because Home has no page picker.
+- **Hosted platform widgets keep their touches.** A platform widget (alone or inside a stack) gets its taps and its own
+  scrolls: Home's gesture layer used to cover it, so its view received no touches at all (`HostedWidgetTapTest`). Home
+  now watches the press from the initial pass, consuming nothing until it has been held still for the long-press time,
+  which still lifts it and opens its menu; a tap, a swipe or a scroll is the widget's. While editing, the gesture layer
+  covers the widget again (the handles and the lift need it).
+- **Cancel.** A drop with no valid landing (the item cannot fit any page, or no page is under it) does nothing: the item
+  stays where it was.
 
 ## Widget stacks
 
@@ -577,7 +623,8 @@ Home only: the Dock and its panel hold single widgets, and a drop there is not o
   stack when it starts on the **dots strip** (a 48 dp wide target along the edge, always), or **anywhere on the stack
   while the shown widget is one of Riffle's own** (they never scroll). While the shown widget is a **platform widget**
   the body is not the stack's: such a widget may scroll along the same axis, and nothing in a provider says whether it
-  does, so it keeps its swipes and the stack switches only from the strip. The strip takes touches only in that case, so
+  does, so it keeps its swipes and its taps (Home's gesture layer is no longer over it) and the stack switches only from
+  the strip. The strip takes touches only in that case, so
   over a Riffle widget its dots are drawn and a tap goes through to the widget. A drag that starts on the stack and moves
   along its axis is not Home's down-swipe (Search); a long press on the strip or the body is still the stack's lift and
   menu. There is a non-gesture route for everything (below).

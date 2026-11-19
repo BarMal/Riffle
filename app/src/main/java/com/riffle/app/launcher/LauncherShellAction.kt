@@ -258,7 +258,11 @@ sealed interface LauncherShellAction {
         val filter: AppDrawerProfileFilter,
     ) : LauncherShellAction
 
-    data class RemoveHomeShortcut(val itemId: LauncherItemId) : LauncherShellAction
+    /** Takes the item off Home; [pageId] names its page when it is not the selected one (a drop on Remove). */
+    data class RemoveHomeShortcut(
+        val itemId: LauncherItemId,
+        val pageId: LauncherPageId? = null,
+    ) : LauncherShellAction
 
     data class CreateEmptyHomeFolder(
         val label: String,
@@ -343,6 +347,50 @@ sealed interface LauncherShellAction {
         val dropOnItemId: LauncherItemId? = null,
         /** The localized name a folder made by this drop starts with when no shared category names it. */
         val folderLabel: String? = null,
+        /** The page is full and the push cannot make room: the displaced item goes to the next page (HomeSpill). */
+        val spill: Boolean = false,
+    ) : LauncherShellAction
+
+    /**
+     * The drop of a Home drag that began outside the pages: [source] (an app of the Library, which is added as a new
+     * item, or an item of the Dock, which moves) lands at [cell] on [targetPageId] after [pushed] neighbours moved
+     * aside, spilling to the next page when the page is full, or (with [dropOnItemId]) joins that item in a folder.
+     */
+    data class DropExternalHomeItem(
+        val source: ExternalHomeDragSource,
+        val targetPageId: LauncherPageId,
+        val cell: GridCell,
+        val pushed: Map<LauncherItemId, GridCell> = emptyMap(),
+        val dropOnItemId: LauncherItemId? = null,
+        val folderLabel: String? = null,
+    ) : LauncherShellAction
+
+    /** "Edit page": a tap on an app or folder ticks or unticks it. */
+    data class ToggleHomeSelection(val itemId: LauncherItemId) : LauncherShellAction
+
+    /** "Edit page": ticks every app and folder of the page. */
+    data object SelectAllOnHomePage : LauncherShellAction
+
+    /** "Edit page": unticks everything. */
+    data object ClearHomeSelection : LauncherShellAction
+
+    /** Asks before the ticked items come off Home (the answer is [RemoveSelectedHomeItems]); from the bar or a drop. */
+    data object ConfirmRemoveSelectedHomeItems : LauncherShellAction
+
+    /** The ticked items off Home, together. */
+    data object RemoveSelectedHomeItems : LauncherShellAction
+
+    /** The ticked apps made one folder, named [folderLabel] unless their shared category names it. */
+    data class MakeFolderOfSelected(val folderLabel: String? = null) : LauncherShellAction
+
+    /**
+     * The drop of the ticked items dragged together: they land from [cell] of [targetPageId] onward in reading order
+     * (spilling to the next pages), or, with [dropOnItemId], join that folder.
+     */
+    data class DropHomeGroup(
+        val targetPageId: LauncherPageId,
+        val cell: GridCell,
+        val dropOnItemId: LauncherItemId? = null,
     ) : LauncherShellAction
 
     data class MoveHomeItemToPage(

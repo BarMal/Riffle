@@ -101,6 +101,18 @@ internal class HomeDockHostState {
      */
     var homeDropAt: ((Offset) -> HomeDropTarget?)? = null
 
+    /**
+     * What Home offers a surface that starts a drag it cannot finish itself (the Library, the Dock): the drag goes on
+     * as a Home drag. Set by the Home surface while it is composed; null where no Home stands beside.
+     */
+    var externalDrag: HomeExternalDrag? = null
+
+    /** Whether a drag that began outside the pages (the Dock's own) is over the Dock now. */
+    val isExternalDragOverDock: MutableState<Boolean> = mutableStateOf(false)
+
+    /** Whether a Library app is being dragged to Home: the Library draws nothing while it is (it has closed). */
+    val libraryDragActive: MutableState<Boolean> = mutableStateOf(false)
+
     /** Where each pinned item's slot is in root coordinates, by item id: where a Home item dropped on the Dock goes. */
     val pinnedSlotBounds: SnapshotStateMap<LauncherItemId, Rect> = mutableStateMapOf()
 
@@ -129,6 +141,7 @@ internal class HomeDockHostState {
     /** Clears what a content surface wrote, for when it leaves composition mid-gesture. */
     fun clearContentFeedback() {
         isDropTargetHighlighted.value = false
+        isExternalDragOverDock.value = false
         widgetDropPreview.value = null
         isWidgetDragInProgress.value = false
         isHomeDragInProgress.value = false
@@ -302,6 +315,9 @@ internal fun HomeDockHost(
             CompositionLocalProvider(
                 LocalDockChoice provides choice,
                 LocalDockHomeDropAt provides remember(hostState) { { hostState.homeDropAt } },
+                LocalDockExternalDrag provides remember(hostState) { { hostState.externalDrag } },
+                LocalDockExternalOverDock provides
+                    remember(hostState) { { hostState.isExternalDragOverDock.value } },
                 LocalDockPinnedSlotBoundsSink provides
                     remember(hostState) {
                         { id: LauncherItemId, rect: Rect? ->

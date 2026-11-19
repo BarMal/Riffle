@@ -1,10 +1,13 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.home.FolderNaming
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomePageEditRejectionReason
 import com.riffle.core.domain.launcher.home.HomePageEditResult
 import com.riffle.core.domain.launcher.home.HomePageEngine
+import com.riffle.core.domain.launcher.home.HomeSelection
 
+@Suppress("CyclomaticComplexMethod") // One branch per action.
 fun HomePageEngine.applyEdit(
     action: LauncherShellAction,
     layout: HomeLayout,
@@ -43,6 +46,24 @@ fun HomePageEngine.applyEdit(
 
         LauncherShellAction.DeleteSelectedHomePage ->
             applyPageDeletionEdit(layout = layout)
+
+        is LauncherShellAction.ToggleHomeSelection ->
+            HomePageEditResult.Updated(HomeSelection.toggle(layout, action.itemId))
+
+        LauncherShellAction.SelectAllOnHomePage -> HomePageEditResult.Updated(HomeSelection.selectAll(layout))
+
+        LauncherShellAction.ClearHomeSelection -> HomePageEditResult.Updated(HomeSelection.clear(layout))
+
+        // The Home surface asks first and never sends this on; were it sent, it changes nothing.
+        LauncherShellAction.ConfirmRemoveSelectedHomeItems -> HomePageEditResult.Updated(layout)
+
+        LauncherShellAction.RemoveSelectedHomeItems ->
+            HomePageEditResult.Updated(HomeSelection.removeSelected(layout))
+
+        is LauncherShellAction.MakeFolderOfSelected ->
+            HomeSelection.makeFolder(layout, layout.nextFolderId(), action.folderLabel ?: FolderNaming.DEFAULT_LABEL)
+                ?.let { HomePageEditResult.Updated(it) }
+                ?: HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
 
         LauncherShellAction.ToggleSelectedHomePagePinned ->
             togglePagePinned(layout = layout, pageId = layout.selectedPageId)
