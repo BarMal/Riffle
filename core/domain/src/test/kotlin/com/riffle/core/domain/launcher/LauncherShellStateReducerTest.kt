@@ -180,7 +180,8 @@ class LauncherShellStateReducerTest {
     fun navigationActionsSelectShellDestinations() {
         val appDrawerState =
             reducer.navigationActionSelected(
-                currentState = LauncherShellState(firstRunStatus = FirstRunStatus.COMPLETE, launcherSettings = libraryOn),
+                currentState =
+                    LauncherShellState(firstRunStatus = FirstRunStatus.COMPLETE, launcherSettings = libraryOn),
                 action = ShellNavigationAction.OpenAppDrawer,
             )
         val searchState =
@@ -219,7 +220,10 @@ class LauncherShellStateReducerTest {
         val searching = reducer.navigationActionSelected(overStream, ShellNavigationAction.OpenSearch)
         val closed = reducer.navigationActionSelected(searching, ShellNavigationAction.OpenStream)
         val overHome =
-            reducer.navigationActionSelected(LauncherShellState(launcherSettings = libraryOn), ShellNavigationAction.OpenAppDrawer)
+            reducer.navigationActionSelected(
+                LauncherShellState(launcherSettings = libraryOn),
+                ShellNavigationAction.OpenAppDrawer,
+            )
 
         assertTrue(overStream.libraryOverStream)
         assertTrue(searching.libraryOverStream)

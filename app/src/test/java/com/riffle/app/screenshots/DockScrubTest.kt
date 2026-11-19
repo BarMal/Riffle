@@ -68,7 +68,8 @@ class DockScrubTest {
     ) {
         vertical = edge == DockPosition.LEFT || edge == DockPosition.RIGHT
         host = realWiringStreamHost(executor = executor)
-        val state = ScreenshotFixtures.homeState(
+        val state =
+            ScreenshotFixtures.homeState(
                 dockPosition = edge.takeIf { it != DockPosition.BOTTOM },
                 sizing = ScreenshotFixtures.HomeSizing(pins = if (pinned) null else emptyList()),
             )
@@ -76,19 +77,19 @@ class DockScrubTest {
             ScreenshotBackdrop {
                 CompositionLocalProvider(LocalRecompositionProbe provides probe) {
                     HomeDestination(
-                    state = state,
-                    appIconLoader = SolidColorAppIconLoader(),
-                    stream = host,
-                    streamShown = shellShown,
-                    haptics =
-                        object : LauncherHaptics {
-                            override fun longPress() = Unit
+                        state = state,
+                        appIconLoader = SolidColorAppIconLoader(),
+                        stream = host,
+                        streamShown = shellShown,
+                        haptics =
+                            object : LauncherHaptics {
+                                override fun longPress() = Unit
 
-                            override fun perform(event: LauncherHapticEvent) {
-                                ticks += event
-                            }
-                        },
-                    onAction = { action -> sent += action },
+                                override fun perform(event: LauncherHapticEvent) {
+                                    ticks += event
+                                }
+                            },
+                        onAction = { action -> sent += action },
                     )
                 }
             }
@@ -132,7 +133,12 @@ class DockScrubTest {
     private fun visibleTiles(): List<String> {
         val dock = composeRule.onNodeWithTag(HOME_DOCK_PULL_TEST_TAG).fetchSemanticsNode()
         val row = composeRule.onNodeWithTag(DOCK_CONTEXTUAL_ROW_TEST_TAG).fetchSemanticsNode()
-        val start = (if (vertical) row.positionInRoot.y - dock.positionInRoot.y else row.positionInRoot.x - dock.positionInRoot.x)
+        val start =
+            if (vertical) {
+                row.positionInRoot.y - dock.positionInRoot.y
+            } else {
+                row.positionInRoot.x - dock.positionInRoot.x
+            }
         val end = start + (if (vertical) row.size.height else row.size.width)
         return allTiles().filter { tile -> along(tile)?.let { it in start..end } == true }.sortedBy { along(it) }
     }
@@ -272,7 +278,9 @@ class DockScrubTest {
     @Test
     fun scrubbingAcrossThreeTilesRecomposesNoTile() {
         show(pinned = false)
-        val (first, second, third, fourth) = visibleTiles().also { assertTrue("need four tiles: $it", it.size >= 4) }
+        val tiles = visibleTiles().also { assertTrue("need four tiles: $it", it.size >= 4) }
+        val (first, second, third) = tiles
+        val fourth = tiles[3]
         composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(first)).performClick()
         landed(first.lowercase())
         press(along(first)!!)
@@ -308,7 +316,6 @@ class DockScrubTest {
         composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
         composeRule.waitForIdle()
         assertEquals("a drag across the Dock scrubbed", 0, detents())
-        assertTrue(composeRule.onAllNodesWithTag(DOCK_CONTEXTUAL_ROW_TEST_TAG).fetchSemanticsNodes().isNotEmpty() || true)
     }
 
     private companion object {

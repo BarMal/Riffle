@@ -543,9 +543,9 @@ private fun StreamPagesMode(
                             },
                         )
                 },
-        // No touch drag changes the stack: a sideways swipe on a card only dismisses it (or resists), and the Dock is the
-        // handle for moving between stacks (a tap on a tile, or sliding along it). The pager still animates the pages
-        // the Dock and the accessibility actions above ask for.
+        // No touch drag changes the stack: a sideways swipe on a card only dismisses it (or resists), and the Dock is
+        // the handle for moving between stacks (a tap on a tile, or sliding along it). The pager still animates the
+        // pages the Dock and the accessibility actions above ask for.
         userScrollEnabled = false,
         pageSpacing = RiffleSpacing.s,
         beyondViewportPageCount = 0,

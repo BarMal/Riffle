@@ -258,7 +258,7 @@ internal interface DockPullGestureHost {
     /** The selection a slide along the Dock scrubs with; null where nothing can be scrubbed. */
     val scrub: DockChoiceState? get() = null
 
-    /** Whether a touch that landed at [position] (the gesture's coordinates) may scrub: the Stream shows, on the row. */
+    /** Whether a touch that landed at [position] (the gesture's coordinates) may scrub: Stream out, on the row. */
     fun canScrubFrom(position: Offset): Boolean = false
 }
 
@@ -398,25 +398,31 @@ private suspend fun AwaitPointerEventScope.trackScrub(
         while (!finished) {
             awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id }?.consume()
             val change = awaitPointerEvent().changes.firstOrNull { candidate -> candidate.id == down.id }
-            if (change == null) {
-                finished = true
-            } else {
-                tracker.addPosition(change.uptimeMillis, change.position)
-                change.consume()
-                if (change.pressed) {
-                    choice.moved(change.position)
-                } else {
-                    finished = true
-                    val velocity = tracker.calculateVelocity()
-                    val along = if (direction.unitY != 0f) velocity.x else velocity.y
-                    choice.end()
-                    if (abs(along) / density > SCRUB_FLING_MIN_DP_PER_SECOND) choice.flingRowBy?.invoke(along)
-                }
-            }
+            finished = trackScrubStep(change, tracker, choice, direction)
         }
     } finally {
         choice.end()
     }
+}
+
+/** One event of a scrub; true once it has ended. The lift hands the row its inertia when it had speed. */
+private fun AwaitPointerEventScope.trackScrubStep(
+    change: PointerInputChange?,
+    tracker: VelocityTracker,
+    choice: DockChoiceState,
+    direction: DockPullDirection,
+): Boolean {
+    if (change == null) return true
+    tracker.addPosition(change.uptimeMillis, change.position)
+    change.consume()
+    if (change.pressed) choice.moved(change.position)
+    if (!change.pressed) {
+        val velocity = tracker.calculateVelocity()
+        val along = if (direction.unitY != 0f) velocity.x else velocity.y
+        choice.end()
+        if (abs(along) / density > SCRUB_FLING_MIN_DP_PER_SECOND) choice.flingRowBy?.invoke(along)
+    }
+    return !change.pressed
 }
 
 /** Starts the press at [change]: the host and the press learn where it landed and how far it already went. */

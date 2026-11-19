@@ -3,12 +3,9 @@ package com.riffle.app.screenshots
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performTouchInput
 import com.riffle.app.launcher.GridFadeAlphaKey
 import com.riffle.app.launcher.HOME_DOCK_SURFACE_TEST_TAG
 import com.riffle.app.launcher.stream.STREAM_OPEN_CARD_TEST_TAG
-import com.riffle.app.launcher.stream.STREAM_PAGER_TEST_TAG
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.settings.AppsBehindCards

@@ -79,11 +79,13 @@ internal fun DockContextualRow(
     DockChoiceRowRegistration(
         choice = choice,
         scrollBy = { deltaPx -> scrollState.dispatchRawDelta(deltaPx) },
-        // A slide along the Dock scrubs instead of scrolling; the lift hands the row its inertia (the platform's fling).
+        // A slide along the Dock scrubs instead of scrolling; the lift hands the row its inertia (the platform fling).
         flingBy = { velocityPx ->
             flingScope.launch { scrollState.scroll { with(fling) { performFling(-velocityPx) } } }
         },
-        canScrollTo = { direction -> if (direction < 0) scrollState.canScrollBackward else scrollState.canScrollForward },
+        canScrollTo = { direction ->
+            if (direction < 0) scrollState.canScrollBackward else scrollState.canScrollForward
+        },
     )
     RevealForChoosing(
         choice = choice,

@@ -6,9 +6,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import com.riffle.app.launcher.stream.STREAM_PAGER_TEST_TAG
 
 /**
- * Changes the Stream's page the way a screen reader does: with the pager's "Next page" or "Previous page" action. A touch
- * drag no longer changes the stack (a sideways swipe on a card only dismisses it); the Dock's tiles and these actions
- * are what do.
+ * Changes the Stream's page the way a screen reader does: with the pager's "Next page" or "Previous page" action. A
+ * touch drag no longer changes the stack (a sideways swipe on a card only dismisses it); the Dock's tiles and these
+ * actions are what do.
  */
 internal fun ComposeContentTestRule.streamPage(next: Boolean) {
     val label = if (next) "Next page" else "Previous page"

@@ -11,22 +11,22 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsPropertyKey
@@ -39,8 +39,8 @@ import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.dock.DockChoice
 import com.riffle.core.domain.launcher.dock.DockChoiceItem
-import com.riffle.core.domain.launcher.dock.DockScrub
 import com.riffle.core.domain.launcher.dock.DockMotionConstants
+import com.riffle.core.domain.launcher.dock.DockScrub
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -56,6 +56,7 @@ import kotlinx.coroutines.launch
  * read them.
  */
 @Stable
+@Suppress("TooManyFunctions")
 internal class DockChoiceState {
     /** Where the Dock is, read fresh at each use; set by whoever binds the Dock's gesture. */
     class Environment(
@@ -109,8 +110,8 @@ internal class DockChoiceState {
     private var scrubbedKey: String? = null
 
     /**
-     * Whether the ring arriving on [key] is the scrub's own landing (taken once): the row then keeps where the finger or
-     * its fling put it, rather than scrolling back to show a tile the finger was just on.
+     * Whether the ring arriving on [key] is the scrub's own landing (taken once): the row then keeps where the
+     * finger or its fling put it, rather than scrolling back to show a tile the finger was just on.
      */
     fun consumeScrubbed(key: String): Boolean = (scrubbedKey == key).also { if (it) scrubbedKey = null }
 

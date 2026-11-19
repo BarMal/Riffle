@@ -53,7 +53,9 @@ object DockScrub {
         val candidates = items.filter { item -> item.key in selectable }
         val current = candidates.firstOrNull { item -> item.key == currentKey }
         val staysOnCurrent =
-            current != null && positionPx >= current.startPx - hysteresisPx && positionPx <= current.endPx + hysteresisPx
+            current != null &&
+                positionPx >= current.startPx - hysteresisPx &&
+                positionPx <= current.endPx + hysteresisPx
         val under = candidates.firstOrNull { item -> positionPx >= item.startPx && positionPx <= item.endPx }
         return when {
             staysOnCurrent -> currentKey

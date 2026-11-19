@@ -259,7 +259,9 @@ private fun HomeDestinationContent(
                     // Sliding along the Dock: the Stream lands on each tile's page as the finger enters it (the same
                     // landing a tap makes; the latest request wins). Never the tap's "second tap opens the app".
                     scrubPages = { keys -> scrubPagesOf(stream?.dock, keys) },
-                    onScrubTo = { entryKey -> dockDynamicEntryTarget(entryKey)?.let { target -> stream?.focus?.request(target) } },
+                    onScrubTo = { entryKey ->
+                        dockDynamicEntryTarget(entryKey)?.let { target -> stream?.focus?.request(target) }
+                    },
                     // The press's accessible equivalents close an open card before they close the Stream.
                     openCard =
                         OpenCardPress(

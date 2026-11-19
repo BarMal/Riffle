@@ -48,6 +48,7 @@ import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.settings.effectiveFeatures
 
 /** What [rememberHomeDockPullBinding] needs to know about the Stream. */
+@Suppress("LongParameterList")
 internal class StreamPullInputs(
     /** Whether the shell has a Stream; without one the Dock has no dynamic side and every pull opens the Library. */
     val available: Boolean,
@@ -640,9 +641,10 @@ private fun rememberDockPullGestureHost(
             override val scrub: DockChoiceState = choice
 
             override fun canScrubFrom(position: Offset): Boolean {
-                if (!latestStream.value.shown || !canPull || motion.running) return false
-                val row = choice.rowViewport ?: return false
-                return row.contains(dockCoordinates.coordinates?.localToRoot(position) ?: position)
+                val row = choice.rowViewport
+                val free = latestStream.value.shown && canPull && !motion.running
+                val inRoot = dockCoordinates.coordinates?.localToRoot(position) ?: position
+                return free && row != null && row.contains(inRoot)
             }
 
             override val canPress: Boolean

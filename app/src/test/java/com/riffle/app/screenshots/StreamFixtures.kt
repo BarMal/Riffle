@@ -25,9 +25,9 @@ import com.riffle.core.domain.launcher.stream.NotificationContent
 import com.riffle.core.domain.launcher.stream.NotificationMessage
 import com.riffle.core.domain.launcher.stream.RecentAppAction
 import com.riffle.core.domain.launcher.stream.RecentAppContent
+import com.riffle.core.domain.launcher.stream.RelativeAge
 import com.riffle.core.domain.launcher.stream.StreamAppRef
 import com.riffle.core.domain.launcher.stream.StreamContent
-import com.riffle.core.domain.launcher.stream.RelativeAge
 import com.riffle.core.domain.launcher.stream.StreamContentId
 import com.riffle.core.domain.launcher.stream.StreamGroup
 import com.riffle.core.domain.launcher.stream.StreamGroupKeys
