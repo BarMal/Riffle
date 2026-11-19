@@ -11,7 +11,6 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
-import com.riffle.core.domain.launcher.home.LauncherViewMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test
@@ -47,35 +46,6 @@ class LauncherFolderEditReducerTest {
 
         assertSame(state, updated)
         assertEquals(0, repository.saveLayoutSetCount)
-    }
-
-    @Test
-    fun createFolderUsesLibraryModeShortcutsBeforeEditing() {
-        val camera = app("Camera")
-        val calendar = app("Calendar")
-        val repository = CountingHomeLayoutRepository()
-        val state =
-            launcherState(
-                HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY),
-            ).copy(installedApps = listOf(camera, calendar))
-
-        val updated =
-            reducer(repository).reduce(
-                state = state,
-                action =
-                    LauncherShellAction.CreateHomeFolder(
-                        itemIds =
-                            state.homeLayout
-                                .withHomeScreenLibraryApps(listOf(camera, calendar))
-                                .selectedPage
-                                .items
-                                .map { item -> item.id },
-                        label = "Folder",
-                    ),
-            )
-
-        val folder = updated.homeLayout.selectedPage.items.single() as FolderItem
-        assertEquals(listOf(camera.identity, calendar.identity), folder.items.map { item -> item.appIdentity })
     }
 
     private fun reducer(repository: HomeLayoutRepository): LauncherFolderEditReducer =

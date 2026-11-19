@@ -114,14 +114,13 @@ class LauncherShellLayoutSourceOfTruthViewModelTest {
         val repository = InMemoryHomeLayoutRepository(HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard()))
         val first = viewModel(repository)
         first.onHomePageEdited(LauncherShellAction.AddHomePage)
-        first.onHomePageEdited(LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY))
         val before = first.state.value
 
         val recreated = viewModel(repository)
 
         assertEquals(before.homeLayoutSet, recreated.state.value.homeLayoutSet)
         assertEquals(before.homeLayout, recreated.state.value.homeLayout)
-        assertEquals(phoneLibraryKey, recreated.state.value.homeLayoutSet.activeKey)
+        assertEquals(phoneStandardKey, recreated.state.value.homeLayoutSet.activeKey)
     }
 
     private fun viewModel(repository: HomeLayoutRepository): LauncherShellViewModel =

@@ -360,7 +360,7 @@ class PoolHomeActiveWorkspaceTest {
         // Library home, Nova unforked: Library. The detour selects Standard, which is then the stored mode.
         assertEquals(
             LauncherViewMode.HOME_SCREEN_LIBRARY,
-            WorkspaceHome.homeModeFor(nova, phone, pool, LauncherViewMode.HOME_SCREEN_LIBRARY),
+            WorkspaceHome.legacyHomeModeFor(nova, phone, pool, LauncherViewMode.HOME_SCREEN_LIBRARY),
         )
         assertEquals(
             LauncherViewMode.STANDARD_APP_DRAWER,
@@ -369,7 +369,7 @@ class PoolHomeActiveWorkspaceTest {
         // Back to Nova with Standard stored: still Library, and it still borrows the Library arrangement.
         assertEquals(
             LauncherViewMode.HOME_SCREEN_LIBRARY,
-            WorkspaceHome.homeModeFor(nova, phone, pool, LauncherViewMode.STANDARD_APP_DRAWER),
+            WorkspaceHome.legacyHomeModeFor(nova, phone, pool, LauncherViewMode.STANDARD_APP_DRAWER),
         )
         val shownOnStandard = WorkspaceHome.shown(setWith(nova), standard, LauncherViewMode.STANDARD_APP_DRAWER)
         assertEquals(migrated, PoolHomeView.arrangementOf(pool, shownOnStandard.candidates.drop(1)))
@@ -401,7 +401,7 @@ class PoolHomeActiveWorkspaceTest {
         for (stored in LauncherViewMode.entries) {
             assertEquals(
                 LauncherViewMode.HOME_SCREEN_LIBRARY,
-                WorkspaceHome.homeModeFor(nova, phone, decoded, stored),
+                WorkspaceHome.legacyHomeModeFor(nova, phone, decoded, stored),
                 "$stored",
             )
         }

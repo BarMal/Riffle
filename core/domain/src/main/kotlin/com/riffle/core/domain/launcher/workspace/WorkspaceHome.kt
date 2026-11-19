@@ -101,8 +101,9 @@ object WorkspaceHome {
         val workspace = activeWorkspace(set, layoutClass)
         return when {
             key.viewMode != activeMode || workspace == null -> migrated
-            // A migrated workspace of another mode shows once the shell switched to its mode ([homeModeFor]).
-            migratedMode(workspace.id, layoutClass) != null -> migrated
+            // A migrated workspace shows its own arrangement. Its mode no longer has to be the key's: the library mode
+            // is retired (ADR 0003, Amendment 10), so a workspace migrated from it is shown by the Standard key.
+            migratedMode(workspace.id, layoutClass) != null -> HomeShownWorkspace(workspace.id)
             !hasHomeGrid(workspace) -> HomeShownWorkspace(workspace.id)
             else -> HomeShownWorkspace(workspace.id, borrowCandidates(workspace.id, layoutClass))
         }
@@ -129,8 +130,25 @@ object WorkspaceHome {
     }
 
     /**
-     * The mode the standard home shows while [workspace] is active on [layoutClass], derived from [pool] (the
-     * layout's placed items) so it never depends on what a migrated workspace selected before:
+     * The mode the standard home shows while [workspace] is active on [layoutClass] (see [legacyHomeModeFor]), except
+     * that the retired library mode is Standard: one Home, whatever mode the workspace was migrated from (ADR 0003,
+     * Amendment 10). Cards stays, as its own mode.
+     */
+    fun homeModeFor(
+        workspace: Workspace?,
+        layoutClass: HomeLayoutDeviceClass,
+        pool: PlacedItemPool?,
+        current: LauncherViewMode,
+    ): LauncherViewMode =
+        legacyHomeModeFor(workspace, layoutClass, pool, current).let { mode ->
+            if (mode == LauncherViewMode.HOME_SCREEN_LIBRARY) LauncherViewMode.STANDARD_APP_DRAWER else mode
+        }
+
+    /**
+     * The mode a build before the retirement of the library mode showed while [workspace] was active on
+     * [layoutClass], derived from [pool] (the layout's placed items) so it never depends on what a migrated
+     * workspace selected before. The retirement ([LibraryViewRetirement]) reads it to find the device classes whose
+     * Home was the library layout; nothing else should:
      * - a migrated workspace: its own mode;
      * - one that forked: the mode of the migrated arrangement it was forked from ([Arrangement.forkedFrom]);
      * - one that borrows: the mode of the arrangement it borrows ([borrowCandidates]);
@@ -138,7 +156,7 @@ object WorkspaceHome {
      *   the pool holds, in [borrowCandidates] order.
      * Otherwise (no pool, or no migrated arrangement at all) [current].
      */
-    fun homeModeFor(
+    fun legacyHomeModeFor(
         workspace: Workspace?,
         layoutClass: HomeLayoutDeviceClass,
         pool: PlacedItemPool?,

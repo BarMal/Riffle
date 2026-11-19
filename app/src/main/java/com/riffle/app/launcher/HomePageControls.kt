@@ -160,10 +160,6 @@ fun PageOverviewControls(
             widgetViewFactory = widgetViewFactory,
             onAction = onAction,
         )
-        PageTypeControls(
-            selectedType = selectedPage.type,
-            onAction = onAction,
-        )
         PageGridControls(
             selectedGrid = selectedPage.grid,
             onAction = onAction,
@@ -388,41 +384,6 @@ private fun PageGridControls(
                     selected = option.dimensions == selectedGrid,
                     onClick = {
                         onAction(LauncherShellAction.SelectSelectedHomePageGridDimensions(option.dimensions))
-                    },
-                    label = { Text(text = option.label) },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun PageTypeControls(
-    selectedType: LauncherPageType,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Text(
-            text = "Page type",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            pageTypeOptions.forEach { option ->
-                FilterChip(
-                    selected = option.type == selectedType,
-                    onClick = {
-                        onAction(LauncherShellAction.SelectSelectedHomePageType(option.type))
                     },
                     label = { Text(text = option.label) },
                 )
@@ -1039,11 +1000,6 @@ private val PageIndicatorHandleSettleSpec: AnimationSpec<Float> = RiffleMotion.s
 
 private fun pageOverviewLabel(index: Int): String = "Page ${index + 1}"
 
-internal data class PageTypeOption(
-    val label: String,
-    val type: LauncherPageType,
-)
-
 internal data class PageGridDimensionOption(
     val label: String,
     val dimensions: GridDimensions,
@@ -1082,20 +1038,6 @@ internal fun pageGridDimensionOptions(selectedGrid: GridDimensions): List<PageGr
     )
         .filter { option -> option.dimensions.columns >= 1 && option.dimensions.rows >= 1 }
         .distinctBy { option -> option.dimensions }
-
-internal val pageTypeOptions: List<PageTypeOption> =
-    listOf(
-        PageTypeOption("Classic", LauncherPageType.Home),
-        PageTypeOption("All apps", LauncherPageType.AllApps),
-        PageTypeOption("Today", LauncherPageType.Generated(GeneratedLauncherPageKind.TODAY)),
-        PageTypeOption("Category", LauncherPageType.Generated(GeneratedLauncherPageKind.CATEGORY)),
-        PageTypeOption("App", LauncherPageType.Generated(GeneratedLauncherPageKind.APP)),
-        PageTypeOption("Work", LauncherPageType.Generated(GeneratedLauncherPageKind.WORK)),
-        PageTypeOption("Personal", LauncherPageType.Generated(GeneratedLauncherPageKind.PERSONAL)),
-        PageTypeOption("Favourites", LauncherPageType.Generated(GeneratedLauncherPageKind.FAVOURITES)),
-        PageTypeOption("Frequent", LauncherPageType.Generated(GeneratedLauncherPageKind.FREQUENTLY_USED)),
-        PageTypeOption("Cards", LauncherPageType.Generated(GeneratedLauncherPageKind.NOTIFICATION_CARDS)),
-    )
 
 internal val LauncherPageType.pageOverviewTypeLabel: String
     get() =

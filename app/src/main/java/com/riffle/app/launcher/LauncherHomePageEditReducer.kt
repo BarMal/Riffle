@@ -21,7 +21,7 @@ internal class LauncherHomePageEditReducer(
     ): LauncherShellState =
         when {
             action is LauncherShellAction.OpenDefaultHome ->
-                state.withDefaultHomeOpened(homeLayoutRepository).withHomeScreenLibraryApps(homeLayoutRepository)
+                state.withDefaultHomeOpened(homeLayoutRepository)
 
             action is LauncherShellAction.LeaveLibrary ->
                 state.withLibraryLeft(
@@ -37,14 +37,14 @@ internal class LauncherHomePageEditReducer(
                     homeLayoutRepository = homeLayoutRepository,
                     viewModeAvailability = viewModeAvailability,
                     templateCatalog = templateCatalog,
-                ).withHomeScreenLibraryApps(homeLayoutRepository)
+                )
 
             state.shouldEditSettingsTargetLayout(action) ->
                 state.withSettingsHomePageEdit(
                     action = action,
                     homePageEngine = homePageEngine,
                     homeLayoutRepository = homeLayoutRepository,
-                ).refreshSettingsGeneratedPageAfterTypeSelection(action, homeLayoutRepository)
+                )
 
             action is LauncherShellAction.SelectLauncherViewMode ->
                 state
@@ -53,7 +53,6 @@ internal class LauncherHomePageEditReducer(
                         homeLayoutRepository = homeLayoutRepository,
                         viewModeAvailability = viewModeAvailability,
                     )
-                    .withHomeScreenLibraryApps(homeLayoutRepository)
 
             action is LauncherShellAction.SelectHomeSurfaceMode ->
                 state
@@ -62,7 +61,6 @@ internal class LauncherHomePageEditReducer(
                         homeLayoutRepository = homeLayoutRepository,
                         viewModeAvailability = viewModeAvailability,
                     )
-                    .withHomeScreenLibraryApps(homeLayoutRepository)
 
             action is LauncherShellAction.SelectHomeLayoutDeviceClass ->
                 state
@@ -72,7 +70,6 @@ internal class LauncherHomePageEditReducer(
                         homeLayoutRepository = homeLayoutRepository,
                         viewModeAvailability = viewModeAvailability,
                     )
-                    .withHomeScreenLibraryApps(homeLayoutRepository)
 
             else ->
                 when (
@@ -85,37 +82,9 @@ internal class LauncherHomePageEditReducer(
                     is HomePageEditResult.Updated ->
                         state
                             .withHomeLayout(result.layout, homeLayoutRepository)
-                            .withHomeScreenLibraryApps(homeLayoutRepository)
-                            .refreshGeneratedPageAfterTypeSelection(action, homeLayoutRepository)
 
                     is HomePageEditResult.Rejected -> state
                 }
-        }
-
-    private fun LauncherShellState.refreshGeneratedPageAfterTypeSelection(
-        action: LauncherShellAction,
-        homeLayoutRepository: HomeLayoutRepository,
-    ): LauncherShellState =
-        if (action is LauncherShellAction.SelectSelectedHomePageType) {
-            withRefreshedGeneratedPages(homeLayoutRepository)
-        } else {
-            this
-        }
-
-    private fun LauncherShellState.refreshSettingsGeneratedPageAfterTypeSelection(
-        action: LauncherShellAction,
-        homeLayoutRepository: HomeLayoutRepository,
-    ): LauncherShellState =
-        if (action is LauncherShellAction.SelectSelectedHomePageType) {
-            val settingsLayout = settingsTargetLayout
-            val refreshedLayout = refreshedGeneratedPages(settingsLayout)
-            if (refreshedLayout == settingsLayout) {
-                this
-            } else {
-                withSettingsTargetLayout(refreshedLayout, homeLayoutRepository)
-            }
-        } else {
-            this
         }
 }
 

@@ -27,7 +27,7 @@ private fun HomeLayout.visibleTo(visibleAppIdentities: Set<AppIdentity>): HomeLa
                 // it is simply reached through the dock rather than through [pages].
                 panel = dock.panel?.visibleTo(visibleAppIdentities),
             ),
-    ).withoutTrailingEmptyLibraryPages()
+    )
 
 private fun LauncherPage.visibleTo(visibleAppIdentities: Set<AppIdentity>): LauncherPage =
     copy(

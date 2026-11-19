@@ -53,7 +53,7 @@ private fun HomeLayout.keepingApps(shouldKeep: (AppIdentity) -> Boolean): HomeLa
                 // shortcut there outlives the app it points at.
                 panel = dock.panel?.keepingApps(shouldKeep),
             ),
-    ).withoutTrailingEmptyLibraryPages()
+    )
 
 private fun LauncherPage.keepingApps(shouldKeep: (AppIdentity) -> Boolean): LauncherPage =
     copy(items = items.mapNotNull { item -> item.keepingApps(shouldKeep) })

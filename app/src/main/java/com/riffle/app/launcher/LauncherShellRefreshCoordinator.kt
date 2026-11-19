@@ -50,15 +50,13 @@ internal class LauncherShellRefreshCoordinator(
         currentState: LauncherShellState,
         notifications: List<LauncherNotification>,
     ): LauncherShellState {
-        val refreshedState =
-            currentState.withNotificationState(
-                notifications = notifications,
-                appNotificationCounter = notificationDependencies.appNotificationCounter,
-                appNotificationGrouper = notificationDependencies.appNotificationGrouper,
-                notificationStaleFilter = notificationDependencies.notificationStaleFilter,
-                nowEpochMillis = notificationDependencies.epochMillisProvider.nowEpochMillis(),
-            )
-        return refreshedState.withRefreshedGeneratedPages(installedAppDependencies.homeLayoutRepository)
+        return currentState.withNotificationState(
+            notifications = notifications,
+            appNotificationCounter = notificationDependencies.appNotificationCounter,
+            appNotificationGrouper = notificationDependencies.appNotificationGrouper,
+            notificationStaleFilter = notificationDependencies.notificationStaleFilter,
+            nowEpochMillis = notificationDependencies.epochMillisProvider.nowEpochMillis(),
+        )
     }
 
     fun refreshWidgetProviders(currentState: LauncherShellState): LauncherShellState =

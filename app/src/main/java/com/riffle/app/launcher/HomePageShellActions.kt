@@ -47,11 +47,9 @@ fun HomePageEngine.applyEdit(
         LauncherShellAction.ToggleSelectedHomePagePinned ->
             togglePagePinned(layout = layout, pageId = layout.selectedPageId)
 
-        is LauncherShellAction.SelectSelectedHomePageType,
         is LauncherShellAction.SelectSelectedHomePageGridDimensions,
         is LauncherShellAction.SelectHomeGridDimensions,
         is LauncherShellAction.SelectHomeGridMargin,
-        is LauncherShellAction.SelectLibraryPageCompaction,
         is LauncherShellAction.SelectHomeLabelBackgroundAlpha,
         is LauncherShellAction.SelectHomeLabelBackgroundVisible,
         is LauncherShellAction.SelectHomeIconSize,
