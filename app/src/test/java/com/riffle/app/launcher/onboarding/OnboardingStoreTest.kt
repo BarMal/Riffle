@@ -1,5 +1,7 @@
 package com.riffle.app.launcher.onboarding
 
+import com.riffle.core.domain.launcher.hints.Hint
+import com.riffle.core.domain.launcher.hints.HintProgress
 import com.riffle.core.domain.launcher.onboarding.OnboardingOrigin
 import com.riffle.core.domain.launcher.onboarding.OnboardingProgress
 import com.riffle.core.domain.launcher.onboarding.OnboardingState
@@ -43,8 +45,30 @@ class OnboardingStoreTest {
     @Test
     fun itHoldsNoItemContent() {
         val text = encodeOnboardingState(OnboardingState(origin = OnboardingOrigin.FRESH_INSTALL, completedRuns = 1))
-        // Changed on purpose: "homeStartChosen" (the Home question was answered) joins the stored keys.
-        assertEquals(setOf("version", "origin", "walkthrough", "completedRuns", "homeStartChosen"), keysOf(text))
+        // Changed on purpose: "homeStartChosen" (the Home question was answered) and "hints" (what the one-time Dock
+        // hints have seen: ids, counts and flags, no content) join the stored keys.
+        assertEquals(
+            setOf("version", "origin", "walkthrough", "completedRuns", "homeStartChosen", "hints"),
+            keysOf(text),
+        )
+    }
+
+    @Test
+    fun theHintProgressSurvivesTheRoundTripAndAnOlderStateReadsAsNothingSeen() {
+        val seen =
+            OnboardingState(
+                origin = OnboardingOrigin.FRESH_INSTALL,
+                hints =
+                    HintProgress(
+                        retired = setOf(Hint.DOCK_PRESS, Hint.DOCK_MENU),
+                        homeVisits = 3,
+                        libraryOpenedElsewhere = true,
+                        lastRetiredVisit = 2,
+                    ),
+            )
+        assertEquals(seen, decodeOnboardingState(encodeOnboardingState(seen)))
+        val older = """{"version":1,"origin":"FRESH_INSTALL","walkthrough":"COMPLETED","completedRuns":1}"""
+        assertEquals(HintProgress(), decodeOnboardingState(older).hints)
     }
 
     @Test

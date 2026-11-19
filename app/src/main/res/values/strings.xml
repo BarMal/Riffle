@@ -59,8 +59,13 @@
     <string name="stream_pair_draft_spoken">New pair. Choose two apps</string>
     <string name="stream_empty_pairs">Open two apps side by side.</string>
     <string name="stream_empty_feeds">No articles yet. Add a feed in Settings.</string>
-    <string name="stream_permission_message">Allow access to show this</string>
-    <string name="stream_permission_action">Allow access</string>
+    <!-- What a section is waiting for: one sentence that says what is gained, and the same "Allow" button each time -->
+    <string name="stream_permission_message">Allow access to show this here.</string>
+    <string name="stream_permission_notifications">Allow notification access to see and act on your notifications here.</string>
+    <string name="stream_permission_media">Allow notification access to see what is playing here and control it.</string>
+    <string name="stream_permission_recents">Allow usage access to list the apps you used lately here.</string>
+    <string name="stream_permission_calendar">Allow calendar access to show today\'s events here.</string>
+    <string name="stream_permission_action">Allow</string>
     <string name="stream_not_connected_tasks">Todoist is not connected, so there are no tasks to show.</string>
     <string name="stream_unavailable">This can\'t be shown right now.</string>
     <string name="stream_off_message">This section is turned off.</string>
@@ -249,6 +254,12 @@
     <string name="dock_live_app_open_action">Open %1$s</string>
     <string name="dock_press_hint">Press the Dock down to see what\'s live</string>
     <string name="dock_press_hint_dismiss">Got it</string>
+    <string name="dock_stream_handle_open">Open the Stream</string>
+    <string name="dock_stream_handle_options">Show Stream handle options</string>
+    <string name="dock_stream_handle_hide">Hide this handle</string>
+    <string name="dock_menu_hint">Touch and hold an app on the Dock for its menu</string>
+    <string name="dock_pull_hint">Pull the Dock up for the Library</string>
+    <string name="dock_scrub_hint">Hold the Dock, then slide along it to change stack</string>
     <string name="dock_live_app_show_in_stream_action">Show %1$s in Stream</string>
     <string name="dock_live_app_open_in_stream_menu">Open in Stream</string>
     <string name="dock_live_app_show_action">Show %1$s</string>
@@ -580,6 +591,9 @@
     <string name="setting_home_hide_navigation_bar_keywords">full screen navigation bar system bars</string>
     <string name="setting_home_set_up_again">Set up Riffle again</string>
     <string name="setting_home_set_up_again_keywords">set up walkthrough onboarding tour first-time</string>
+    <string name="setting_home_show_hints_again">Show hints again</string>
+    <string name="setting_home_show_hints_again_keywords">hints tips tutorial gestures dock help reset teach</string>
+    <string name="settings_show_hints_again_subtitle">Brings back the short tips about the Dock\'s gestures.</string>
     <string name="setting_dock_show">Show the Dock</string>
     <string name="setting_dock_show_keywords">dock visible hide</string>
     <string name="setting_layout_folded_dock_edge">Dock position, folded</string>
@@ -620,6 +634,10 @@
     <string name="setting_dock_background_keywords">dock background opacity</string>
     <string name="setting_dock_grid_spacing">Spacing to the grid</string>
     <string name="setting_dock_grid_spacing_keywords">dock gap spacing grid controls</string>
+    <string name="setting_feature_dock_stream_handle">Show Stream handle</string>
+    <string name="setting_feature_dock_stream_handle_keywords">dock stream handle chevron grab open tap button visible</string>
+    <string name="setting_feature_stream_view_button">Show view button</string>
+    <string name="setting_feature_stream_view_button_keywords">stream show as view button list stack options visible</string>
     <string name="setting_feature_dock_live_apps">Show live apps</string>
     <string name="setting_feature_dock_live_apps_keywords">dock live apps now playing now tile media dynamic side switch on off</string>
     <string name="setting_dock_live_apps">Number of live apps</string>
@@ -843,6 +861,8 @@
     <string name="settings_add_new_apps_subtitle">A newly installed app is placed after the last item on Home. Off keeps it in the Library only.</string>
     <string name="settings_simple_mode_subtitle">Home shows every app, A to Z, and cannot be rearranged; the Stream, live apps and the Library sheet are off. Your arranged Home comes back when you turn it off.</string>
     <string name="settings_feature_stream_subtitle">The actions centre: press the Dock down to see what is live. Off removes the press, the live pages and their shortcuts.</string>
+    <string name="settings_feature_stream_handle_subtitle">A small handle beside the Dock on Home. Tap it to open the Stream; touch and hold it for the Library.</string>
+    <string name="settings_feature_stream_view_button_subtitle">A small button on the Stream that opens the same menu as touching and holding a Dock tile: Show as, Move, Hide.</string>
     <string name="settings_feature_live_apps_subtitle">Apps with something new, and a Now tile while something plays, on the Dock. Off leaves the Dock with your pinned apps.</string>
     <string name="settings_feature_library_subtitle">Every app on pages, reached by pulling away from the Dock. Off removes the pull, the Dock action and the gesture. Search stays.</string>
     <string name="settings_feature_off_in_simple_mode">Off in Simple mode</string>
@@ -997,4 +1017,13 @@
     <string name="settings_layout_apps_behind_both_subtitle">Behind and around: Home stays and fades out under the cards.</string>
     <string name="settings_stream_apps_behind_cards_note">The same setting as in Layout: one value for each way you hold the device.</string>
     <string name="settings_layout_quick_scroll_off_subtitle">The page dots are off, so there is nothing to drag.</string>
+
+    <!-- The way into Settings itself: the Library header, the Library menu and the launcher search -->
+    <string name="settings_open_title">Riffle settings</string>
+    <string name="settings_open_subtitle">Open settings</string>
+    <string name="settings_open_keywords">preferences options configure setup gear riffle</string>
+
+    <!-- App long-press menu: the app's own shortcuts lead it -->
+    <string name="menu_more_shortcuts">More</string>
+    <string name="menu_more_shortcut_actions">More shortcut actions</string>
 </resources>

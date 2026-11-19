@@ -4,46 +4,20 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
+import com.riffle.core.domain.launcher.hints.Hint
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** When the first-run hint shows and where it sits (pure logic; the drawing is in the screenshots package). */
-class DockPressHintTest {
-    private fun show(
-        seen: Boolean = false,
-        streamAvailable: Boolean = true,
-        streamShown: Boolean = false,
-        libraryShown: Boolean = false,
-        motionRunning: Boolean = false,
-        choosing: Boolean = false,
-        simpleMode: Boolean = false,
-    ) = shouldShowDockPressHint(seen, streamAvailable, streamShown, libraryShown, motionRunning, choosing, simpleMode)
-
+/**
+ * Where a hint sits (pure logic; the drawing is in the screenshots package, and when a hint is due is `HintsTest` in
+ * the domain module, which took over the rules this class held for the press hint alone).
+ */
+class DockHintTest {
     @Test
-    fun itNeverShowsInSimpleMode() {
-        assertFalse(show(simpleMode = true))
-        assertTrue(show(simpleMode = false))
-    }
-
-    @Test
-    fun itShowsOnHomeOnceThereIsAStreamAndItHasNotBeenSeen() {
-        assertTrue(show())
-    }
-
-    @Test
-    fun itNeverShowsAgainOnceSeen() {
-        assertFalse(show(seen = true))
-    }
-
-    @Test
-    fun itStaysOutOfTheWayOfTheStreamTheLibraryAMotionAndAChoice() {
-        assertFalse(show(streamShown = true))
-        assertFalse(show(libraryShown = true))
-        assertFalse(show(motionRunning = true))
-        assertFalse(show(choosing = true))
-        assertFalse(show(streamAvailable = false))
+    fun everyHintHasItsOwnSentenceInTheResources() {
+        val ids = Hint.entries.map { hint -> hint.textRes() }
+        assertEquals(ids.size, ids.toSet().size)
     }
 
     private val root = IntSize(1000, 2000)

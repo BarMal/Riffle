@@ -101,6 +101,7 @@ internal fun SettingsStreamPageContent(
     SettingsPostureTabs(state = state, onAction = onAction)
     SettingsSection(title = stringResource(R.string.settings_section_features)) {
         SettingsFeatureSwitchRow(LauncherFeature.STREAM, state.settings.features, onAction)
+        SettingsFeatureSwitchRow(LauncherFeature.STREAM_VIEW_BUTTON, state.settings.features, onAction)
     }
     if (repository == null) {
         SettingsPreviewOffNote()

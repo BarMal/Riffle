@@ -69,6 +69,7 @@ internal fun OnboardingLayer(
                 granted = granted,
                 onAllow = host.launchPermission,
                 askHomeStart = askHomeStart,
+                reducedMotion = state.launcherSettings.motion.reducedMotion,
                 onHomeStart = { start ->
                     host.controller.homeStartChosen()
                     onSeedHome(start)

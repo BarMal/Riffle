@@ -134,6 +134,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SetFeatureEnabled,
         is LauncherShellAction.SetSimpleMode,
         LauncherShellAction.DismissDockPressHint,
+        LauncherShellAction.ShowHintsAgain,
         is LauncherShellAction.SetScreenContentProtection,
         is LauncherShellAction.SelectReturnBehavior,
         is LauncherShellAction.SelectLibraryView,

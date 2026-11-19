@@ -175,8 +175,8 @@ class GlanceWidgetTest {
                 GridSpan(2, 1),
             )
         }
-        composeRule.onNodeWithText("Allow access to show this").assertExists()
-        composeRule.onNodeWithText("Allow access").assertHeightIsAtLeast(48.dp).performClick()
+        composeRule.onNodeWithText("Allow calendar access to show today's events here.").assertExists()
+        composeRule.onNodeWithText("Allow").assertHeightIsAtLeast(48.dp).performClick()
         assertEquals(listOf(listOf(SourceIds.CALENDAR)), accessRequests)
     }
 

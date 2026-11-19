@@ -88,6 +88,11 @@ enum class SettingKey(
         R.string.setting_home_set_up_again,
         R.string.setting_home_set_up_again_keywords,
     ),
+    HOME_SHOW_HINTS_AGAIN(
+        SettingsPage.HOME,
+        R.string.setting_home_show_hints_again,
+        R.string.setting_home_show_hints_again_keywords,
+    ),
     DOCK_SHOW(SettingsPage.DOCK, R.string.setting_dock_show, R.string.setting_dock_show_keywords),
     DOCK_POSITION(SettingsPage.DOCK, R.string.setting_dock_position, R.string.setting_dock_position_keywords),
     DOCK_ICON_SIZE(SettingsPage.DOCK, R.string.setting_dock_icon_size, R.string.setting_dock_icon_size_keywords),
@@ -113,6 +118,11 @@ enum class SettingKey(
         SettingsPage.DOCK,
         R.string.setting_feature_dock_live_apps,
         R.string.setting_feature_dock_live_apps_keywords,
+    ),
+    FEATURE_DOCK_STREAM_HANDLE(
+        SettingsPage.DOCK,
+        R.string.setting_feature_dock_stream_handle,
+        R.string.setting_feature_dock_stream_handle_keywords,
     ),
     DOCK_LIVE_APPS(SettingsPage.DOCK, R.string.setting_dock_live_apps, R.string.setting_dock_live_apps_keywords),
     FLOATING_ENABLED(
@@ -182,6 +192,11 @@ enum class SettingKey(
         SettingsPage.STREAM,
         R.string.setting_feature_stream,
         R.string.setting_feature_stream_keywords,
+    ),
+    FEATURE_STREAM_VIEW_BUTTON(
+        SettingsPage.STREAM,
+        R.string.setting_feature_stream_view_button,
+        R.string.setting_feature_stream_view_button_keywords,
     ),
     STREAM_SECTION_NOW(
         SettingsPage.STREAM,

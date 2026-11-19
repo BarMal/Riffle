@@ -337,6 +337,7 @@ internal fun StandardHome(
                     }
                 homeDragSession.value = planned?.copy(dockIndex = hovered)
                 dockHostState.isDropTargetHighlighted.value = planned?.isOverDock == true
+                dockHostState.isHomeDragInProgress.value = planned != null
             },
             currentDragSession = { homeDragSession.value },
             haptics = interactions.haptics,

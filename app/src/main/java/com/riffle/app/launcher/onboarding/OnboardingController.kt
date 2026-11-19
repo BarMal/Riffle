@@ -1,5 +1,7 @@
 package com.riffle.app.launcher.onboarding
 
+import com.riffle.core.domain.launcher.hints.HintEvent
+import com.riffle.core.domain.launcher.hints.HintProgress
 import com.riffle.core.domain.launcher.home.HomeStart
 import com.riffle.core.domain.launcher.onboarding.Onboarding
 import com.riffle.core.domain.launcher.onboarding.OnboardingPrompt
@@ -46,6 +48,11 @@ internal class OnboardingController(
      */
     val askHomeStart: StateFlow<Boolean> = mutableAskHomeStart.asStateFlow()
 
+    private val mutableHints = MutableStateFlow<HintProgress?>(null)
+
+    /** What the one-time Dock hints have seen and what was done; null until the state is read (no hint shows then). */
+    val hints: StateFlow<HintProgress?> = mutableHints.asStateFlow()
+
     /** The state as last read or written; null before the first read. */
     val current: OnboardingState? get() = state
 
@@ -60,6 +67,7 @@ internal class OnboardingController(
         val (next, prompt) = Onboarding.atLaunch(stored, freshInstall = stored.origin == null && freshInstall())
         if (next != stored) withContext(io) { store.write(next) }
         state = next
+        mutableHints.value = next.hints
         // A set-up opened meanwhile from Settings wins; nothing is shown over it.
         if (prompt == OnboardingPrompt.RUN && mutableSurface.value == OnboardingSurface.None) {
             mutableAskHomeStart.value = !next.homeStartChosen
@@ -100,10 +108,21 @@ internal class OnboardingController(
         mutableSurface.value = OnboardingSurface.None
     }
 
+    /** Something the hints care about happened. Ignored before the state is read: no hint was showing yet. */
+    fun hintEvent(event: HintEvent) {
+        if (state != null) update { current -> Onboarding.hintEvent(current, event) }
+    }
+
+    /** Settings > Show hints again. */
+    fun showHintsAgain() {
+        if (state != null) update(Onboarding::showHintsAgain)
+    }
+
     private fun update(change: (OnboardingState) -> OnboardingState): OnboardingState {
         val before = state ?: store.read()
         val next = change(before)
         state = next
+        mutableHints.value = next.hints
         if (next != before) store.write(next)
         return next
     }
