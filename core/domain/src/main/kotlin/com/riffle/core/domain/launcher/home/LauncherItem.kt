@@ -3,6 +3,7 @@ package com.riffle.core.domain.launcher.home
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.glance.GlanceWidgetKind
+import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 
 sealed interface LauncherItem {
     val id: LauncherItemId
@@ -50,10 +51,19 @@ data class WidgetItem(
     val stack: List<StackedWidget> = emptyList(),
     /** The member a stack shows (the last one shown), an index into [members]. Not stored for a plain widget. */
     val shownIndex: Int = 0,
+    /**
+     * The platform provider this widget was bound to, when known. A placeholder (no host id, see [needsSetUp]) uses it
+     * to run the bind, permission and configuration steps again in place; it is not what makes a bound widget draw.
+     * Null for a glance widget and for a widget whose provider was never recorded.
+     */
+    val provider: WidgetProviderIdentity? = null,
 ) : LauncherItem {
     override fun withPlacement(placement: GridPlacement): LauncherItem = copy(placement = placement)
 
     val isStack: Boolean get() = stack.size > 1
+
+    /** A lone platform widget with no host id (a stack's members say it each for themselves). */
+    val needsSetUp: Boolean get() = !isStack && glance == null && appWidgetId.value == 0
 
     /** This item's widgets in stack order: itself alone when it is a plain widget. */
     val members: List<StackedWidget>
@@ -61,7 +71,7 @@ data class WidgetItem(
             if (isStack) {
                 stack
             } else {
-                listOf(StackedWidget(appWidgetId, label, resizeConstraints, glance))
+                listOf(StackedWidget(appWidgetId, label, resizeConstraints, glance, provider))
             }
 
     /** The member a stack shows now ([shownIndex] kept in range). */
@@ -81,7 +91,12 @@ data class StackedWidget(
     val label: String,
     val resizeConstraints: WidgetResizeConstraints = WidgetResizeConstraints(),
     val glance: GlanceWidgetKind? = null,
-)
+    /** See [WidgetItem.provider]. */
+    val provider: WidgetProviderIdentity? = null,
+) {
+    /** A platform widget with no host id: it could not be bound again (restored, activated, or the provider left). */
+    val needsSetUp: Boolean get() = glance == null && appWidgetId.value == 0
+}
 
 @JvmInline
 value class HostedWidgetId(val value: Int)

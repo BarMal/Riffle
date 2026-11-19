@@ -1303,6 +1303,12 @@
     <string name="home_layout_apps_loading_message">Apps are still loading. Try again in a moment.</string>
     <string name="home_layout_failed_message">That didn\u2019t work. Home is unchanged.</string>
     <string name="widget_not_set_up">Not set up. Add it again from Widgets.</string>
+    <string name="widget_not_set_up_tap">Not set up. Tap to set up.</string>
+    <string name="widget_not_set_up_provider_gone">Its app isn\'t installed. You can remove it.</string>
+    <string name="menu_set_up_widget">Set up widget</string>
+    <string name="widget_set_up_description">Set up %1$s</string>
+    <string name="widget_set_up_failed">Couldn\'t set up %1$s</string>
+    <string name="widget_set_up_provider_gone">%1$s can\'t be set up: its app isn\'t installed</string>
 
     <!-- Backup messages -->
     <string name="backup_message_exported">Backup exported</string>
@@ -1328,10 +1334,10 @@
     <string name="settings_section_reset">Reset</string>
     <string name="setting_about_reset_settings">Reset settings</string>
     <string name="setting_about_reset_settings_keywords">reset settings defaults restore factory clear</string>
-    <string name="settings_reset_settings_subtitle">Puts every setting back to its default. Home and the Dock are not changed.</string>
+    <string name="settings_reset_settings_subtitle">Puts every setting back to its default, including which Stream sections are on and their order. Home and the Dock are not changed.</string>
     <string name="settings_reset_settings_action">Reset</string>
     <string name="settings_reset_dialog_title">Reset settings?</string>
-    <string name="settings_reset_dialog_body">Every setting goes back to its default, and Developer options are hidden again. Kept as they are: Home, the Dock and the Floating dock\u2019s apps, your saved Home layouts, hidden apps, your feeds, calendar feeds and account tokens, and the Stream\u2019s sections.</string>
+    <string name="settings_reset_dialog_body">Every setting goes back to its default, including which Stream sections are on, their order and how each is shown, and Developer options are hidden again. Kept as they are: Home, the Dock and the Floating dock\u2019s apps, your saved Home layouts, hidden apps, and your feeds, calendar feeds and account tokens.</string>
     <string name="settings_reset_dialog_confirm">Reset</string>
     <string name="settings_reset_dialog_cancel">Cancel</string>
     <string name="settings_reset_done">Settings reset</string>

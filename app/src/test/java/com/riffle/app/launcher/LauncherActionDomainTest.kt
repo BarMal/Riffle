@@ -364,6 +364,10 @@ class LauncherActionDomainTest {
                     LauncherShellAction.AddHostedWidgetToStack(itemId, HostedWidgetId(7), "Weather"),
                 ),
                 activity(
+                    "BindHostedWidgetToPlaceholder",
+                    LauncherShellAction.BindHostedWidgetToPlaceholder(itemId, 0, HostedWidgetId(7), "Weather"),
+                ),
+                activity(
                     "AddGlanceWidgetToStack",
                     LauncherShellAction.AddGlanceWidgetToStack(itemId, GlanceWidgetKind.NOW_PLAYING, "Now playing"),
                 ),

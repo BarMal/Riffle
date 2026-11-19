@@ -55,6 +55,7 @@ import com.riffle.app.launcher.diagnostics.pair.PairActivityHub
 import com.riffle.app.launcher.failureMessage
 import com.riffle.app.launcher.fallbackWallpaperSourceAction
 import com.riffle.app.launcher.isLauncherHomeIntent
+import com.riffle.app.launcher.isWidgetProviderGone
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
 import com.riffle.app.launcher.notifications.AndroidNotificationStageActionGateway
 import com.riffle.app.launcher.notifications.launchNotificationListenerSettings
@@ -69,6 +70,8 @@ import com.riffle.app.launcher.rss.startFeedBackgroundSync
 import com.riffle.app.launcher.startScreenContentProtectionSync
 import com.riffle.app.launcher.startSystemUiSync
 import com.riffle.app.launcher.startWallpaperOffsetSync
+import com.riffle.app.launcher.widgetAddFailedText
+import com.riffle.app.launcher.widgetSetUpGoneText
 import com.riffle.app.launcher.widgets.PendingWidgetAddStep
 import com.riffle.app.launcher.widgets.WidgetAddRecoveryResult
 import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
@@ -218,6 +221,7 @@ class MainActivity : ComponentActivity() {
             completeWidgetAdd = shellViewModel::completeWidgetAdd,
             completeGlanceAdd = shellViewModel::completeGlanceWidgetAdd,
             completeGlanceStackAdd = shellViewModel::completeGlanceStackAdd,
+            isProviderGone = { provider -> shellViewModel.state.value.isWidgetProviderGone(provider) },
         )
     }
 
@@ -707,7 +711,10 @@ class MainActivity : ComponentActivity() {
     private fun handleWidgetAddRequest(action: LauncherShellAction.RequestAddWidget) {
         when (val result = widgetAddRequestHandler.handle(action)) {
             LauncherWidgetAddHandlingResult.Cancelled ->
-                Toast.makeText(this, "Widget could not be added", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, widgetAddFailedText(action), Toast.LENGTH_SHORT).show()
+
+            LauncherWidgetAddHandlingResult.ProviderGone ->
+                Toast.makeText(this, widgetSetUpGoneText(action), Toast.LENGTH_SHORT).show()
 
             is LauncherWidgetAddHandlingResult.Completed ->
                 result.message?.let { message -> Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }

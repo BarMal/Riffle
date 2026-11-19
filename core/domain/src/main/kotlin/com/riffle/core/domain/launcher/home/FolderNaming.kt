@@ -20,4 +20,14 @@ object FolderNaming {
         val key = LibraryCategories.keyOf(first)
         return key.takeIf { it != LibraryCategories.OTHER_KEY && it == LibraryCategories.keyOf(second) } ?: fallback
     }
+
+    /** The shared category's label when every one of [apps] has the same one (two or more), otherwise [fallback]. */
+    fun suggestedForAll(
+        apps: List<InstalledApp?>,
+        fallback: String = DEFAULT_LABEL,
+    ): String {
+        if (apps.size < 2 || apps.any { it == null }) return fallback
+        val keys = apps.filterNotNull().map { LibraryCategories.keyOf(it) }.toSet()
+        return keys.singleOrNull()?.takeIf { it != LibraryCategories.OTHER_KEY } ?: fallback
+    }
 }

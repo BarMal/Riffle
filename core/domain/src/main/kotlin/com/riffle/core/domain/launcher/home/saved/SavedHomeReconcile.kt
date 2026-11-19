@@ -235,6 +235,7 @@ object SavedHomeReconciler {
                         m.label,
                         m.resizeConstraints,
                         GlanceWidgets.kindOf(m.provider),
+                        m.provider.takeIf { GlanceWidgets.kindOf(it) == null },
                     )
                 }
             members.forEachIndexed { index, m ->
@@ -251,6 +252,7 @@ object SavedHomeReconciler {
                 resizeConstraints = item.resizeConstraints,
                 placement = at,
                 glance = lead.glance,
+                provider = lead.provider,
                 stack = if (stacked.size > 1) stacked else emptyList(),
                 shownIndex = if (stacked.size > 1) item.shown.coerceIn(0, stacked.lastIndex) else 0,
             )

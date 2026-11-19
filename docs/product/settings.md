@@ -136,6 +136,7 @@ are not, except the product's own nouns, which are always capitalised as the pro
 | Put a widget in a widget stack | Add widget to stack | "Add to stack", "Stack with" |
 | Change the widgets of a stack | Edit stack | "Edit widgets" |
 | Take a widget out of a stack onto Home | Move out to Home | "Unstack", "Move out" |
+| Bind a widget that could not be bound again, in place | Set up widget (its placeholder says "Not set up. Tap to set up.") | "Re-add", "Retry" |
 
 Settings labels follow the same rule ("Show the Dock", "Dock position", "Floating dock", "Hidden apps"). A test
 (`SettingsPagesTest`) holds the page and setting names; the menus' wording is held by `ShortcutContextMenuTest`,
@@ -322,8 +323,20 @@ saved layout belongs to the device class it was saved on.
   go, one page stays (a pinned page stays too). Every item gets a new id.
 - **Widgets.** A live widget with the same provider at the same page, cell and span keeps its host id. The others are
   bound again, with a new host id, only when Android needs no permission prompt and the provider needs no
-  configuration screen; anything else is a placeholder that says "Not set up. Add it again from Widgets." The ids of
-  widgets that leave Home are kept until the Undo window (the snackbar) closes.
+  configuration screen; anything else is a placeholder that keeps the saved provider and says "Not set up. Tap to set
+  up." (see "Setting up a placeholder" below). The ids of widgets that leave Home are kept until the Undo window (the
+  snackbar) closes.
+- **Setting up a placeholder.** A widget that could not be bound (after activating a layout, a late Undo of an import,
+  a backup restore) is a placeholder that keeps its provider (`WidgetItem.provider`, `StackedWidget.provider`; the pool
+  already stored it, and the layout JSON now writes an optional `provider`, read as none from older data). **Tap it**, or
+  **Set up widget** in its menu, or the accessibility action "Set up <name>", or the row's button in Edit stack: it runs
+  the widget picker's own bind, permission prompt and configuration transaction (`WidgetAddTarget.HOME_PLACEHOLDER`, the
+  same pending-add record, persisted with the item and member so it survives the process dying during the system's
+  screen) and, on success, the placeholder becomes the live widget in place: same cell, span, stack membership, position
+  and shown widget (`WidgetStackEngine.bindPlaceholder`). Cancelled or failed: it stays a placeholder with "Widget setup
+  was cancelled. Try again." A placeholder with no known provider keeps "Not set up. Add it again from Widgets." and
+  offers only Remove; one whose app is not installed says "Its app isn't installed. You can remove it." and offers only
+  Remove, with "<name> can't be set up: its app isn't installed" when asked.
 - **Storage:** its own DataStore file `riffle_saved_home_layouts`, one versioned JSON document (version 1; each layout's
   pages and items are a pool value, so the pool's safe decoding applies; malformed entries are skipped; a newer version
   is read as far as it is understood and kept once). Included in backup export and import (`savedHomeLayouts`), and in
@@ -342,7 +355,10 @@ made by a newer version, or damaged; a file that cannot be read keeps the generi
 ## About > Reset settings
 
 `SettingsReset` (`:core:domain`): every `LauncherSettings` value returns to its default, including Developer options
-(hidden again), Simple mode and the hints seen. Kept: the feed list and the Floating dock's apps (inside
-`LauncherSettings`), and everything stored elsewhere: Home, the Dock, saved Home layouts, hidden apps, calendar feeds,
-the Tasks token and the Stream's sections. The confirmation lists these exactly; "Settings reset" offers Undo, which
-saves the previous settings back unchanged.
+(hidden again), Simple mode and the hints seen. **The Stream's sections go back too**: they live in their own store
+(`CachedStreamLayoutRepository`, apart from the settings), so the Reset row resets it in the same step: every posture's
+layout returns to `StreamLayout.DEFAULT` (which sections are on, their order, how each is shown, and the per-section
+options such as Now > Show up next). Kept: the feed list and the Floating dock's apps (inside `LauncherSettings`), and
+everything else stored elsewhere: Home, the Dock, saved Home layouts, hidden apps and exclusions, calendar feeds and the
+Tasks token. The confirmation lists these exactly; "Settings reset" offers Undo, which puts the previous settings back
+unchanged and, with them, the Stream's layouts exactly as they were (`restoreAll` of what `resetAll` returned).

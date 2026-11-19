@@ -3,6 +3,7 @@ package com.riffle.app.screenshots
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -111,11 +112,96 @@ class MediaQueueStackTest {
     }
 
     @Test
+    fun aReadOnlyQueueCardHasNoPlayAndIsNotAButtonButIsStillSpoken() {
+        show(MediaQueueFixtures.readOnly, capture = false)
+        stackAction("Next card")()
+        composeRule.onNodeWithText("Second Track").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Play").assertCountEquals(0)
+        composeRule.onNodeWithText("Up next").assertIsDisplayed()
+        composeRule.captureScreen()
+        val card =
+            SemanticsMatcher("the read-only queue card") { node ->
+                node.config.getOrNull(SemanticsProperties.ContentDescription).orEmpty()
+                    .any { it == "Up next, Second Track by Example Band" }
+            }
+        val config = composeRule.onNode(card).fetchSemanticsNode().config
+        val labels = config.getOrNull(SemanticsActions.CustomActions).orEmpty().map { it.label }
+        assertTrue("no Play: $labels", "Play" !in labels)
+        // The track's header is not a button either: pressing it does nothing.
+        composeRule.onNodeWithText("Second Track").performClick()
+        assertEquals(emptyList<Pair<StreamContent, StreamAction>>(), actions)
+    }
+
+    @Test
     fun theOpenPlayerCardNoLongerHoldsAnUpNextList() {
         show(MediaQueueFixtures.withQueue, capture = false)
         composeRule.onNodeWithText("Morning Light").performClick()
         composeRule.waitForIdle()
         composeRule.onAllNodesWithText("Up next").assertCountEquals(0)
+    }
+
+    @Test
+    fun whenTheTrackAdvancesTheStackStaysOnTheCardTheUserBrowsedTo() {
+        val cards = mutableStateOf(MediaQueueFixtures.withQueue)
+        showLive(cards)
+        stackAction("Next card")()
+        stackAction("Next card")()
+        composeRule.onNodeWithText("Third Track").assertIsDisplayed()
+
+        // The track advances: the second track is playing now, the rest moved up and a new one joined the queue.
+        cards.value = MediaQueueFixtures.advanced(MediaQueueFixtures.withQueue)
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Third Track").assertIsDisplayed()
+        composeRule.onNode(position("Card 2 of 4")).assertExists()
+        composeRule.captureScreen()
+    }
+
+    @Test
+    fun whenTheBrowsedCardBecomesThePlayingOneTheStackLandsOnTheFront() {
+        val cards = mutableStateOf(MediaQueueFixtures.withQueue)
+        showLive(cards)
+        stackAction("Next card")()
+        composeRule.onNodeWithText("Second Track").assertIsDisplayed()
+
+        cards.value = MediaQueueFixtures.advanced(MediaQueueFixtures.withQueue)
+        composeRule.waitForIdle()
+
+        composeRule.onNode(position("Card 1 of 4")).assertExists()
+        // The front card is the player, now playing the track that was next.
+        composeRule.onNodeWithText("Second Track").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Play").assertCountEquals(0)
+    }
+
+    @Test
+    fun aStackNotYetBrowsedStaysOnItsFrontWhenTheTrackAdvances() {
+        val cards = mutableStateOf(MediaQueueFixtures.withQueue)
+        showLive(cards)
+        cards.value = MediaQueueFixtures.advanced(MediaQueueFixtures.withQueue)
+        composeRule.waitForIdle()
+        composeRule.onNode(position("Card 1 of 4")).assertExists()
+    }
+
+    private fun showLive(cards: androidx.compose.runtime.MutableState<List<MediaContent>>) {
+        composeRule.setContent {
+            ScreenshotBackdrop {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    val group = StreamGroup(MediaQueueFixtures.groupKey, "Music", cards.value)
+                    val results =
+                        StreamSection.layoutSections.associateWith { StreamFixtures.ready(it) } +
+                            (StreamSection.NOW to StreamSectionResult.Ready(listOf(group)))
+                    StreamSurface(
+                        layout = StreamLayout.DEFAULT,
+                        results = results,
+                        env = StreamFixtures.environment(reducedMotion = true),
+                        callbacks = StreamCallbacks(onAction = { content, action -> actions += content to action }),
+                        contentPadding = PaddingValues(top = 48.dp, bottom = 96.dp),
+                        initialPageKey = StreamPagePlanner.keyOf(StreamSection.NOW, MediaQueueFixtures.groupKey),
+                    )
+                }
+            }
+        }
+        composeRule.waitForIdle()
     }
 
     private fun position(text: String) =
@@ -206,6 +292,22 @@ internal object MediaQueueFixtures {
         actions = setOf(MediaAction.PLAY_QUEUE_ITEM),
         queueItem = MediaQueueItem(queueId, position),
     )
+
+    /** The same queue from a player that cannot skip to a track: cards with nothing to press. */
+    val readOnly get() = withQueue.map { if (it.queueItem != null) it.copy(actions = emptySet()) else it }
+
+    /**
+     * The queue after the track advanced: the player's card is the same card (now playing the next track), the one
+     * that was next is gone from the queue (it is the one playing), the rest moved up and a new one joined.
+     */
+    fun advanced(before: List<MediaContent>): List<MediaContent> {
+        val upcoming = before.filter { it.queueItem != null }.drop(1)
+        val newest = queueCard(105L, upcoming.size, "Fifth Track", "Sample Duo")
+        return listOf(player.copy(title = "Second Track")) +
+            (upcoming + newest).mapIndexed { index, card ->
+                card.copy(queueItem = MediaQueueItem(card.queueItem!!.queueId, index))
+            }
+    }
 
     val withQueue =
         listOf(

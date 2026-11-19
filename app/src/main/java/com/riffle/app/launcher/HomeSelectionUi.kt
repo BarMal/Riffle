@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -122,7 +123,9 @@ internal const val HOME_SELECTION_FOLDER_TEST_TAG = "home-selection-folder"
 
 /**
  * The selection row of the edit bar: "Select all on this page" always; with something ticked its count (announced as it
- * changes), Clear, Remove from Home and, for apps only, Make a folder. Every button is at least 48 dp high.
+ * changes) at the start, and Clear, Remove from Home and, for apps only, Make a folder grouped at the end. The actions
+ * wrap onto further lines on a narrow window (aligned to the end) rather than scrolling out of reach, and the count
+ * stays on the first line. Every target is at least 48 dp high.
  */
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
@@ -132,11 +135,11 @@ internal fun HomeSelectionBar(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val countText = stringResource(R.string.home_selection_count, selectedCount)
-    // The buttons wrap onto a second line on a narrow window rather than scrolling out of reach.
+    // One flowing row: the count takes the room the first line has left (so the first action stands at the end), and
+    // the actions that do not fit wrap onto the next lines, each aligned to the end.
     FlowRow(
         modifier = Modifier.testTag(HOME_SELECTION_BAR_TEST_TAG).fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-        verticalArrangement = Arrangement.Center,
+        horizontalArrangement = Arrangement.End,
     ) {
         if (selectedCount > 0) {
             Text(
@@ -144,7 +147,10 @@ internal fun HomeSelectionBar(
                 style = MaterialTheme.typography.labelLarge,
                 modifier =
                     Modifier
+                        .weight(1f)
                         .testTag(HOME_SELECTION_COUNT_TEST_TAG)
+                        .heightIn(min = 48.dp)
+                        .wrapContentHeight(Alignment.CenterVertically)
                         .padding(horizontal = 8.dp)
                         .semantics { liveRegion = LiveRegionMode.Polite },
             )

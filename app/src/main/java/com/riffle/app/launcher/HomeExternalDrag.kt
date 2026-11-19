@@ -17,6 +17,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -144,6 +145,26 @@ internal fun BoxScope.HomeRemoveTarget(
         if (reducedMotion) grow.snapTo(target) else grow.animateTo(target)
     }
     DisposableEffect(Unit) { onDispose { onBoundsChanged(null) } }
+    // The lifted icon sits on the finger and would cover the label, so while the item hovers, the label stands at the
+    // end of the pill away from the finger. The side is read from the pointer without recomposing (a derived value
+    // that changes only on crossing the pill's middle); the move is animated and drawn in the draw phase.
+    val centreX = remember { floatArrayOf(0f) }
+    val side by remember {
+        derivedStateOf {
+            val pointer = session()?.pointerInRoot
+            when {
+                !hovered || pointer == null || pointer == Offset.Unspecified -> 0
+                pointer.x >= centreX[0] -> -1
+                else -> 1
+            }
+        }
+    }
+    val shift = remember { Animatable(0f) }
+    LaunchedEffect(reducedMotion) {
+        snapshotFlow { side }.collect { target ->
+            if (reducedMotion) shift.snapTo(target.toFloat()) else shift.animateTo(target.toFloat())
+        }
+    }
     val label = stringResource(R.string.home_remove_target)
     val description = stringResource(R.string.menu_remove_from_home)
     Box(
@@ -158,7 +179,10 @@ internal fun BoxScope.HomeRemoveTarget(
                 Modifier
                     .testTag(HOME_REMOVE_TARGET_TEST_TAG)
                     .defaultMinSize(minWidth = REMOVE_TARGET_MIN_WIDTH_DP.dp, minHeight = REMOVE_TARGET_HEIGHT_DP.dp)
-                    .onGloballyPositioned { onBoundsChanged(it.boundsInRoot()) }
+                    .onGloballyPositioned {
+                        centreX[0] = it.boundsInRoot().center.x
+                        onBoundsChanged(it.boundsInRoot())
+                    }
                     .graphicsLayer {
                         scaleX = grow.value
                         scaleY = grow.value
@@ -180,6 +204,7 @@ internal fun BoxScope.HomeRemoveTarget(
                     text = label,
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.graphicsLayer { translationX = shift.value * REMOVE_LABEL_SHIFT_DP.dp.toPx() },
                 )
             }
         }
@@ -189,5 +214,8 @@ internal fun BoxScope.HomeRemoveTarget(
 internal const val HOME_REMOVE_TARGET_TEST_TAG = "home-remove-target"
 internal const val HOME_REMOVE_TARGET_PROBE_KEY = "home-remove-target"
 private const val REMOVE_TARGET_HEIGHT_DP = 56
-private const val REMOVE_TARGET_MIN_WIDTH_DP = 144
+private const val REMOVE_TARGET_MIN_WIDTH_DP = 200
+
+/** How far the label stands from the middle while an item hovers: clear of the lifted icon on the finger. */
+private const val REMOVE_LABEL_SHIFT_DP = 56
 private const val REMOVE_TARGET_HOVER_SCALE = 1.15f

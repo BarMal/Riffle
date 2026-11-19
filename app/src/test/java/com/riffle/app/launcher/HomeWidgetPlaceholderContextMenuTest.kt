@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridPlacement
@@ -10,6 +11,9 @@ import com.riffle.core.domain.launcher.home.StackedWidget
 import com.riffle.core.domain.launcher.home.WidgetItem
 import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import com.riffle.core.domain.launcher.home.restacked
+import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
+import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
+import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -254,4 +258,34 @@ class HomeWidgetPlaceholderContextMenuTest {
             items.single { item -> item.label == "Make wider" }.action,
         )
     }
+
+    @Test
+    fun aPlaceholderThatCanBeSetUpOffersItFirstAndTheRestStaysAsItWas() {
+        val widget =
+            WidgetItem(
+                id = LauncherItemId("widget"),
+                appWidgetId = HostedWidgetId(0),
+                label = "Calendar",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val request =
+            LauncherShellAction.RequestAddWidget(
+                provider = provider,
+                label = "Calendar",
+                dimensions = WidgetProviderDimensions(minWidthDp = 100, minHeightDp = 100),
+                target = WidgetAddTarget.HOME_PLACEHOLDER,
+                targetItemId = widget.id,
+            )
+
+        val items = widgetPlaceholderContextMenuItems(widget, text = SettingsTestText, setUp = request)
+        val without = widgetPlaceholderContextMenuItems(widget, text = SettingsTestText)
+
+        assertEquals(ShortcutContextMenuItem(label = "Set up widget", action = request), items.first())
+        assertEquals(without, items.drop(1))
+        assertEquals(false, "Set up widget" in without.map { it.label })
+        assertEquals(true, "Remove from Home" in without.map { it.label })
+    }
+
+    private val provider =
+        WidgetProviderIdentity(AppPackageName("com.example.widgets"), WidgetProviderClassName(".Calendar"))
 }

@@ -90,6 +90,31 @@ class MediaQueueCardsTest {
     }
 
     @Test
+    fun `a player that cannot skip to a track still shows its queue as read-only cards`() {
+        val readOnly = session("alpha", 11, 12, 13).copy(queuePlayable = false)
+        val cards = now(inputs(listOf(readOnly))).groups.single().items.drop(1).map { it as MediaContent }
+
+        assertEquals(listOf(11L, 12L, 13L), cards.map { it.queueItem?.queueId })
+        cards.forEach { card ->
+            assertEquals(emptySet(), card.actions)
+            assertEquals("Track ${card.queueItem?.queueId}", card.title)
+            assertFalse(StreamActionPolicy.offers(card, StreamAction.PlayQueueItem(card.queueItem!!.queueId)))
+            assertFalse(StreamActionPolicy.offers(card, StreamAction.Open))
+            assertFalse(StreamCardActions.opensInPlace(card))
+        }
+    }
+
+    @Test
+    fun `read-only cards keep the cap the order and the privacy rules`() {
+        val many = session("alpha", *(1L..15L).toList().toLongArray()).copy(queuePlayable = false)
+        val shown = now(inputs(listOf(many))).groups.single().items.drop(1)
+        assertEquals((1L..10L).toList(), shown.map { (it as MediaContent).queueItem?.queueId })
+
+        val off = now(inputs(listOf(many)), NowOptions(showUpNext = false))
+        assertEquals(1, off.groups.single().items.size)
+    }
+
+    @Test
     fun `a queue entry with artwork carries the handle the platform loader resolves`() {
         val withArt = now(inputs(listOf(session("alpha", 12)))).groups.single().items.last() as MediaContent
         assertEquals(MediaItemExt.queueArtwork("alpha", 12), withArt.artwork)

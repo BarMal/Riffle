@@ -198,9 +198,12 @@ Show hints again clears all of it. The old press hint's flag (`HintSettings.dock
   second one (its routes are the Dock pull, "Open Library", the handle's menu and search).
 - **Settings.** A gear in the Library header and an item in the Library's menu, and "Riffle settings" in search.
 - **Show as.** The Library header's view button (it was a "more" glyph) and, on the Stream, a small view button at the top
-  end of the page that opens the page options (Show as, Move, Hide) a tile's long-press opens (it lies over the page's top
-  corner and takes no room: a stack is anchored to the bottom, and the strips behind its front card carry no control). Settings > Stream > Show
-  view button turns the Stream's off. The long-presses stay.
+  end of the page that opens the page options (Show as, Move, Hide) a tile's long-press opens. It takes no room (a stack
+  is anchored to the bottom and its geometry does not move for a control) and so is **not drawn over a page that would
+  reach its corner**: a List (its rows start at the top), a stack whose tallest card, strips and bottom gap plus the 48 dp
+  target exceed its room (`StreamViewButtonRoom`; each page says whether it reaches the corner), and it is hidden while a
+  card is open. Empty pages and notices keep it. Settings > Stream > Show view button turns the Stream's off. The
+  long-presses stay, so every page's options are always reachable.
 
 ### History: the Dock pull by side (P5, superseded)
 
@@ -581,17 +584,24 @@ outline of its span); the lifted icon follows the finger, slightly enlarged, abo
   Not offered while the Library is over the Stream (no Home is showing). The press is watched from the initial pass, so the
   tap, the menu and the list's scroll are untouched until the drag starts.
 - **Drop to remove.** While anything on Home or in the Dock is lifted a glass **Remove** target (56 dp high, at least
-  144 dp wide) shows at the top of the screen (at the bottom when the Dock is on the top edge), grows while the finger is
+  200 dp wide) shows at the top of the screen (at the bottom when the Dock is on the top edge), grows while the finger is
   over it and ticks once on entering. Dropping on it removes the item exactly as the menu's "Remove from Home" does: no
   confirmation for an app, a shortcut, a folder or a widget (as the menu has none), the stack asks first, and there is no
   Undo (the menu has none); a Dock item is unpinned. Nothing is uninstalled. The target is not offered for a Library app
-  (it is not on Home). It is drawn in the draw phase: moving recomposes nothing and entering it recomposes it once.
+  (it is not on Home). It is drawn in the draw phase: moving recomposes nothing and entering it recomposes it once. The
+  lifted icon sits on the finger and would cover the label, so while an item hovers the label stands at the end of the pill
+  away from the finger (it changes sides when the finger crosses the middle; animated in the draw phase, snapped under
+  reduced motion).
 - **Multi-select in Edit page.** In "Edit page" a tap on an app or folder ticks it (a check badge; the selection state is
   announced; the bar says "N selected"); the bar offers **Select all on this page**, **Clear**, **Remove from Home**
-  (asked once, with an Undo in a snackbar) and **Make a folder** (apps only), so nothing needs dragging. Dragging any
+  (asked once, with an Undo in a snackbar) and **Make a folder** (apps only), so nothing needs dragging. The bar is one
+  flowing row: the count at the start, the actions grouped at the end, wrapping onto further lines aligned to the end
+  (three lines at 320 dp, one when wide), every target at least 48 dp high. Dragging any
   ticked item lifts the group as one stacked ghost with the count: it drops from the drop cell onward in reading order
   (spilling to the next pages as above), into a folder as every app when it is dropped on one (a selection that holds a
-  folder cannot be dropped into one), and on Remove it asks once (the same confirmation and Undo). The ticked items
+  folder cannot be dropped into one), **on an app it makes a folder of that app and the group** (apps only: a group that
+  holds a folder is not offered it; the same hold, "will make a folder" feedback and folder naming as a single app; the
+  app is first and the folder stands where it stood; a ticked app is never the target), and on Remove it asks once (the same confirmation and Undo). The ticked items
   stay as dimmed ghosts where they were. Widgets and stacks are not selectable. The long press on an item is still its
   menu. A selection only counts on the page being edited and goes with the mode (`HomeSelection`, `:core:domain`).
   There is no "Move to page" action because Home has no page picker.

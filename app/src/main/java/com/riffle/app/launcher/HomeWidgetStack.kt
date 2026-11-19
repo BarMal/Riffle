@@ -96,6 +96,8 @@ internal fun HomeWidgetStack(
     val previousLabel = stringResource(R.string.widget_stack_previous)
     val editLabel = stringResource(R.string.menu_edit_stack)
     val span = widget.placement?.span ?: GridSpan()
+    val setUpRequest = LocalWidgetSetUpSupport.current.requestForShown(widget)
+    val setUpLabel = stringResource(R.string.widget_set_up_description, shownMember.label)
 
     val dragModifier =
         if (dragState != null && workspaceActions != null) {
@@ -147,12 +149,18 @@ internal fun HomeWidgetStack(
                         }
                     }
                     customActions =
-                        listOf(
+                        listOfNotNull(
                             CustomAccessibilityAction(nextLabel) { swipe.step(1) },
                             CustomAccessibilityAction(previousLabel) { swipe.step(-1) },
                             CustomAccessibilityAction(editLabel) {
                                 onAction(LauncherShellAction.OpenWidgetStackEditor(widget.id))
                                 true
+                            },
+                            setUpRequest?.let { request ->
+                                CustomAccessibilityAction(setUpLabel) {
+                                    onAction(request)
+                                    true
+                                }
                             },
                         )
                 }
@@ -180,6 +188,7 @@ internal fun HomeWidgetStack(
                         span = span,
                         widgetViewFactory = widgetViewFactory,
                         interactive = interactive,
+                        setUp = WidgetSetUpHandle(widget.id, index, onAction),
                         // Riffle's own widget takes its taps itself; the long press is the stack's drag and menu.
                         modifier = if (ownWidgetShown && !isEditing && index == shown) dragModifier else Modifier,
                     )
@@ -227,6 +236,7 @@ internal fun HomeWidgetStack(
                     pageItems = dragState?.pageItems ?: listOf(widget),
                     contextSurface = contextSurface,
                     text = rememberSettingsText(),
+                    setUp = setUpRequest,
                 ),
             onDismissRequest = { isContextMenuExpanded.value = false },
             onAction = onAction,
@@ -258,6 +268,7 @@ private fun StackMemberBody(
     span: GridSpan,
     widgetViewFactory: HomeWidgetViewFactory,
     interactive: () -> Boolean,
+    setUp: WidgetSetUpHandle,
     modifier: Modifier,
 ) {
     val kind: GlanceWidgetKind? = member.glance
@@ -276,10 +287,12 @@ private fun StackMemberBody(
                     label = member.label,
                     resizeConstraints = member.resizeConstraints,
                     glance = null,
+                    provider = member.provider,
                     stack = emptyList(),
                     shownIndex = 0,
                 ),
             widgetViewFactory = widgetViewFactory,
+            setUp = setUp,
         )
     }
 }

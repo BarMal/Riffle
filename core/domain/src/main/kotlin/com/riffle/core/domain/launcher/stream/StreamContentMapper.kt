@@ -198,7 +198,13 @@ object StreamContentMapper {
             artwork = item.image,
             icon = item.icon,
             target = item.target,
-            actions = setOf(MediaAction.PLAY_QUEUE_ITEM),
+            // A player that cannot skip to a queue item still shows what is coming: a card with nothing to press.
+            actions =
+                if ((original.ext[MediaItemExt.QUEUE_READ_ONLY] as? ItemExtValue.Flag)?.value == true) {
+                    emptySet()
+                } else {
+                    setOf(MediaAction.PLAY_QUEUE_ITEM)
+                },
             postedAtEpochMillis = item.timeEpochMillis,
             privacy = privacy,
             queueItem = MediaQueueItem(queueId, position),

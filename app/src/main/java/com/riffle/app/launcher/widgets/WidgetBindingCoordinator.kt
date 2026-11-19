@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 
+@Suppress("TooManyFunctions")
 class WidgetBindingCoordinator(
     private val widgetHostGateway: WidgetHostGateway,
     private val transactionStore: WidgetAddTransactionStore = InMemoryWidgetAddTransactionStore(),
@@ -41,8 +42,21 @@ class WidgetBindingCoordinator(
         grid: GridDimensions,
         availableWidthDp: Int,
         availableHeightDp: Int,
+    ): WidgetAddRequestResult =
+        when {
+            pendingAdd != null -> WidgetAddRequestResult.AlreadyInProgress
+            // A set-up with no item to set up cannot be finished: nothing is allocated for it.
+            action.target == WidgetAddTarget.HOME_PLACEHOLDER && action.targetItemId == null ->
+                WidgetAddRequestResult.Cancelled
+            else -> startAdd(action, grid, availableWidthDp, availableHeightDp)
+        }
+
+    private fun startAdd(
+        action: LauncherShellAction.RequestAddWidget,
+        grid: GridDimensions,
+        availableWidthDp: Int,
+        availableHeightDp: Int,
     ): WidgetAddRequestResult {
-        if (pendingAdd != null) return WidgetAddRequestResult.AlreadyInProgress
         val hostedWidgetId = widgetHostGateway.allocateHostedWidgetId()
         val preferredSpan =
             action.dimensions.preferredGridSpan(
@@ -73,6 +87,8 @@ class WidgetBindingCoordinator(
                         targetCell = action.targetCell,
                         dockIndex = action.dockIndex,
                         targetStackId = action.targetStackId,
+                        targetItemId = action.targetItemId,
+                        targetMemberIndex = action.targetMemberIndex,
                         step = PendingWidgetAddStep.CONFIGURATION,
                         createdAtEpochMillis = epochMillisProvider(),
                     )
@@ -107,6 +123,8 @@ class WidgetBindingCoordinator(
                         targetCell = action.targetCell,
                         dockIndex = action.dockIndex,
                         targetStackId = action.targetStackId,
+                        targetItemId = action.targetItemId,
+                        targetMemberIndex = action.targetMemberIndex,
                         step = PendingWidgetAddStep.PERMISSION,
                         createdAtEpochMillis = epochMillisProvider(),
                     ),
@@ -255,6 +273,16 @@ class WidgetBindingCoordinator(
                     hostedWidgetId = hostedWidgetId,
                     label = label,
                     preferredSpan = preferredSpan,
+                    resizeConstraints = resizeConstraints,
+                )
+
+            WidgetAddTarget.HOME_PLACEHOLDER ->
+                // Decoding refuses a set-up with no item; a request without one cannot reach here.
+                LauncherShellAction.BindHostedWidgetToPlaceholder(
+                    itemId = checkNotNull(targetItemId) { "A placeholder set-up names its item." },
+                    memberIndex = targetMemberIndex,
+                    hostedWidgetId = hostedWidgetId,
+                    label = label,
                     resizeConstraints = resizeConstraints,
                 )
 
