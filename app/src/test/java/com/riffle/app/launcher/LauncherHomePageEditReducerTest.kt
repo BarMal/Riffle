@@ -268,7 +268,7 @@ class LauncherHomePageEditReducerTest {
 
         val drawerState =
             LauncherShellStateReducer().navigationActionSelected(
-                selectedTemplate,
+                selectedTemplate.copy(launcherSettings = libraryOnSettings),
                 ShellNavigationAction.OpenAppDrawer,
             )
         val populatedDrawer =

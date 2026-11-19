@@ -44,12 +44,14 @@ import com.riffle.app.launcher.library.LibrarySheet
 import com.riffle.app.launcher.library.libraryState
 import com.riffle.app.launcher.search.DockSearchSurface
 import com.riffle.app.launcher.stream.StreamDestination
+import com.riffle.app.launcher.stream.StreamDockLink
 import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.dock.DockMotionTuning
+import com.riffle.core.domain.launcher.dock.DockRing
 import com.riffle.core.domain.launcher.dockpull.pullDirection
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeEditMode
@@ -214,7 +216,8 @@ private fun HomeDestinationContent(
             onLaunchApp = { identity -> onAction(LauncherShellAction.LaunchApp(identity)) },
             modeInterpreter = HomeDockInterpreter(),
             appShortcuts = state.appShortcutsByApp,
-            choosing = choice.choosing,
+            // The ring gives way to the selection's while choosing or sliding along the Dock (no tile recomposes).
+            choosing = choice.choosing || choice.scrubbing,
             pinnedApps = state.homeLayout.visibleTo(state.installedApps).pinnedApps(),
             showLiveApps = features.dockLiveApps,
             closing = motion.isClosing,
@@ -253,6 +256,12 @@ private fun HomeDestinationContent(
                     },
                     // Choosing while the Stream is out: it stays and lands on the chosen page, as a tap on a tile does.
                     onSwitchPage = { entryKey -> dockInterpreter.onDynamicEntryDelegated(entryKey) },
+                    // Sliding along the Dock: the Stream lands on each tile's page as the finger enters it (the same
+                    // landing a tap makes; the latest request wins). Never the tap's "second tap opens the app".
+                    scrubPages = { keys -> scrubPagesOf(stream?.dock, keys) },
+                    onScrubTo = { entryKey ->
+                        dockDynamicEntryTarget(entryKey)?.let { target -> stream?.focus?.request(target) }
+                    },
                     // The press's accessible equivalents close an open card before they close the Stream.
                     openCard =
                         OpenCardPress(
@@ -1019,3 +1028,17 @@ internal fun cardsPanelInsetPolicy(state: LauncherShellState): HomeInsetPolicy {
 
 /** How long a committed switch stands in for the shell's answer before giving up on it. */
 private const val DOCK_PULL_PENDING_TIMEOUT_MILLIS = 2_000L
+
+/**
+ * What a slide along the Dock may land on: the entries that stand for a page the Stream lists (a pair, or a pinned app
+ * with no page, stands for none and is passed over), and the one of the page in front (ringed).
+ */
+internal fun scrubPagesOf(
+    link: StreamDockLink?,
+    entryKeys: Collection<String>,
+): DockChoiceState.DockScrubPages {
+    val pages = link?.pages.orEmpty()
+    val selectable = pages.mapNotNull { page -> DockRing.entryKeyFor(page, entryKeys) }.toSet()
+    val ringed = DockRing.entryKeyFor(pages.firstOrNull { page -> page.key == link?.currentKey }, entryKeys)
+    return DockChoiceState.DockScrubPages(selectable, ringed)
+}

@@ -20,8 +20,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.stream.STREAM_PAGER_TEST_TAG
 import com.riffle.app.launcher.stream.StreamCallbacks
@@ -299,9 +297,9 @@ class StreamBehaviorTest {
     }
 
     @Test
-    fun swipingSidewaysChangesThePageAndTellsTheDock() {
+    fun theNextPageActionChangesThePageAndTellsTheDock() {
         show()
-        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).performTouchInput { swipeLeft() }
+        composeRule.streamPage(next = true)
         composeRule.waitForIdle()
         assertOpen(StreamPageKeys.MAIL)
         composeRule.onNodeWithText("Invoice 2026-114").assertIsDisplayed()

@@ -2,7 +2,9 @@
 
 package com.riffle.app.launcher.stream
 
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -266,7 +268,16 @@ internal fun StreamSurface(
     val emptyRoom: Modifier =
         onEmptyTap?.let { tap ->
             if (pageMenuItems.isEmpty()) {
-                Modifier.pointerInput(tap) { detectTapGestures { tap() } }
+                Modifier.pointerInput(tap) {
+                    // A tap, not a swipe nothing claimed (the pager no longer takes sideways drags): that does nothing.
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val up = waitForUpOrCancellation()
+                        if (up != null && (up.position - down.position).getDistance() <= viewConfiguration.touchSlop) {
+                            tap()
+                        }
+                    }
+                }
             } else {
                 Modifier.pressMenu(pageMenu, haptics, pageMenuLabel, onTap = tap)
             }
@@ -461,7 +472,7 @@ private fun StreamFocusRequest.isWaiting(pages: List<StreamPage>): Boolean {
     return page?.isLoading() == true || liveStillLoading
 }
 
-/** The pager of pages: one at a time, swiped sideways. */
+/** The pager of pages: one at a time, changed from the Dock (a tap or a slide along it) and by the actions below. */
 @Composable
 @Suppress("LongParameterList", "LongMethod")
 private fun StreamPagesMode(
@@ -532,8 +543,10 @@ private fun StreamPagesMode(
                             },
                         )
                 },
-        // A swipe is not for a page while a card is open (the open card is its own scene): a tile or Back leaves it.
-        userScrollEnabled = !LocalOpenCards.current.state.isOpen,
+        // No touch drag changes the stack: a sideways swipe on a card only dismisses it (or resists), and the Dock is
+        // the handle for moving between stacks (a tap on a tile, or sliding along it). The pager still animates the
+        // pages the Dock and the accessibility actions above ask for.
+        userScrollEnabled = false,
         pageSpacing = RiffleSpacing.s,
         beyondViewportPageCount = 0,
         key = { index -> latestPages.getOrNull(index)?.key ?: index },

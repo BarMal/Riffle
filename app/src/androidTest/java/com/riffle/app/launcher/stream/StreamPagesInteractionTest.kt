@@ -143,12 +143,12 @@ class StreamPagesInteractionTest {
     }
 
     @Test
-    fun aSidewaysSwipeChangesThePageAndTheDockFollows() {
+    fun aSidewaysSwipeOnTheEmptyRoomNoLongerChangesThePage() {
         show()
         assertOpen(chat)
 
-        // From the page's empty room, above the stack: a drag that starts on a card is that card's (it resists), so
-        // only the room outside the cards changes the page by a swipe (batch 7).
+        // Changed on purpose: the page's empty room used to change the page by a swipe; the Dock does that now (a tap
+        // on a tile, or sliding along it), and the pager's actions for a screen reader.
         composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).performTouchInput {
             swipe(
                 Offset(width * EMPTY_ROOM_FROM, height * EMPTY_ROOM_Y),
@@ -157,8 +157,8 @@ class StreamPagesInteractionTest {
         }
         composeRule.waitForIdle()
 
-        assertOpen(mail)
-        composeRule.onNodeWithText("Only mail").assertIsDisplayed()
+        assertOpen(chat)
+        composeRule.onNodeWithText("First chat").assertIsDisplayed()
     }
 
     @Test

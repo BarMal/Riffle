@@ -110,6 +110,7 @@ class LauncherShellAppDrawerViewModelTest {
         val viewModel =
             LauncherShellViewModel(
                 firstRunRepository = FakeFirstRunRepository(),
+                launcherSettingsRepository = LibraryOnSettingsRepository(),
                 installedAppRepository =
                     FakeInstalledAppRepository(
                         apps =

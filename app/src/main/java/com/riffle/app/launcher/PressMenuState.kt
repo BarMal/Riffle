@@ -105,7 +105,8 @@ internal fun Modifier.pressMenu(
             }
             .pointerInput(hasTap) {
                 detectTapGestures(
-                    onTap = if (hasTap) ({ latestTap?.invoke() }) else null,
+                    // A swipe nothing claimed is not a tap (the pager no longer takes sideways drags): it does nothing.
+                    onTap = if (hasTap) ({ if (!moved[0]) latestTap?.invoke() }) else null,
                     onLongPress = { local -> if (!moved[0]) latestOpen(local) },
                 )
             }

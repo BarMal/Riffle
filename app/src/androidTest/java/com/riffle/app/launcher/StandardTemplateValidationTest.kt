@@ -31,6 +31,8 @@ import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
 import com.riffle.core.domain.launcher.home.LauncherTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.library.LibraryView
+import com.riffle.core.domain.launcher.settings.FeatureSettings
+import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import org.junit.Assert.assertEquals
@@ -178,6 +180,8 @@ class StandardTemplateValidationTest {
         LauncherShellState(
             firstRunStatus = FirstRunStatus.COMPLETE,
             installedApps = apps,
+            // The Library is off by default; this matrix is about reaching every app in it.
+            launcherSettings = LauncherSettings(features = FeatureSettings(library = true)),
         )
 
     private fun app(label: String): InstalledApp =

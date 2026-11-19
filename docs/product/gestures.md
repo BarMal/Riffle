@@ -64,7 +64,8 @@ The Dock has two gestures along the axis across its run, in opposite directions 
 
 | Gesture | Direction | Result |
 | --- | --- | --- |
-| **Pull** | Away from the edge (a bottom dock pulls up, a top dock down, a left dock right, a right dock left) | The Library, tracking the finger, from anywhere on the Dock and from Home or the Stream |
+| **Pull** | Away from the edge (a bottom dock pulls up, a top dock down, a left dock right, a right dock left) | The Library, tracking the finger, from anywhere on the Dock and from Home or the Stream. **Only while the Library switch is on: it defaults off** (Settings > Features), and with it off the pull claims nothing, so the drag falls through to what is underneath |
+| **Slide** | Along the Dock's run (sideways on a top or bottom Dock, up and down on a side Dock), starting on the contextual row, with the Stream showing | Changes the stack: the tile under the finger becomes the open page as the finger enters it. See "Slide along the Dock" below |
 | **Press** | Toward the edge (a bottom dock is pressed down), then release | Toggles Home and the contextual mode (the Stream): opens the Stream on the last page, or on the page of the live app / now playing icon the press started on; from the Stream returns Home |
 
 - **Claim.** One finger on the dock body, past touch slop, before the long-press timeout. The drag is a pull when it leads
@@ -116,8 +117,8 @@ The Dock has two gestures along the axis across its run, in opposite directions 
   live page, else its shortcuts page) has a page, so a press that starts on one opens it; a press that starts on a tile
   or the background opens the last page. The landing is asked for at the commit and dropped if nothing opens.
 - **Taps.** Home mode: a pinned app or a live app launches the app, now playing the player. Contextual mode: a pinned
-  app (slice 4b), a live app, now playing or a tile switches the Stream to that page. The ringed icon is the open page's; swiping the Stream's
-  pager moves the ring (when the swipe passes halfway) and the Dock scrolls to keep it in view.
+  app (slice 4b), a live app, now playing or a tile switches the Stream to that page. The ringed icon is the open page's; the ring moves
+  when the page changes (a tap, a slide along the Dock, the pager's actions) and the Dock scrolls to keep it in view.
 - **Long-press.** Home mode: the app's menu with "Open in Stream". Contextual mode: the page options (Show as the other
   view, Move earlier / later on a tile, Hide section, Show <hidden section>), then the app's own items for a live app.
 - **Equivalents (a non-gesture route for each).** Press: the Dock's (and the surface root's) accessibility action **"Show
@@ -126,6 +127,19 @@ The Dock has two gestures along the axis across its run, in opposite directions 
   Library" and Ctrl + Shift + the arrow. Switching page: the tiles are focusable 48 dp targets with a spoken name and a
   click action ("Show Today"), and the pager's custom actions "Previous page" and "Next page". Page options: the tile's
   long-press menu (its own long-click action for assistive technology).
+- **Slide along the Dock (design canvas round 12).** With the Stream showing, a drag that starts on the Dock's contextual
+  row and leads along its run, past touch slop (`DockScrub.claims`), scrubs: the tile under the finger becomes the open page
+  as the finger enters it (with a few dp of hysteresis at the tile boundaries, `DockScrub.tileAt`), the ring moves to it, and
+  the Stream lands on that page with the landing a tap on the tile makes (the latest target wins when several tiles are
+  crossed quickly). One `DETENT` tick per tile entered, through the same tick wrapper as hold to choose ("Light ticks"
+  applies). Pair tiles and pinned apps with no page are passed over (no tick). Releasing leaves the current page showing:
+  nothing opens, the Dock does not collapse. The row holds more tiles than fit: within 24 dp of an end, while tiles are hidden
+  that way, it scrolls toward that end at the hold-to-choose pace (300 dp/s) and the tiles passing under the finger keep
+  becoming current; a fling (a lift with velocity) scrolls the row by inertia without changing the page past the tile last
+  entered. A tap still jumps to a page, a long-press still opens a tile's menu, and a drag across the run is still the press or
+  the pull. It reuses `DockChoiceState` (one selection that follows the finger) and the Dock's one pointer loop (`dockPullInput`).
+  Draw-phase only: scrubbing recomposes no tile (the choice mark is drawn in the draw phase). Equivalents are unchanged (the
+  tiles, "Previous page" and "Next page"); there is nothing gesture-only.
 - **App pairs (drop to pair).** While the Dock is rearranged, a pinned app held over the middle half of another for 350 ms
   shows the pair it would make and a drop pairs them (`DockPairHold`, `dockHover`; the pure rules are in
   `DockDropToPair.kt`). The non-gesture equivalent is the pinned app's menu item **"Pair with..."** (an app picker with
@@ -160,9 +174,11 @@ the Dock's accessibility actions.
   **Who owns a sideways drag is decided by where it starts (batch 7, `SwipeDismiss.ownerOf`): on a card it is always that
   card's, never the pager's.** On the front card of a dismissible notification it dismisses; on any other card (a strip, a
   notification that cannot be dismissed, any other kind of card) the card resists, a short rubber band of a few dp with no
-  fade, and settles back, and the stack does not change. A sideways drag that starts in the page's empty room (outside
-  every card) is the pager's and changes the stack; the Dock (a tap on an icon or tile, hold to choose, the contextual
-  row) is the primary route, and "Previous page" and "Next page" are the accessibility routes. They also look and feel
+  fade, and settles back, and the stack does not change. **A sideways swipe never changes the stack any more (design canvas
+  round 12):** the pager takes no touch drag (`userScrollEnabled = false`), so a sideways drag in the page's empty room does
+  nothing (and is no tap either: it does not close the Stream). The Dock is the handle for moving between stacks: a tap on
+  an icon or tile, a slide along it ("Slide along the Dock" below), hold to choose; "Previous page" and "Next page" are the
+  accessibility routes and keep animating the page. They also look and feel
   different: a dismissing card alone moves, lifts to 1.02, fades as it travels and shows the word "Dismiss" in the room
   it leaves once past the threshold (one light tick on dismissal); a page change moves the whole stack as one sheet,
   with the Dock's ring, fades nothing and has no tick. **A card that resists says why** (`SwipeDismiss.resistCueAlpha`,
@@ -224,7 +240,7 @@ the Dock's accessibility actions.
 
   | Gesture | Equivalent |
   | --- | --- |
-  | Swipe to the next or previous page | Tap the page's tile or live app in the Dock (contextual mode); the pager's custom actions "Previous page" and "Next page" |
+  | Slide along the Dock to another page | Tap the page's tile or live app in the Dock (contextual mode); the pager's custom actions "Previous page" and "Next page"; there is no longer a swipe on the Stream itself |
   | Tap the front card to open it, press the Dock to close it | The front card's custom action "Open card" and Enter or Space; the open card's "Close card" click action and Back; the Dock's action "Close card" (it reads "Back to Home" when no card is open) |
   | Scroll a stack to another card | The stack's own custom actions "Previous card" and "Next card" (Next is an older card, drawn above) and the front card's "Open card"; the arrow keys (up and Page Up: older; down and Page Down: newer); a tap on a peeking card (above or, with a card open, a slim tab above or below it); "Next card" and "Previous card" on the open card itself. There is no on-screen stepper (the "Card 2 of 3" pill with arrows was removed in slice 4a); the front card's state description says "Card 2 of 3" |
   | Long-press a page's tile or icon in the Dock for Show as, Move and Hide, and Show for each hidden section | The long-click custom action of the tile (assistive technology), the same menu |
@@ -333,7 +349,8 @@ means no default binding, so nothing happens unless the user binds the gesture.
 
 | Region | Input | Std / Lib | Cards |
 | --- | --- | --- | --- |
-| Dock body | 1-finger in the natural pull direction (away from the edge) | **Dock pull**: opens the Library, tracking the finger (claims past touch slop when the drag leads along the pull) | same |
+| Dock body | 1-finger in the natural pull direction (away from the edge) | **Dock pull**: opens the Library, tracking the finger (claims past touch slop when the drag leads along the pull); claims nothing while the Library switch is off (the default) | same |
+| Dock contextual row, Stream out | 1-finger along the run, past touch slop, before the long-press timeout | **Slide**: the tile under the finger becomes the open page (a tick per tile); the row scrolls at its ends; a fling scrolls it by inertia; the lift does nothing else | same |
 | Dock body | 1-finger toward the edge, then release past 28 dp | **Dock press**: toggles Home and the Stream (needs a Stream); a press that starts on a live app / now playing icon opens that page | same |
 | Dock body | the same press held 220 ms past 28 dp, or slid sideways more than 14 dp | **Hold to choose**: the selection follows the finger along the Dock; release opens (Home) or switches to (Stream out) the selected page; dragging more than a Dock thickness away cancels | same |
 | Dock, live app / now playing | tap | Home mode: launches the app (the player for now playing). Contextual mode: switches to its page | same |

@@ -541,7 +541,8 @@ Amendment 1 and the swipe-down flip; the rest of Amendments 1 and 2 stands. Bein
   (what is playing and its queue, the day's events and tasks, recent apps, feed items). An app with nothing
   live shows its shortcuts.
 - **Stacks are ordered as the Dock is.** Swiping the cards left or right moves to the neighbouring icon's
-  stack, and the Dock scrolls to keep that icon in view.
+  stack, and the Dock scrolls to keep that icon in view. (Superseded by Amendment 6: a swipe no longer changes the stack;
+  sliding along the Dock does.)
 
 ### One gesture, three depths
 
@@ -630,6 +631,23 @@ to 4 stands.
 - **Stored data keeps decoding.** An unknown item kind in a stored Dock is skipped without failing the rest.
 
 See "App pairs" in `docs/product/dock-modes-plan.md`.
+
+## Amendment 6 (owner, 2026-11-19): the Dock is the handle for the stacks; the Library defaults off
+
+Design canvas round 12, option "HA". Three decisions:
+
+- **The Dock itself moves between stacks.** While the Stream shows (the Dock in its contextual mode) a press on the Dock
+  that slides along its run scrubs: the ring moves from tile to tile, the Stream lands on each page as the finger enters
+  its tile, with a tick per tile. No new control. The rules (hysteresis, edge scrolling of a row that holds more tiles than
+  fit, a fling, pair tiles and pinned apps with no page passed over) are in `dock-modes-plan.md`, "The Dock as the stack
+  handle".
+- **A sideways swipe on a card only dismisses.** The Stream's pager takes no touch drag. This supersedes the sentence of
+  Amendment 3 that says swiping the cards moves to the neighbouring icon's stack, and the sideways drag in the page's empty
+  room that did the same; the pager's accessibility actions ("Previous page", "Next page") and its programmatic page changes
+  (the Dock's) stay, and animate.
+- **The Library pull defaults to off.** The "Library" feature switch (Settings > Features) now defaults off; a stored choice,
+  on or off, is kept, and a missing value decodes to off. With it off the Dock pull claims nothing and "Open Library" is not
+  offered; search stays (the handle's tap, swipe down on Home, the Dock's "Search" action).
 
 ## Superseded documents
 

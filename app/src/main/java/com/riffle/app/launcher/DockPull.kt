@@ -27,6 +27,7 @@ import androidx.compose.ui.input.pointer.util.VelocityTracker
 import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.core.domain.launcher.dock.DockChoiceStart
 import com.riffle.core.domain.launcher.dock.DockPress
+import com.riffle.core.domain.launcher.dock.DockScrub
 import com.riffle.core.domain.launcher.dockpull.DockPullClaim
 import com.riffle.core.domain.launcher.dockpull.DockPullDestination
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
@@ -253,6 +254,12 @@ internal interface DockPullGestureHost {
 
     /** A pull is taking over: whatever the trampoline is running goes to its end at once. */
     fun settleMotion() {}
+
+    /** The selection a slide along the Dock scrubs with; null where nothing can be scrubbed. */
+    val scrub: DockChoiceState? get() = null
+
+    /** Whether a touch that landed at [position] (the gesture's coordinates) may scrub: Stream out, on the row. */
+    fun canScrubFrom(position: Offset): Boolean = false
 }
 
 /**
@@ -290,13 +297,14 @@ internal fun Modifier.dockPullInput(
             when (awaitClaim(down, direction, tracker, host, claimed)) {
                 DockClaim.PULL -> trackPull(down.id, tracker, host.state)
                 DockClaim.PRESS -> trackPress(down, direction, host, claimed)
+                DockClaim.SCRUB -> trackScrub(down, tracker, host, claimed, direction)
                 DockClaim.NONE -> Unit
             }
         }
     }
 
 /** What a touch on the Dock turned out to be. */
-private enum class DockClaim { PULL, PRESS, NONE }
+private enum class DockClaim { PULL, PRESS, SCRUB, NONE }
 
 /** Where the finger was, and when, at the latest event a press has seen. */
 private class PressSample(
@@ -329,6 +337,12 @@ private suspend fun AwaitPointerEventScope.awaitClaim(
                     early.consume()
                     beginPress(early, down, direction, host, claimed)
                     decision = DockClaim.PRESS
+                } else if (early != null && claimsScrub(direction, down, early, host)) {
+                    tracker.addPosition(early.uptimeMillis, early.position)
+                    early.consume()
+                    claimed.position = early.position
+                    claimed.timeMillis = early.uptimeMillis
+                    decision = DockClaim.SCRUB
                 } else {
                     val change = awaitPointerEvent().changes.firstOrNull { candidate -> candidate.id == down.id }
                     decision = decideOnMain(change, down, direction, tracker, host, claimed, touchSlopPx)
@@ -349,6 +363,66 @@ private fun AwaitPointerEventScope.claimsPress(
     if (!host.canPress || !change.pressed || change.isConsumed) return false
     val drag = change.position - down.position
     return DockPress.claimFor(direction, drag.x, drag.y, viewConfiguration.touchSlop) == DockPullClaim.CLAIM
+}
+
+/**
+ * Whether [change] makes the touch a scrub: it started on the contextual row with the Stream out and left slop leading
+ * along the Dock's run. Decided on the Initial pass, ahead of the row's own scroll, which a scrub replaces.
+ */
+private fun AwaitPointerEventScope.claimsScrub(
+    direction: DockPullDirection,
+    down: PointerInputChange,
+    change: PointerInputChange,
+    host: DockPullGestureHost,
+): Boolean {
+    if (!change.pressed || change.isConsumed || !host.canScrubFrom(down.position)) return false
+    val drag = change.position - down.position
+    return DockScrub.claims(direction, drag.x, drag.y, viewConfiguration.touchSlop)
+}
+
+/**
+ * Follows a scrub until the finger lifts or goes away. The finger's place is all the selection needs (it ticks, shows
+ * the page and scrolls the row at an end as it goes); the lift only hands the row its inertia: nothing else happens.
+ */
+private suspend fun AwaitPointerEventScope.trackScrub(
+    down: PointerInputChange,
+    tracker: VelocityTracker,
+    host: DockPullGestureHost,
+    claimed: PressSample,
+    direction: DockPullDirection,
+) {
+    val choice = host.scrub ?: return
+    choice.beginScrub(claimed.position)
+    try {
+        var finished = false
+        while (!finished) {
+            awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id }?.consume()
+            val change = awaitPointerEvent().changes.firstOrNull { candidate -> candidate.id == down.id }
+            finished = trackScrubStep(change, tracker, choice, direction)
+        }
+    } finally {
+        choice.end()
+    }
+}
+
+/** One event of a scrub; true once it has ended. The lift hands the row its inertia when it had speed. */
+private fun AwaitPointerEventScope.trackScrubStep(
+    change: PointerInputChange?,
+    tracker: VelocityTracker,
+    choice: DockChoiceState,
+    direction: DockPullDirection,
+): Boolean {
+    if (change == null) return true
+    tracker.addPosition(change.uptimeMillis, change.position)
+    change.consume()
+    if (change.pressed) choice.moved(change.position)
+    if (!change.pressed) {
+        val velocity = tracker.calculateVelocity()
+        val along = if (direction.unitY != 0f) velocity.x else velocity.y
+        choice.end()
+        if (abs(along) / density > SCRUB_FLING_MIN_DP_PER_SECOND) choice.flingRowBy?.invoke(along)
+    }
+    return !change.pressed
 }
 
 /** Starts the press at [change]: the host and the press learn where it landed and how far it already went. */
@@ -574,3 +648,6 @@ internal val DockPullDirection.shortcutKey: Key
 internal const val HOME_DOCK_PULL_TEST_TAG = "home-dock-pull"
 
 private const val DOCK_PULL_PROGRESS_THRESHOLD = 0.001f
+
+/** The slowest lift that still flings the row: slower is a finger that stopped, and the row stays put. */
+private const val SCRUB_FLING_MIN_DP_PER_SECOND = 100f
