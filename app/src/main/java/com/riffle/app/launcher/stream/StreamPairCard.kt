@@ -95,8 +95,11 @@ internal fun PairCard(
                         // The strip's words are the card's: assistive technology reads the card, not its miniature.
                         .clearAndSetSemantics {},
             ) {
+                // The "New pair" card is one centred "+ New pair", not one in each half.
                 PairStripHalf(content.first, content.kind, env, Modifier.weight(1f))
-                PairStripHalf(content.second, content.kind, env, Modifier.weight(1f))
+                if (content.kind != PairCardKind.NEW) {
+                    PairStripHalf(content.second, content.kind, env, Modifier.weight(1f))
+                }
             }
         }
     }
