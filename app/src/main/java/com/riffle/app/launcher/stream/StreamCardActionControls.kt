@@ -48,6 +48,7 @@ import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.core.domain.launcher.stream.CardAction
 import com.riffle.core.domain.launcher.stream.EventKind
+import com.riffle.core.domain.launcher.stream.MediaContent
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamCardActions
 import com.riffle.core.domain.launcher.stream.StreamContent
@@ -69,6 +70,10 @@ internal fun CardActionControls(
     modifier: Modifier = Modifier,
 ) {
     if (actions.isEmpty()) return
+    if (content is MediaContent && !content.source) {
+        MediaActionRow(content, actions, callbacks, onToggleQueue, modifier)
+        return
+    }
     val own = actions.filterIsInstance<CardAction.Own>()
     Column(modifier = modifier.fillMaxWidth()) {
         // Icons and the reply field on the first line; every text action (Open, Open in calendar, Complete and the
