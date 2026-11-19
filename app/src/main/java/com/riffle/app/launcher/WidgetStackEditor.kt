@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -207,6 +208,15 @@ private fun StackMemberRow(
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // A placeholder member (it could not be bound) is set up from here with the picker's own flow.
+            LocalWidgetSetUpSupport.current.requestFor(stack.id, index, member)?.let { request ->
+                TextButton(
+                    onClick = { onAction(request) },
+                    modifier = Modifier.heightIn(min = STACK_ROW_BUTTON_DP.dp),
+                ) {
+                    Text(text = stringResource(R.string.menu_set_up_widget))
+                }
+            }
             StackRowButton(
                 icon = Icons.Filled.KeyboardArrowUp,
                 description = stringResource(R.string.widget_stack_move_up_description, member.label),

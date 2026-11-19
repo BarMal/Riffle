@@ -211,6 +211,16 @@ class SavedHomeReconcileTest {
     }
 
     @Test
+    fun aPlaceholderCarriesTheSavedProviderSoItCanBeSetUpInPlace() {
+        val saved = saved(page("p", widget("cal", host = 10, column = 2, row = 1)))
+        val item = SavedHomeReconciler.reconcile(saved, context()).items().single() as WidgetItem
+
+        assertEquals(provider("calendar"), item.provider)
+        assertTrue(item.needsSetUp)
+        assertEquals(provider("calendar"), item.members.single().provider)
+    }
+
+    @Test
     fun aLiveWidgetIsKeptForOneSavedWidgetOnly() {
         val live = page("live", widget("cal", host = 10, column = 0, row = 0))
         val layout = saved(page("p", widget("a", host = 10, column = 0, row = 0)))

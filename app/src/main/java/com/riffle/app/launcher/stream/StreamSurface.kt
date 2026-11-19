@@ -284,6 +284,7 @@ internal fun StreamSurface(
         )
     val pageMenuLabel = stringResource(R.string.stream_page_options_label)
     val viewButtonOn = LocalStreamViewButton.current
+    val buttonRoom = remember { StreamViewButtonRoom() }
     val haptics = LocalLauncherHaptics.current
     // The stack's empty room: a tap closes the Stream and a long-press opens the page's options (or does nothing new
     // when there are none). Folded, the room is the whole window, under the system bars too; beside a Dock it is the
@@ -310,6 +311,7 @@ internal fun StreamSurface(
         LocalActionsInDock provides actionsInDock,
         LocalQuickActionsInDock provides quickActionsInDock,
         LocalQuickStripReserved provides (!quickActionsInDock && quickByPage.isNotEmpty()),
+        LocalStreamViewButtonRoom provides buttonRoom,
     ) {
         Box(
             modifier =
@@ -346,7 +348,8 @@ internal fun StreamSurface(
                         )
                     }
                     // The page's options as a visible control, for whoever has not found the long-press.
-                    if (viewButtonOn && pageMenuItems.isNotEmpty() && !cardOpen) {
+                    val buttonShown = viewButtonOn && pageMenuItems.isNotEmpty() && !cardOpen
+                    if (buttonShown && buttonRoom.isClear(state.currentKey)) {
                         StreamViewButton(
                             onClick = { centre -> pageMenu.show(centre) },
                             modifier = Modifier.align(Alignment.TopEnd),

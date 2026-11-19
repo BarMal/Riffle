@@ -95,9 +95,14 @@ class MediaSessionMappingTest {
     }
 
     @Test
-    fun aQueueThatCannotBeSkippedIntoShowsNoCards() {
-        val noSkip = snapshot(queue = queue, active = 0, actions = PlaybackState.ACTION_PAUSE)
-        assertEquals(emptyList<Any>(), noSkip.toMediaSessionInfo(1_000).queue)
+    fun aQueueThatCannotBeSkippedIntoStillShowsItsTracksButIsNotPlayable() {
+        val noSkip = snapshot(queue = queue, active = 0, actions = PlaybackState.ACTION_PAUSE).toMediaSessionInfo(1_000)
+        assertEquals(listOf("Two", "Four"), noSkip.queue.map { it.title })
+        assertEquals(false, noSkip.queuePlayable)
+        val skipping = PlaybackState.ACTION_SKIP_TO_QUEUE_ITEM
+        val skippable = snapshot(queue = queue, active = 0, actions = skipping).toMediaSessionInfo(1_000)
+        assertEquals(true, skippable.queuePlayable)
+        assertEquals(noSkip.queue, skippable.queue)
     }
 
     @Test

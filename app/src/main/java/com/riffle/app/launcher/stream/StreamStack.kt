@@ -85,7 +85,9 @@ import com.riffle.core.domain.launcher.stream.OpenCardBlend
 import com.riffle.core.domain.launcher.stream.OpenCardEvent
 import com.riffle.core.domain.launcher.stream.RecentAppContent
 import com.riffle.core.domain.launcher.stream.SlimTabs
+import com.riffle.core.domain.launcher.stream.StackCardRef
 import com.riffle.core.domain.launcher.stream.StackFling
+import com.riffle.core.domain.launcher.stream.StackFollow
 import com.riffle.core.domain.launcher.stream.StackGeometry
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamCardActions
@@ -280,6 +282,15 @@ private fun StreamStackContent(
     val openState = cards.state
     val presences = remember(stackKey) { mutableMapOf<String, OpenCardPresence>() }
     val stackState = remember(stackKey) { StreamStackState() }
+    // Whether the stack, with its strips, stops short of the Stream's top-end corner, where the view button stands.
+    val buttonRoom = LocalStreamViewButtonRoom.current
+    val strips = minOf(peeks, entries.size - 1).coerceAtLeast(0)
+    val reachDp = geometry.cardHeightDp + strips * sizes.pitchDp + pageInsets.stackBottom.value
+    val cornerClear = reachDp + StreamMinTarget.value <= areaHeight.value
+    if (buttonRoom != null) {
+        SideEffect { buttonRoom.report(stackKey, cornerClear) }
+        DisposableEffect(buttonRoom, stackKey) { onDispose { buttonRoom.report(stackKey, clear = true) } }
+    }
     val ids = remember(entries) { entries.map { it.id }.toSet() }
     // A card that goes away closes; a card open on another page is that page's.
     LaunchedEffect(stackKey, ids) { cards.dispatch(OpenCardEvent.CardsChanged(stackKey, ids)) }
@@ -788,6 +799,10 @@ private fun FocusedStack(
 ) {
     val count = items.size
     val dockFan = LocalDockFan.current
+    // A media stack's queue moves up as the track advances: the person stays on the same card (by its id), or on the
+    // front when that card became the one playing. Before the clamp, in the frame the cards change.
+    val followed = remember(state) { StackFollowMemory() }
+    SideEffect { followed.follow(items, state) }
     LaunchedEffect(count) { state.clampTo(count) }
     // The stack is held to its cards in the very frame they change (a card dismissed, a conversation gone), not a frame
     // later, so its position is never past the last card.
@@ -1105,3 +1120,28 @@ private class SideBleedShape(private val bleedPx: Float) : Shape {
         density: Density,
     ): Outline = Outline.Rectangle(Rect(-bleedPx, 0f, size.width + bleedPx, size.height))
 }
+
+/**
+ * Remembers the cards a media stack had, so that when they change the stack's position follows the card the person was
+ * on ([StackFollow]) instead of staying on the same index. A stack with no queue card is left as it was.
+ */
+internal class StackFollowMemory {
+    private var last: List<StackCardRef> = emptyList()
+
+    fun follow(
+        items: List<StackEntry>,
+        state: StreamStackState,
+    ) {
+        val now = items.map { StackCardRef(it.id, goneMeansPlayed = it.isQueueCard()) }
+        val previous = last
+        last = now
+        val ids = now.map { it.id }
+        if (previous.isEmpty() || previous.map { it.id } == ids) return
+        if (previous.none { it.goneMeansPlayed } && now.none { it.goneMeansPlayed }) return
+        val from = StackFling.nearest(state.position, previous.size)
+        val to = StackFollow.indexAfterChange(previous, from, ids)
+        state.followBy(to - from, items.size)
+    }
+}
+
+private fun StackEntry.isQueueCard(): Boolean = ((this as? ContentEntry)?.content as? MediaContent)?.queueItem != null

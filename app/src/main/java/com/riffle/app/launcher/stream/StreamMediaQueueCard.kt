@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -26,12 +27,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.core.domain.launcher.stream.MediaAction
 import com.riffle.core.domain.launcher.stream.MediaContent
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.workspace.settings.HideChoice
 
 /** The action a queue card performs: play its track. Null for a card that is not a queue card. */
-internal fun MediaContent.playQueueAction(): StreamAction? = queueItem?.let { StreamAction.PlayQueueItem(it.queueId) }
+internal fun MediaContent.playQueueAction(): StreamAction? =
+    queueItem?.takeIf { MediaAction.PLAY_QUEUE_ITEM in actions }?.let { StreamAction.PlayQueueItem(it.queueId) }
 
 /** The queue card as one spoken phrase: "Up next, <track> by <artist>". */
 @Composable
@@ -86,7 +89,13 @@ internal fun MediaQueueCard(
                 title = content.title ?: stringResource(R.string.stream_media_unknown_title),
                 subtitle = content.artist,
                 modifier = Modifier.padding(end = RiffleSpacing.xs),
-                contentModifier = Modifier.streamClickable({ play?.let { callbacks.onAction(content, it) } }),
+                // A read-only card (the player cannot skip to a track) has nothing to press: not a button.
+                contentModifier =
+                    if (play != null) {
+                        Modifier.streamClickable({ callbacks.onAction(content, play) })
+                    } else {
+                        Modifier
+                    },
                 trailing = { StreamHideMenuButton(hideChoices, content, groupKey, callbacks) },
             )
             // A gap under the header: the strip of this card behind another shows the header only, never the button.
@@ -96,12 +105,20 @@ internal fun MediaQueueCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Start,
             ) {
-                FilledTonalButton(
-                    onClick = { play?.let { callbacks.onAction(content, it) } },
-                    modifier = Modifier.heightIn(min = StreamMinTarget),
-                ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Text(playLabel, maxLines = 1)
+                if (play != null) {
+                    FilledTonalButton(
+                        onClick = { callbacks.onAction(content, play) },
+                        modifier = Modifier.heightIn(min = StreamMinTarget),
+                    ) {
+                        Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Text(playLabel, maxLines = 1)
+                    }
+                } else {
+                    Text(
+                        text = stringResource(R.string.stream_media_up_next),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }

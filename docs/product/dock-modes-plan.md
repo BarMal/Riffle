@@ -2645,10 +2645,17 @@ player" did nothing. ADR 0003, Amendment 16.
   rules, profile visibility and content levels reach them as they reach the player; a sensitive player has none, and a
   source set to hide body or text maps them to nothing (as the old in-card list followed the body level).
 - **Which tracks.** Only those after `PlaybackState.activeQueueItemId` (an unknown active id: from the top), at most 10,
-  in queue order, only when the session offers `ACTION_SKIP_TO_QUEUE_ITEM` (a queue that cannot be skipped into would
-  be cards that do nothing) and the entry has a platform id and a title. Thumbnails: the `MediaDescription` bitmap, else
+  in queue order, and the entry has a platform id and a title. A session that does not offer
+  `ACTION_SKIP_TO_QUEUE_ITEM` still shows its queue, as read-only "Up next" cards (`MediaSessionInfo.queuePlayable`
+  false, ext `media.queue_read_only`): no actions, "Up next" in place of Play, a header that is not a button, spoken as
+  "Up next, <track> by <artist>" (Amendment 18). Thumbnails: the `MediaDescription` bitmap, else
   a `content:` or `android.resource:` icon URI read through the content resolver and scaled to 256 px (never the
   network), kept in memory with the session's artwork (`media-art:<package>/q/<id>`), small cache, nothing on disk.
+- **The same card when the track advances.** The queue moves up as the track advances (the card that was next becomes
+  the player's, the rest shift by one), so the person browsing a queue card would find the same index on another
+  track. The stack's position follows the card's id instead (`StackFollow`, `:core:domain`; `StackFollowMemory` runs it
+  in the frame the cards change): the card they were on stays in front wherever it is now, and a queue card that left
+  the queue (it is the one playing) lands on the front. Stacks with no queue card are untouched (Amendment 18).
 - **One page, one stack, per player.** Now's section result is a group per active player (`player:<package>:<profile>`:
   the player's card, then its queue cards) and one group of the recent players (key `now`). `StreamPagePlanner` makes
   each player group a page (`now/player:<package>:<profile>`); the recent players stay together as the page with the

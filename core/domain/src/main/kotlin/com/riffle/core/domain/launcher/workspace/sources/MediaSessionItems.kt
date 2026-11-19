@@ -54,6 +54,11 @@ data class MediaSessionInfo(
     val durationMillis: Long? = null,
     val controls: Set<MediaControl> = emptySet(),
     val queue: List<MediaSessionQueueEntry> = emptyList(),
+    /**
+     * Whether the session lets a launcher skip to a queue item. When it does not, the queue is still shown, as
+     * read-only "Up next" cards with no Play.
+     */
+    val queuePlayable: Boolean = true,
 )
 
 /** Platform seam: the active media sessions. Blocking; call off the main thread. Empty when there is no access. */
@@ -73,6 +78,9 @@ object MediaItemExt {
 
     /** Set on the item of one upcoming track of a player's queue: the platform's queue item id. */
     val QUEUE_ID = ItemExtKey("media.queue_id")
+
+    /** Set (true) on a queue item of a session that cannot skip to a queue item: the card has no Play. */
+    val QUEUE_READ_ONLY = ItemExtKey("media.queue_read_only")
 
     /** Where the track comes in the queue after the one playing: 0 is next. */
     val QUEUE_POSITION = ItemExtKey("media.queue_position")
@@ -158,7 +166,12 @@ object MediaSessionItems {
                             mapOf(
                                 MediaItemExt.QUEUE_ID to ItemExtValue.Number(entry.queueId),
                                 MediaItemExt.QUEUE_POSITION to ItemExtValue.Number(position.toLong()),
-                            ),
+                            ) +
+                            if (session.queuePlayable) {
+                                emptyMap()
+                            } else {
+                                mapOf(MediaItemExt.QUEUE_READ_ONLY to ItemExtValue.Flag(true))
+                            },
                 )
             }
     }

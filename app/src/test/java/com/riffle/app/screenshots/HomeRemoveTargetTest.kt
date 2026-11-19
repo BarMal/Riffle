@@ -140,6 +140,27 @@ class HomeRemoveTargetTest {
     }
 
     @Test
+    fun theLabelStandsClearOfTheLiftedItemWhileItHoversOnEitherSideOfTheMiddle() {
+        show()
+        lift()
+        val dp = composeRule.density.density
+        val bounds = composeRule.onNodeWithTag(HOME_REMOVE_TARGET_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        listOf(-40f, 0f, 40f).forEach { offset ->
+            val finger = Offset(bounds.center.x + offset * dp, bounds.center.y)
+            composeRule.onRoot().performTouchInput { moveTo(finger) }
+            composeRule.mainClock.advanceTimeBy(600)
+            composeRule.waitForIdle()
+            val label = composeRule.onNodeWithText("Remove").fetchSemanticsNode().boundsInRoot
+            val pill = composeRule.onNodeWithTag(HOME_REMOVE_TARGET_TEST_TAG).fetchSemanticsNode().boundsInRoot
+            // The lifted icon is about 44 dp across and centred on the finger.
+            val gap = kotlin.math.abs(label.center.x - finger.x) - label.width / 2
+            assertTrue("offset $offset: label ${label.center.x} finger ${finger.x}", gap >= 22 * dp)
+            assertTrue("pill $pill label $label", label.left >= pill.left && label.right <= pill.right)
+        }
+        composeRule.onRoot().performTouchInput { up() }
+    }
+
+    @Test
     fun releasingElsewhereDoesNotRemoveAnything() {
         show()
         lift()

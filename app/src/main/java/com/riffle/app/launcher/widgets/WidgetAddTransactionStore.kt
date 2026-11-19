@@ -29,6 +29,9 @@ data class PendingWidgetAddTransaction(
     val dockIndex: Int? = null,
     /** With [WidgetAddTarget.HOME_STACK]: the stack the widget joins. */
     val targetStackId: LauncherItemId? = null,
+    /** With [WidgetAddTarget.HOME_PLACEHOLDER]: the Home item whose placeholder is set up, and which of its widgets. */
+    val targetItemId: LauncherItemId? = null,
+    val targetMemberIndex: Int = 0,
     val step: PendingWidgetAddStep,
     val createdAtEpochMillis: Long,
     val version: Int = CURRENT_WIDGET_ADD_TRANSACTION_VERSION,
@@ -118,6 +121,8 @@ internal fun encodeWidgetAddTransaction(transaction: PendingWidgetAddTransaction
         .put("targetRow", transaction.targetCell?.row)
         .put("dockIndex", transaction.dockIndex)
         .put("targetStackId", transaction.targetStackId?.value)
+        .put("targetItemId", transaction.targetItemId?.value)
+        .put("targetMemberIndex", transaction.targetMemberIndex)
         .put("step", transaction.step.name)
         .put("createdAtEpochMillis", transaction.createdAtEpochMillis)
         .toString()
@@ -163,10 +168,15 @@ internal fun decodeWidgetAddTransaction(value: String): PendingWidgetAddTransact
                     },
                 dockIndex = json.optInt("dockIndex", -1).takeIf { it >= 0 },
                 targetStackId = json.optString("targetStackId").takeIf(String::isNotBlank)?.let(::LauncherItemId),
+                targetItemId = json.optString("targetItemId").takeIf(String::isNotBlank)?.let(::LauncherItemId),
+                targetMemberIndex = json.optInt("targetMemberIndex", 0).coerceAtLeast(0),
                 step = PendingWidgetAddStep.valueOf(json.getString("step")),
                 createdAtEpochMillis = json.getLong("createdAtEpochMillis").also { require(it >= 0) },
                 version = json.getInt("version").also { require(it in 1..CURRENT_WIDGET_ADD_TRANSACTION_VERSION) },
-            )
+            ).also {
+                // A set-up with no item to set up cannot be finished; it is discarded like any unreadable one.
+                require(it.target != WidgetAddTarget.HOME_PLACEHOLDER || it.targetItemId != null)
+            }
         }
     }.getOrNull()
 
@@ -175,6 +185,6 @@ internal fun decodeInvalidWidgetAddTransactionHostedId(value: String): HostedWid
         HostedWidgetId(JSONObject(value).getInt("hostedWidgetId").also { require(it > 0) })
     }.getOrNull()
 
-private const val CURRENT_WIDGET_ADD_TRANSACTION_VERSION = 3
+private const val CURRENT_WIDGET_ADD_TRANSACTION_VERSION = 4
 private const val WIDGET_ADD_TRANSACTION_PREFERENCES = "widget_add_transaction"
 private const val WIDGET_ADD_TRANSACTION_KEY = "pending"

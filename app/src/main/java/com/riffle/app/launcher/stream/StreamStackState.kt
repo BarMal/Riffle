@@ -22,6 +22,7 @@ import com.riffle.core.domain.launcher.stream.StackSpringState
  * had got to.
  */
 @Stable
+@Suppress("TooManyFunctions")
 internal class StreamStackState {
     /** Which card is in front, as a float: 0 is the first card, 1.5 is half way from the second to the third. */
     var position by mutableFloatStateOf(0f)
@@ -60,6 +61,22 @@ internal class StreamStackState {
         if (settled > last) settled = last
         if (heading > last) heading = last
         if (ticked > last) ticked = last
+    }
+
+    /**
+     * The cards changed under the person and the card they were on is now [delta] places along (a queue moved up as
+     * the track advanced): the position moves with it, so the same card stays in front with no visible jump.
+     */
+    fun followBy(
+        delta: Int,
+        count: Int,
+    ) {
+        if (delta == 0) return
+        val last = (count - 1).coerceAtLeast(0)
+        position = (position + delta).coerceIn(0f, last.toFloat())
+        settled = (settled + delta).coerceIn(0, last)
+        heading = (heading + delta).coerceIn(0, last)
+        ticked = (ticked + delta).coerceIn(0, last)
     }
 
     /** The finger moved by [deltaDp] (positive: down); [slopDp] is credited once at the start of a drag. */

@@ -89,6 +89,42 @@ class WidgetStackEngine(
         }
     }
 
+    /**
+     * Gives the placeholder member [memberIndex] of [itemId] (a lone widget is member 0) the host id [hostedId] it was
+     * just bound with, in place: same cell, span, stack membership, position and shown member. The member keeps its
+     * provider and label; [constraints] (what the provider permits now) replace its own only when they still permit
+     * the item's span. A member that is not a placeholder, or a host id the layout already holds, is rejected.
+     */
+    fun bindPlaceholder(
+        layout: HomeLayout,
+        itemId: LauncherItemId,
+        memberIndex: Int,
+        hostedId: HostedWidgetId,
+        constraints: WidgetResizeConstraints? = null,
+    ): WidgetStackResult {
+        val (page, item) = locate(layout, itemId)
+        val span = item?.placement?.span
+        val member = item?.members?.getOrNull(memberIndex)
+        return when {
+            page == null || item == null || span == null -> reject(WidgetStackRejection.ITEM_NOT_FOUND)
+            page.type is LauncherPageType.Generated -> reject(WidgetStackRejection.GENERATED_PAGE)
+            member == null -> reject(WidgetStackRejection.INDEX_OUT_OF_RANGE)
+            !member.needsSetUp || hostedId.value == 0 -> reject(WidgetStackRejection.NOT_A_PLACEHOLDER)
+            layout.allItems().filterIsInstance<WidgetItem>().any { hostedId in it.hostIds } ->
+                reject(WidgetStackRejection.DUPLICATE_WIDGET)
+            else -> {
+                val bound =
+                    member.copy(
+                        appWidgetId = hostedId,
+                        resizeConstraints = constraints?.takeIf { it.permits(span) } ?: member.resizeConstraints,
+                    )
+                val members = item.members.mapIndexed { index, m -> if (index == memberIndex) bound else m }
+                val shown = if (item.isStack) item.shownIndex else 0
+                updated(layout, page.replacing(item.restacked(members, shown)))
+            }
+        }
+    }
+
     /** Remembers which member the stack shows. An index out of range is kept in range. */
     fun show(
         layout: HomeLayout,
@@ -264,6 +300,7 @@ fun WidgetItem.restacked(
         appWidgetId = lead.appWidgetId,
         label = lead.label,
         glance = lead.glance,
+        provider = lead.provider,
         resizeConstraints = WidgetStackEngine.constraintsOf(members),
         stack = if (members.size > 1) members else emptyList(),
         shownIndex = if (members.size > 1) shown.coerceIn(0, members.lastIndex) else 0,
@@ -278,6 +315,7 @@ fun StackedWidget.asItem(id: LauncherItemId): WidgetItem =
         label = label,
         resizeConstraints = resizeConstraints,
         glance = glance,
+        provider = provider,
     )
 
 sealed interface WidgetStackResult {
@@ -301,6 +339,7 @@ enum class WidgetStackRejection {
     SPAN_NOT_SUPPORTED,
     DUPLICATE_WIDGET,
     INDEX_OUT_OF_RANGE,
+    NOT_A_PLACEHOLDER,
     GENERATED_PAGE,
     NO_ROOM,
 }

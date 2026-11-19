@@ -930,10 +930,37 @@ to 16 stands; this adds no Place and no View.
 - **Import and reset have a way back.** An import keeps one local "before import" copy first (the export document,
   excluded from Android's backup); Undo re-imports it through the normal validated path. "Reset settings" restores
   defaults and keeps Home, the Dock, saved layouts, hidden apps and feeds and tokens, with Undo.
-- **Not built:** prompts and configuration screens during activation, resetting the Stream's sections, and a device
-  run of any of it.
+- **Not built:** a device run of any of it. (Prompts and configuration screens during activation, and resetting the
+  Stream's sections, were built by Amendment 18.)
 
 Detail: `settings.md`, "Home > Home layouts", "Backup > Undo last import", "About > Reset settings".
+
+## Amendment 18 (owner, 2026-11-19): set up a placeholder in place, a read-only queue, and a stack that keeps its card
+
+Gaps the last batches reported about their own work. The rest of Amendments 1 to 17 stands; this adds no Place, no View
+and no kind of content, and one stored value (a widget's optional provider in the layout JSON).
+
+- **A placeholder is set up where it stands.** A platform widget that could not be bound (a saved layout activated, an
+  import undone late, a backup restored) keeps its provider (`WidgetItem.provider`, `StackedWidget.provider`) and is set
+  up by tapping it, by "Set up widget" in its menu, by an accessibility action or from Edit stack. There is no second
+  flow: it is the widget picker's request, bind, permission and configuration transaction with a new target
+  (`WidgetAddTarget.HOME_PLACEHOLDER`) that also records the item and the member, persisted like any pending add, and its
+  completion is `WidgetStackEngine.bindPlaceholder`: the same cell, span, stack membership, position and shown widget.
+  No known provider: the old text, Remove only. App gone: it says so, Remove only. Cancelled: it stays a placeholder.
+- **A queue that cannot be skipped into is still shown.** Amendment 16 showed queue cards only when the session offered
+  skip-to-queue-item. The queue is now always shown; where the session does not offer it the cards are read-only "Up
+  next" cards: no `PLAY_QUEUE_ITEM`, no Play, not buttons, spoken "Up next, <track> by <artist>". The cap of ten, the
+  order and the privacy rules are unchanged.
+- **A stack follows its card.** When a media stack's cards change, its position follows the id of the card the person
+  was on (`StackFollow`), not the index: the queue moving up as the track advances no longer changes what they look at,
+  and a queue card that became the playing one lands on the front. It happens in the frame the cards change.
+- **Smaller rules in the same batch.** Reset settings also resets the Stream's layouts (sections on or off, order, view
+  and options) with Undo, as the one place Amendment 17 left out. A group of apps dropped on an app makes a folder of
+  both (a group holding a folder does not). The Remove target is wider and keeps its label clear of the lifted icon. The
+  Edit page bar flows: count at the start, actions at the end. The Stream's view button is not drawn over a page that
+  reaches its corner (it never reserved room; a stack's geometry stays as it was).
+
+Detail and tests: `settings.md` (Reset settings, Setting up a placeholder), `gestures.md`, `dock-modes-plan.md`.
 
 ## Superseded documents
 

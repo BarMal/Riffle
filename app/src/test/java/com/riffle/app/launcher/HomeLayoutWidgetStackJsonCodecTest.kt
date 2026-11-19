@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.glance.GlanceWidgetKind
 import com.riffle.core.domain.launcher.glance.GlanceWidgets
 import com.riffle.core.domain.launcher.home.GridCell
@@ -13,6 +14,8 @@ import com.riffle.core.domain.launcher.home.StackedWidget
 import com.riffle.core.domain.launcher.home.WidgetItem
 import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import com.riffle.core.domain.launcher.home.restacked
+import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
+import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -124,5 +127,58 @@ class HomeLayoutWidgetStackJsonCodecTest {
         val decoded = decodeHomeLayoutSet(encodeHomeLayoutSet(set))
 
         assertEquals(stack, decoded.activeLayout.selectedPage.items.single())
+    }
+
+    private val weatherProvider =
+        WidgetProviderIdentity(AppPackageName("com.example.weather"), WidgetProviderClassName(".WeatherWidget"))
+
+    @Test
+    fun aPlaceholderKeepsItsProviderThroughTheLayoutCodec() {
+        val placeholder =
+            WidgetItem(
+                id = LauncherItemId("widget:7"),
+                appWidgetId = HostedWidgetId(0),
+                label = "Weather",
+                placement = GridPlacement(GridCell(1, 2), span),
+                provider = weatherProvider,
+            )
+        val member = StackedWidget(HostedWidgetId(0), "Calendar", provider = weatherProvider)
+        val mixed =
+            placeholder.restacked(listOf(StackedWidget(HostedWidgetId(9), "Notes"), member), shown = 1)
+
+        listOf(placeholder, mixed).forEach { item ->
+            val decoded = decodeHomeLayout(encodeHomeLayout(layoutOf(item))).selectedPage.items.single()
+
+            assertEquals(item, decoded)
+        }
+    }
+
+    @Test
+    fun aWidgetStoredWithoutAProviderReadsWithNone() {
+        val old =
+            """
+            {"selectedPageId":"home","pages":[{"id":"home","columns":4,"rows":5,"items":[
+              {"type":"widget","id":"widget:42","appWidgetId":0,"label":"Weather","column":1,"row":2,
+               "columns":2,"rows":2}
+            ]}],"dock":{"capacity":5,"items":[]}}
+            """.trimIndent()
+
+        val decoded = decodeHomeLayout(old).selectedPage.items.single() as WidgetItem
+
+        assertEquals(null, decoded.provider)
+        assertTrue(decoded.needsSetUp)
+    }
+
+    @Test
+    fun aDamagedProviderReadsAsNoneAndKeepsTheWidget() {
+        val encoded =
+            encodeHomeLayout(
+                layoutOf(WidgetItem(LauncherItemId("widget:7"), HostedWidgetId(0), "W", placement = stack.placement)),
+            ).replace("\"type\":\"widget\"", "\"type\":\"widget\",\"provider\":{\"package\":\"x\"}")
+
+        val decoded = decodeHomeLayout(encoded).selectedPage.items.single() as WidgetItem
+
+        assertEquals(null, decoded.provider)
+        assertEquals("W", decoded.label)
     }
 }

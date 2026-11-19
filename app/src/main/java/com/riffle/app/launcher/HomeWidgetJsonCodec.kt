@@ -1,5 +1,9 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppProfileId
+import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.glance.GlanceWidgets
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HostedWidgetId
@@ -8,6 +12,8 @@ import com.riffle.core.domain.launcher.home.StackedWidget
 import com.riffle.core.domain.launcher.home.WidgetItem
 import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import com.riffle.core.domain.launcher.home.restacked
+import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
+import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -28,6 +34,7 @@ fun encodeWidget(widget: WidgetItem): JSONObject =
         .put("supportsHorizontalResize", widget.resizeConstraints.supportsHorizontalResize)
         .put("supportsVerticalResize", widget.resizeConstraints.supportsVerticalResize)
         .put("glance", widget.glance?.storedId)
+        .also { json -> widget.provider?.let { json.put("provider", encodeWidgetProvider(it)) } }
         .also { json ->
             // A stack (ADR 0003, Amendment 14) adds two keys; a plain widget is stored exactly as before.
             if (widget.isStack) {
@@ -47,6 +54,30 @@ private fun encodeStackedWidget(member: StackedWidget): JSONObject =
         .put("supportsHorizontalResize", member.resizeConstraints.supportsHorizontalResize)
         .put("supportsVerticalResize", member.resizeConstraints.supportsVerticalResize)
         .put("glance", member.glance?.storedId)
+        .also { json -> member.provider?.let { json.put("provider", encodeWidgetProvider(it)) } }
+
+/** The provider a placeholder is set up from again; absent for a widget that never had one recorded. */
+private fun encodeWidgetProvider(provider: WidgetProviderIdentity): JSONObject =
+    JSONObject()
+        .put("package", provider.packageName.value)
+        .put("class", provider.className.value)
+        .put("profile", provider.profile.id.value)
+        .put("profileType", provider.profile.type.name)
+
+private fun JSONObject.toWidgetProviderOrNull(): WidgetProviderIdentity? =
+    optJSONObject("provider")?.let { json ->
+        runCatching {
+            WidgetProviderIdentity(
+                packageName = AppPackageName(json.getString("package")),
+                className = WidgetProviderClassName(json.getString("class")),
+                profile =
+                    AppProfile(
+                        id = AppProfileId(json.getString("profile")),
+                        type = AppProfileType.valueOf(json.getString("profileType")),
+                    ),
+            )
+        }.getOrNull()
+    }
 
 private fun JSONObject.toStackedWidget(): StackedWidget =
     StackedWidget(
@@ -54,6 +85,7 @@ private fun JSONObject.toStackedWidget(): StackedWidget =
         label = optString("label", ""),
         resizeConstraints = toResizeConstraints(),
         glance = GlanceWidgets.kindOfStoredId(optString("glance").takeIf { it.isNotEmpty() }),
+        provider = toWidgetProviderOrNull(),
     )
 
 private fun JSONObject.toResizeConstraints(): WidgetResizeConstraints =
@@ -88,6 +120,7 @@ fun JSONObject.toWidget(): WidgetItem =
         glance = GlanceWidgets.kindOfStoredId(optString("glance").takeIf { it.isNotEmpty() }),
         stack = toStackOrEmpty(),
         shownIndex = optInt("shown", 0).coerceAtLeast(0),
+        provider = toWidgetProviderOrNull(),
     ).let { widget ->
         // A stack's members are the truth: the item's own fields are the first member's, whatever else was stored.
         if (widget.isStack) widget.restacked(widget.stack, widget.shownIndex) else widget.copy(shownIndex = 0)

@@ -61,6 +61,7 @@ private object StreamLayoutKeys {
  * told when an option changed (this is the [ContextChanges] the Stream provider re-evaluates on). A failing read
  * disables writing for this process, so a transient storage failure can never replace what is on disk.
  */
+@Suppress("TooManyFunctions")
 internal class CachedStreamLayoutRepository(
     private val store: StreamLayoutStorePort,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
@@ -112,6 +113,33 @@ internal class CachedStreamLayoutRepository(
         if (after != before) {
             if (after.options != before.options) notifyOptionsChanged()
             // Before the first read finishes the edit is only held: [initialize] merges it and writes.
+            if (persistenceEnabled && loaded) scope.launch { write() }
+        }
+        return before
+    }
+
+    /**
+     * "Reset settings": every posture's layout (sections on or off, their order, view and options) back to the
+     * default. Reads the store first so what was stored is what Undo gets back; returns it, for [restoreAll].
+     */
+    suspend fun resetAll(): StreamLayouts {
+        initialize()
+        return replaceAll(StreamLayouts())
+    }
+
+    /** Undo of [resetAll]: puts [layouts] back exactly. */
+    fun restoreAll(layouts: StreamLayouts) {
+        replaceAll(layouts)
+    }
+
+    private fun replaceAll(next: StreamLayouts): StreamLayouts {
+        val before: StreamLayouts
+        synchronized(lock) {
+            before = state.value
+            state.value = next
+        }
+        if (next != before) {
+            notifyOptionsChanged()
             if (persistenceEnabled && loaded) scope.launch { write() }
         }
         return before

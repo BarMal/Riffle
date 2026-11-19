@@ -26,6 +26,7 @@ import com.riffle.app.R
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun SettingsHiddenAppsPageContent(
@@ -269,6 +270,7 @@ private fun SettingsResetSection(
     val scope = rememberCoroutineScope()
     val undo = stringResource(R.string.stream_undo)
     val done = stringResource(R.string.settings_reset_done)
+    val streamLayouts = LocalStreamLayoutRepository.current
     var confirm by remember { mutableStateOf(false) }
     SettingsSection(title = stringResource(R.string.settings_section_reset)) {
         SettingsClickableRow(
@@ -285,7 +287,15 @@ private fun SettingsResetSection(
                 confirm = false
                 val before = settings
                 onAction(LauncherShellAction.ResetSettings)
-                scope.announceWithUndo(snackbar, done, undo) { onAction(LauncherShellAction.RestoreSettings(before)) }
+                // The Stream's sections live in their own store: they go back to the default with the settings, and
+                // Undo puts back exactly what was there.
+                scope.launch {
+                    val streamBefore = streamLayouts?.resetAll()
+                    scope.announceWithUndo(snackbar, done, undo) {
+                        onAction(LauncherShellAction.RestoreSettings(before))
+                        streamBefore?.let { streamLayouts?.restoreAll(it) }
+                    }
+                }
             },
             onDismiss = { confirm = false },
         )

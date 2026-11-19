@@ -25,4 +25,14 @@ class FolderNamingTest {
         assertEquals("Folder", FolderNaming.suggested(app("a", "Social"), null))
         assertEquals("Mappe", FolderNaming.suggested(app("a", null), app("b", "Social"), fallback = "Mappe"))
     }
+
+    @Test
+    fun aCategoryNamesAFolderOfSeveralOnlyWhenEveryAppSharesIt() {
+        val social = listOf(app("a", "Social"), app("b", "Social"))
+        assertEquals("Social", FolderNaming.suggestedForAll(social + app("c", "Social")))
+        assertEquals("Folder", FolderNaming.suggestedForAll(social + app("c", "Audio")))
+        assertEquals("Folder", FolderNaming.suggestedForAll(listOf(app("a", "Social"), null, app("c", "Social"))))
+        assertEquals("Folder", FolderNaming.suggestedForAll(listOf(app("a", "Social"))))
+        assertEquals("Mappe", FolderNaming.suggestedForAll(listOf(app("a", null), app("b", null)), fallback = "Mappe"))
+    }
 }

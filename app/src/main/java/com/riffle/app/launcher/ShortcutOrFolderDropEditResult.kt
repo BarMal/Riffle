@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderEditResult
 import com.riffle.core.domain.launcher.home.FolderEngine
 import com.riffle.core.domain.launcher.home.FolderItem
+import com.riffle.core.domain.launcher.home.FolderNaming
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.HomeAppPlacement
@@ -76,17 +77,42 @@ internal fun applyShortcutOrFolderDropEdit(
         is LauncherShellAction.DropExternalHomeItem ->
             dropExternalItem(action, layout, shortcutEngine, folderEngine, installedApps)
 
-        is LauncherShellAction.DropHomeGroup ->
-            (
-                if (action.dropOnItemId != null) {
-                    HomeSelection.dropGroupOnFolder(layout, action.targetPageId, action.dropOnItemId)
-                } else {
-                    HomeSelection.dropGroup(layout, action.targetPageId, action.cell)
-                }
-            ).toShortcutOrFolderDropEditResult()
+        is LauncherShellAction.DropHomeGroup -> dropGroup(action, layout, installedApps)
 
         else -> shortcutEngine.applyEdit(action = action, layout = layout).toShortcutOrFolderDropEditResult()
     }
+
+/** The ticked items dropped together: from the cell onward, into a folder, or onto an app to make a folder of both. */
+private fun dropGroup(
+    action: LauncherShellAction.DropHomeGroup,
+    layout: HomeLayout,
+    installedApps: List<InstalledApp>,
+): ShortcutOrFolderDropEditResult {
+    val target =
+        action.dropOnItemId?.let { id ->
+            layout.pages.firstOrNull { it.id == action.targetPageId }?.items?.firstOrNull { it.id == id }
+        }
+    val result =
+        when (target) {
+            null -> HomeSelection.dropGroup(layout, action.targetPageId, action.cell)
+            is AppShortcutItem -> {
+                val members = listOf(target) + HomeSelection.selectedItems(layout).filter { it.id != target.id }
+                val apps =
+                    members.map { member ->
+                        installedApps.firstOrNull { it.identity == (member as? AppShortcutItem)?.appIdentity }
+                    }
+                HomeSelection.dropGroupOnApp(
+                    layout = layout,
+                    targetPageId = action.targetPageId,
+                    appId = target.id,
+                    folderId = layout.nextFolderId(),
+                    label = FolderNaming.suggestedForAll(apps, action.folderLabel ?: FolderNaming.DEFAULT_LABEL),
+                )
+            }
+            else -> HomeSelection.dropGroupOnFolder(layout, action.targetPageId, target.id)
+        }
+    return result.toShortcutOrFolderDropEditResult()
+}
 
 /**
  * A drop of an item that is not on a page yet: an app of the Library becomes a new Home item (rejected when Home

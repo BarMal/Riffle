@@ -34,6 +34,14 @@ internal fun LauncherShellState.withWidgetStackEdit(
                         action.resizeConstraints,
                     ),
                 )
+            is LauncherShellAction.BindHostedWidgetToPlaceholder ->
+                engine.bindPlaceholder(
+                    homeLayout,
+                    action.itemId,
+                    action.memberIndex,
+                    action.hostedWidgetId,
+                    action.resizeConstraints,
+                )
             is LauncherShellAction.AddGlanceWidgetToStack ->
                 engine.addMember(
                     homeLayout,
