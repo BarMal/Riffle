@@ -16,7 +16,7 @@ internal object OnboardingText {
     const val NOT_NOW = "Not now"
     const val ALLOW = "Allow"
     const val ALLOWED = "Allowed"
-    const val SKIPPED = "Skipped. The section shows Allow access until you allow it."
+    const val SKIPPED = "Skipped. The section shows an Allow button until you allow it."
     const val STREAM_PERMISSIONS_HEADING = "Optional access"
 
     fun progress(
