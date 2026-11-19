@@ -349,12 +349,17 @@ class LauncherShellViewModel(
         if (poolHome != null && !poolHome.isReadyForEdits()) return
         val set = state.homeLayoutSet.withActiveLayout(state.homeLayout)
         val derived = libraryClassesOfWorkspaces(set, poolHome)
-        if (!LibraryViewRetirement.isPending(set, derived)) return
+        // The device class on screen only: the pool knows which arrangement an edit belongs to for the layout it shows.
+        val shown = listOf(set.activeKey.deviceClass)
+        if (!LibraryViewRetirement.isPending(set, derived, shown)) return
         poolHome?.keepBeforeOneHome(set)
         // Step one retypes the pages in place, so the pool takes their items in as an ordinary edit; step two moves
         // the library layout to the Standard key, which the pool only projects.
-        val placed = homeLayoutRepository.commitHomeLayoutSet(LibraryViewRetirement.withPlacedPages(set, derived))
-        val moved = LibraryViewRetirement.withStandardKeys(placed, derived)
+        val placed =
+            homeLayoutRepository.commitHomeLayoutSet(
+                LibraryViewRetirement.withPlacedPages(set, derived, shown),
+            )
+        val moved = LibraryViewRetirement.withStandardKeys(placed, derived, shown)
         val settled =
             when {
                 moved == placed -> placed
@@ -576,6 +581,9 @@ class LauncherShellViewModel(
         // A rotation or fold changes the layout, and with it the active workspace (and possibly its mode).
         if (action is LauncherShellAction.SelectHomeLayoutDeviceClass && mutableState.value != previousState) {
             followActiveWorkspace()
+            // A device class that was not on screen is converted the first time it is (a home without workspaces
+            // never reaches the call in followActiveWorkspace).
+            retireLibraryViewMode()
         }
     }
 

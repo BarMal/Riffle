@@ -12,11 +12,8 @@ import com.riffle.core.domain.launcher.home.GridInsets
 import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
-import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.LauncherItemId
-import com.riffle.core.domain.launcher.home.LauncherViewMode
-import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -148,14 +145,5 @@ class LauncherShellHomeGridViewModelTest {
                     activityName = AppActivityName(".MainActivity"),
                 ),
             label = label,
-        )
-
-    private val List<Any>.appIdentities: List<AppIdentity>
-        get() = filterIsInstance<AppShortcutItem>().map { item -> item.appIdentity }
-
-    private val libraryViewModeAvailability =
-        LauncherViewModeAvailability(
-            enabledExperimentalModesByDeviceClass =
-                mapOf(HomeLayoutDeviceClass.PHONE to setOf(LauncherViewMode.HOME_SCREEN_LIBRARY)),
         )
 }

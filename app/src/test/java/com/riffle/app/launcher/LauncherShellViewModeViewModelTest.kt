@@ -7,8 +7,6 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.apps.InstalledAppRepository
-import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -570,12 +568,6 @@ class LauncherShellViewModeViewModelTest {
         }
     }
 
-    private class FakeInstalledAppRepository(
-        var apps: List<InstalledApp>,
-    ) : InstalledAppRepository {
-        override fun installedApps(): List<InstalledApp> = apps
-    }
-
     private class FakeNotificationRepository(
         private val notifications: List<LauncherNotification>,
     ) : LauncherNotificationRepository {
@@ -611,6 +603,4 @@ class LauncherShellViewModeViewModelTest {
     ) = GridSettings(
         dimensions = GridDimensions(columns = columns, rows = rows),
     )
-
-    private fun List<Any>.singleAppShortcut(): AppShortcutItem = single() as AppShortcutItem
 }

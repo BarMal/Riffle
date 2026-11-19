@@ -385,8 +385,11 @@ What a real install can be in, and what happened to it:
 | (d') Stored Standard, workspace brings the library mode back | Active workspace is the migrated library one (or a preset that forked from it) | The shell flipped to the library mode on load | Shown by the Standard key; a stored library layout, if any, is converted |
 
 Per device class: every class of the stored set (phone, landscape phone, foldable, tablet, desktop) is converted by its own
-current mode. Per workspace: the conversion edits the arrangement of the workspace the layout shows (the migrated library
-one, or the preset's own, after its fork); other stored workspaces and arrangements are not touched.
+current mode, each the first time the shell shows it (the phone at the first start, a foldable when it is first unfolded). A
+class that is not shown is not converted yet, because the pool can only say which arrangement a layout edits for the layout
+it shows; until then nothing touches it (nothing fills layouts any more) and its stored layout is intact. Per workspace: the
+conversion edits the arrangement of the workspace the layout shows (the migrated library one, or the preset's own, after
+its fork); other stored workspaces and arrangements are not touched.
 
 ### What changed
 
@@ -416,16 +419,46 @@ one, or the preset's own, after its fork); other stored workspaces and arrangeme
 
 ### Tests
 
-Deleted as obsolete (the behaviour is intentionally gone): `HomeScreenLibraryLayoutTest` (all 16: auto-fill, overflow
-pages, compaction, trimming, leaving the library mode), `HomeScreenLibraryCompactionTest` (both: repacking for a side dock),
-`HomePageControlsTest.pageTypeOptionsExposeClassicLibraryAndGeneratedPages`,
-`LauncherFolderEditReducerTest.createFolderUsesLibraryModeShortcutsBeforeEditing`,
-`LauncherHomePageEditReducerTest` (four: selecting a generated page type fills it, refreshes clear it, the settings target
-layout refreshes), `LauncherShellHomeGridViewModelTest` (two: library compaction after a toggle or a grid change),
-`LauncherShellMoveHomeShortcutToCellViewModelTest.reflowsCompactLibraryPagesAfterMovingGeneratedShortcut`,
-`LauncherShellPageOverviewViewModelTest` (two: choosing a page type, pinning a generated page). Rewritten: the two action
-lists (`LauncherActionDomainTest`, `LauncherShellHomePageActionRoutingTest`) lose the removed actions;
-`WorkspaceHomeTest` and `PoolHomeActiveWorkspaceTest` assert the old derivation through `legacyHomeModeFor` and the new
-answer through `homeModeFor`. Added: `LibraryViewRetirementTest`, `LibraryViewRetirementPoolTest` (removal and moving stick
-across a refresh and a restart, a new install is appended and nothing else moves, both migrations do not double-place) and
-the app-level tests listed in the commit that adds them.
+Deleted as obsolete (the behaviour is intentionally gone):
+
+- `HomeScreenLibraryLayoutTest` (all 16: auto-fill, overflow pages, compaction, trimming, leaving the library mode) and
+  `HomeScreenLibraryCompactionTest` (both: repacking for a side dock): the code is deleted.
+- `HomePageControlsTest.pageTypeOptionsExposeClassicLibraryAndGeneratedPages`: the chooser is gone.
+- `LauncherFolderEditReducerTest.createFolderUsesLibraryModeShortcutsBeforeEditing` and
+  `LauncherShellFolderViewModelTest.createsHomeFolderFromLibraryModeShortcutsAndSavesLayout`: folders of auto-filled
+  library shortcuts. Folder creation stays covered by the other tests of both files.
+- `LauncherHomePageEditReducerTest`: `selectingCategoryPageImmediatelyPopulatesCategorizedInstalledApps`,
+  `categoryRefreshClearsGeneratedShortcutsWhenCategoriesBecomeUnavailable`,
+  `disabledContextualBehaviourPreservesTheConfiguredPageSelection`,
+  `selectingCategoryPageFromSettingsRefreshesSettingsTargetLayout` (generated pages are no longer created or refreshed;
+  editing the settings target layout of another device class stays covered by the grid-dimension test beside it) and
+  `launcherViewModeSelectionReflowsHomeScreenLibraryApps`.
+- `LauncherShellHomeGridViewModelTest.enablingLibraryPageCompactionImmediatelyReflowsGeneratedApps` and
+  `compactLibraryPagesReflowGeneratedAppsAfterGridChanges`, and
+  `LauncherShellMoveHomeShortcutToCellViewModelTest.reflowsCompactLibraryPagesAfterMovingGeneratedShortcut`: compaction.
+- `LauncherShellPageOverviewViewModelTest.updatesSelectedPageTypeFromOverview` and `pinsSelectedPageFromOverview`: the
+  chooser, and pinning a generated page.
+- `LauncherShellViewModeViewModelTest`: `savesLauncherViewModeSelection`,
+  `choosingTheHomeScreenInSettingsWhileOnLibraryKeepsLibraryAndChangesWhereThePullLeads`,
+  `refreshAddsNewInstalledAppsWhenLibraryModeIsActive`, `switchingBackToStandardRemovesGeneratedLibraryApps`,
+  `switchingModesPreservesSeparateModeLayouts` and `switchingDeviceClassPreservesSeparateDeviceLayoutsForCurrentMode`:
+  they chose the library mode and expected it to fill. Switching device classes with separate layouts stays covered by
+  `editsAfterInitialDeviceSelectionDoNotOverwritePreviousDeviceLayout` and its neighbours; "a refresh adds nothing" is
+  now `LauncherShellLibraryRetirementViewModelTest.aRefreshNeverPlacesAnAppTheUserDidNotPlace`.
+- `HomeLayoutUnavailableAppPrunerTest.removesTrailingEmptyAllAppsPagesAfterPruningUnavailableApps` and
+  `HomeLayoutVisibilityFilterTest.removesTrailingEmptyAllAppsPagesAfterFiltering`: trimming of generated library pages.
+  The tests that guard pruning of apps (data safety) are unchanged.
+
+Rewritten: the two action lists (`LauncherActionDomainTest`, `LauncherShellHomePageActionRoutingTest`) lose the removed
+actions; `WorkspaceHomeTest` and `PoolHomeActiveWorkspaceTest` assert the old derivation through `legacyHomeModeFor` and the
+new answer through `homeModeFor`; `LauncherShellViewModeViewModelTest.importsBackupDocumentIntoStateAndRepositories` imports
+a Standard backup (a library backup is in the new tests); `LauncherShellViewModeAvailabilityViewModelTest` starts with a
+stored library layout and expects the converted Standard Home.
+
+Added: `LibraryViewRetirementTest` (the rules on the stored set), `LibraryViewRetirementPoolTest` (the same path the shell
+runs, with the pool: removal and moving stick across a refresh and a restart, a new install is appended and nothing else
+moves, the widget keeps its host id, a workspace forked from the library arrangement is converted in its own
+arrangement, the settings-level migration afterwards does not double-place), `LauncherShellLibraryRetirementViewModelTest`
+(through the shell, from the stored form of the library layout including the oldest format without page types: convert once,
+removal, move, refresh, restart, new install, Simple mode on and off, a second device class) and
+`LibraryViewRetirementCodecTest` (every stored page type decodes and becomes what the table says).

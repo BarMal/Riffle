@@ -15,11 +15,16 @@ package com.riffle.core.domain.launcher.home
  *   items it holds now; an empty one is dropped. The generated Today and Cards pages are dropped: the Stream shows
  *   recents and notifications now, and they hold nothing the user arranged (Today lists the same apps as App).
  *
+ * Each step takes the device classes it works on ([within]; every class of the set by default). The shell passes the
+ * class it shows: the pool can only say which arrangement a layout edits for the layout it shows, so another class is
+ * converted the first time the shell shows it, and until then it is left as it is (nothing fills it any more).
+ *
  * Two steps, because the pool must see the page change before the key moves: [withPlacedPages] retypes the pages of
  * the layout each device class shows now (an ordinary commit puts the new pages' items into the pool), then
  * [withStandardKeys] moves a library layout to the Standard key (a projection only, nothing is ingested). Both are
  * pure, never throw and are idempotent: a set they have already converted is returned unchanged.
  */
+@Suppress("TooManyFunctions") // The two steps, their shared reads and the page rules, all pure and small.
 object LibraryViewRetirement {
     /**
      * The device classes that show the library layout: those whose current mode is the library mode in [set], and
@@ -28,8 +33,9 @@ object LibraryViewRetirement {
     fun libraryClasses(
         set: HomeLayoutSet,
         derived: Set<HomeLayoutDeviceClass> = emptySet(),
+        within: Collection<HomeLayoutDeviceClass> = classesOf(set),
     ): Set<HomeLayoutDeviceClass> =
-        classesOf(set)
+        within
             .filter { deviceClass ->
                 deviceClass in derived || currentKey(set, deviceClass).viewMode == LauncherViewMode.HOME_SCREEN_LIBRARY
             }.toSet()
@@ -38,10 +44,11 @@ object LibraryViewRetirement {
     fun isPending(
         set: HomeLayoutSet,
         derived: Set<HomeLayoutDeviceClass> = emptySet(),
+        within: Collection<HomeLayoutDeviceClass> = classesOf(set),
     ): Boolean {
-        val library = libraryClasses(set, derived)
+        val library = libraryClasses(set, derived, within)
         return library.any { set.holdsLibraryKey(it) } ||
-            classesOf(set).any { deviceClass ->
+            within.any { deviceClass ->
                 val key = sourceKey(set, deviceClass, deviceClass in library)
                 set.layouts[key]?.pages.orEmpty().any { page -> page.type != LauncherPageType.Home }
             }
@@ -51,9 +58,10 @@ object LibraryViewRetirement {
     fun withPlacedPages(
         set: HomeLayoutSet,
         derived: Set<HomeLayoutDeviceClass> = emptySet(),
+        within: Collection<HomeLayoutDeviceClass> = classesOf(set),
     ): HomeLayoutSet {
-        val library = libraryClasses(set, derived)
-        return classesOf(set).fold(set) { current, deviceClass ->
+        val library = libraryClasses(set, derived, within)
+        return within.fold(set) { current, deviceClass ->
             val key = sourceKey(current, deviceClass, deviceClass in library)
             val layout = current.layoutFor(key)
             val pages = layout.pagesAsPlaced()
@@ -69,8 +77,9 @@ object LibraryViewRetirement {
     fun withStandardKeys(
         set: HomeLayoutSet,
         derived: Set<HomeLayoutDeviceClass> = emptySet(),
+        within: Collection<HomeLayoutDeviceClass> = classesOf(set),
     ): HomeLayoutSet =
-        libraryClasses(set, derived).fold(set) { current, deviceClass ->
+        libraryClasses(set, derived, within).fold(set) { current, deviceClass ->
             if (!current.holdsLibraryKey(deviceClass)) {
                 current
             } else {

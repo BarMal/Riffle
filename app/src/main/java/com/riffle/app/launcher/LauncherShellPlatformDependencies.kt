@@ -33,9 +33,9 @@ data class LauncherShellPlatformDependencies(
  * on load any more (design 3.3, #1324). The Library-only availability the alpha shipped with is retired.
  *
  * The library mode stays available on purpose, although it is retired as a mode (ADR 0003, Amendment 10): a stored
- * library layout must still be found as the layout in use at start, so that `LibraryViewRetirement` converts it. Were it
- * unavailable, the start would fall back to the Standard layout and leave the library layout, which holds what the user
- * arranged, unread. Nothing fills it or chooses it any more, and it is converted as soon as it is seen.
+ * library layout must still be found as the layout in use at start, so that `LibraryViewRetirement` converts it.
+ * Were it unavailable, the start would fall back to the Standard layout and leave the library layout, which holds
+ * what the user arranged, unread. Nothing fills it or chooses it any more; it is converted as soon as it is seen.
  */
 fun defaultLauncherViewModeAvailability(): LauncherViewModeAvailability =
     LauncherViewModeAvailability(

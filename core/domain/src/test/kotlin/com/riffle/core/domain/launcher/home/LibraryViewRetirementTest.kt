@@ -316,4 +316,38 @@ class LibraryViewRetirementTest {
         assertEquals(set, retire(set))
         assertNull(set.layouts[key(LauncherViewMode.HOME_SCREEN_LIBRARY)])
     }
+
+    @Test
+    fun onlyTheGivenDeviceClassesAreConverted() {
+        val phoneLibrary = layout(LauncherViewMode.HOME_SCREEN_LIBRARY, page("home", LauncherPageType.Home, "p"))
+        val foldableLibrary = layout(LauncherViewMode.HOME_SCREEN_LIBRARY, page("home", LauncherPageType.Home, "f"))
+        val set =
+            HomeLayoutSet(
+                activeKey = key(LauncherViewMode.HOME_SCREEN_LIBRARY),
+                layouts =
+                    mapOf(
+                        key(LauncherViewMode.HOME_SCREEN_LIBRARY) to phoneLibrary,
+                        key(LauncherViewMode.HOME_SCREEN_LIBRARY, foldable) to foldableLibrary,
+                    ),
+                preferredModesByDeviceClass =
+                    mapOf(
+                        phone to LauncherViewMode.HOME_SCREEN_LIBRARY,
+                        foldable to LauncherViewMode.HOME_SCREEN_LIBRARY,
+                    ),
+            )
+        val shown = listOf(phone)
+
+        val retired =
+            LibraryViewRetirement.withStandardKeys(
+                LibraryViewRetirement.withPlacedPages(set, within = shown),
+                within = shown,
+            )
+
+        assertEquals(
+            setOf(key(LauncherViewMode.STANDARD_APP_DRAWER), key(LauncherViewMode.HOME_SCREEN_LIBRARY, foldable)),
+            retired.layouts.keys,
+        )
+        assertTrue(LibraryViewRetirement.isPending(retired))
+        assertFalse(LibraryViewRetirement.isPending(retired, within = shown))
+    }
 }

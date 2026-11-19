@@ -44,7 +44,7 @@ class LibraryBackReturnTest {
     private fun assertBackKeepsLibrary(settings: LauncherSettings) {
         val library =
             HomeLayoutSet.fromLayout(
-                HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY),
+                HomeLayoutDefaults.standard(),
             )
         val state =
             LauncherShellState(
@@ -70,7 +70,7 @@ class LibraryBackReturnTest {
         composeRule.runOnIdle {
             assertTrue(reachedSystem)
             assertTrue(dispatched.none { it is LauncherShellAction.LeaveLibrary })
-            assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, state.homeLayoutSet.activeKey.viewMode)
+            assertEquals(LauncherViewMode.STANDARD_APP_DRAWER, state.homeLayoutSet.activeKey.viewMode)
         }
     }
 }

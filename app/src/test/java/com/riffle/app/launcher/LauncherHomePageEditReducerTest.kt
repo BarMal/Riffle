@@ -10,7 +10,6 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
-import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridPlacement
@@ -436,6 +435,4 @@ class LauncherHomePageEditReducerTest {
 
     private val HomeLayout.pageIds: List<LauncherPageId>
         get() = pages.map { page -> page.id }
-
-    private fun List<Any>.singleAppShortcut(): AppShortcutItem = single() as AppShortcutItem
 }

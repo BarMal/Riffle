@@ -238,14 +238,14 @@ class LauncherShellLibraryRetirementViewModelTest {
     @Test
     fun everyDeviceClassOfTheStoredSetIsConvertedAndNoneOfThemIsRefilled() {
         val key = HomeLayoutKey(LauncherViewMode.HOME_SCREEN_LIBRARY, HomeLayoutDeviceClass.PHONE)
-        val foldableKey = HomeLayoutKey(LauncherViewMode.HOME_SCREEN_LIBRARY, HomeLayoutDeviceClass.FOLDABLE)
+        val foldableLibraryKey = HomeLayoutKey(LauncherViewMode.HOME_SCREEN_LIBRARY, HomeLayoutDeviceClass.FOLDABLE)
         val set =
             HomeLayoutSet(
                 activeKey = key,
                 layouts =
                     mapOf(
                         key to libraryLayout(),
-                        foldableKey to libraryLayout(HomeLayoutDeviceClass.FOLDABLE, compact = false),
+                        foldableLibraryKey to libraryLayout(HomeLayoutDeviceClass.FOLDABLE, compact = false),
                     ),
                 preferredModesByDeviceClass =
                     mapOf(
@@ -256,6 +256,11 @@ class LauncherShellLibraryRetirementViewModelTest {
         val sets = Sets(decodeHomeLayoutSet(encodeHomeLayoutSet(set)))
 
         val model = model(allApps(), sets)
+        // The phone is on screen: it is converted at the start; the foldable, not shown yet, is left as stored.
+        assertEquals(
+            setOf(HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER), foldableLibraryKey),
+            sets.saved!!.layouts.keys,
+        )
         model.onHomePageEdited(
             LauncherShellAction.SelectHomeLayoutDeviceClass(
                 HomeLayoutDeviceClass.FOLDABLE,

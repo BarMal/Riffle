@@ -738,8 +738,9 @@ stored arrangement.
   converted: the content it has now (the apps the auto-layout had filled in, in the same order, on the same pages) becomes
   ordinary placed items, its view mode becomes Standard, it is stored under the Standard key of the same device class (the
   library key is removed) and `compactLibraryPages` is cleared. Settings and page order stay. Done for every device class
-  of the stored set (phone, landscape phone, foldable, tablet, desktop) and for the arrangement of whichever workspace the
-  layout shows. A dormant library layout of a device class that shows Standard is left as it is.
+  of the stored set (phone, landscape phone, foldable, tablet, desktop), each the first time the shell shows it, and for the
+  arrangement of whichever workspace the layout shows (the pool can only say which arrangement an edit belongs to for the
+  layout on screen; a class not shown yet is left as stored, and nothing fills it any more). A dormant library layout of a device class that shows Standard is left as it is.
 - **Workspace ids are not changed.** `ws:<layout class>:home_screen_library` stays a valid, stored id: it is read as "the
   workspace migrated from the library mode" and shown by the Standard key (`WorkspaceHome.shown`, `homeModeFor`), so no
   stored workspace, arrangement, fork or backup is orphaned. `legacyHomeModeFor` keeps the old derivation for the
