@@ -19,6 +19,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -198,14 +199,19 @@ internal fun ImmediateWorkspacePager(
         val latestTarget by rememberUpdatedState(onDragPageTargetChanged)
         val latestNewPage by rememberUpdatedState(onDragNewPage)
         val edgePx = with(density) { HomeDragTuning.EDGE_ZONE_DP.dp.toPx() }
-        val edgeSide =
-            dragEdgeSide(
-                pointer = activeDragSession?.pointerInRoot ?: Offset.Unspecified,
-                bounds = pagerBounds,
-                edgePx = edgePx,
-                vertical = vertical,
-                rtl = isRtl,
-            )
+        // Read from the latest session in a derived state: the finger moves every frame, the edge it is at rarely.
+        val latestPointer by rememberUpdatedState(actions.currentDragSession)
+        val edgeSide by remember {
+            derivedStateOf {
+                dragEdgeSide(
+                    pointer = latestPointer()?.pointerInRoot ?: Offset.Unspecified,
+                    bounds = pagerBounds,
+                    edgePx = edgePx,
+                    vertical = vertical,
+                    rtl = isRtl,
+                )
+            }
+        }
         LaunchedEffect(edgeSide, activeDragSession != null) {
             if (edgeSide == 0 || latestSession == null) return@LaunchedEffect
             delay(tuning.edgeHoldMillis.toLong())

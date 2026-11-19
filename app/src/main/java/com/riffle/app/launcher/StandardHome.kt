@@ -37,11 +37,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -151,6 +153,13 @@ internal fun StandardHome(
         openedFolderId.value = created
     }
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
+    // What composition sees of the drag: everything but where the finger is. The finger moves every frame; the lifted
+    // icon and the edge hold read it in the layout phase and from the latest session, so composition (and every cell
+    // of every page) only changes when the drag does: a new landing cell, a new push, a page turn.
+    val composedDragSession =
+        remember {
+            derivedStateOf(structuralEqualityPolicy()) { homeDragSession.value?.withoutPointer() }
+        }
     // The page a drag offers past the last one: asked for (the pages before it noted), then found in the layout, kept
     // when the drag ends on it and discarded otherwise.
     val pagesBeforeCandidate = remember { mutableStateOf<Set<LauncherPageId>?>(null) }
@@ -281,7 +290,7 @@ internal fun StandardHome(
         }
         onDispose { dockHostState.homeDropAt = null }
     }
-    val actions =
+    val freshActions =
         HomeWorkspaceActions(
             onFolderOpen = { folder ->
                 renameOpenedFolder.value = false
@@ -349,6 +358,9 @@ internal fun StandardHome(
                 onAction(action)
             },
         )
+    // One instance for the life of the surface, which hands every call to the latest: the cells compare what they are
+    // given, and a fresh bundle of lambdas at every recomposition would make every cell recompose with it.
+    val actions = rememberStableWorkspaceActions(freshActions)
 
     StandardHomeColumn(
         state =
@@ -356,7 +368,7 @@ internal fun StandardHome(
                 layout = layout,
                 visibleLayout = visibleLayout,
                 dockPosition = dockPosition,
-                dragSession = homeDragSession.value,
+                dragSession = composedDragSession.value,
                 widgetPickerDragPreview = widgetPickerDragPreview.value,
                 presentation = presentation,
                 dockReservation = dockHostState.reservedExtent(visibleLayout, dockPosition),
@@ -366,7 +378,7 @@ internal fun StandardHome(
         modifier = surfaceModifier,
     )
     // The lifted icon above the pager (and so above a page turn), read in the layout phase.
-    if (homeDragSession.value != null) {
+    if (composedDragSession.value != null) {
         HomeLiftedItem(
             session = { homeDragSession.value },
             presentation = homeGridPresentationFor(layout, presentation, actions),
@@ -1126,6 +1138,10 @@ private fun StandardHomeContentState.homeGridPresentation(actions: HomeWorkspace
             ),
     )
 
+/** This drag as composition sees it: without where the finger is, which changes every frame. */
+internal fun HomeDragSession.withoutPointer(): HomeDragSession =
+    copy(pointerInRoot = Offset.Unspecified, dragOffsetX = 0f, dragOffsetY = 0f)
+
 internal data class HomeDragSession(
     val item: LauncherItem,
     val originPageId: com.riffle.core.domain.launcher.home.LauncherPageId =
@@ -1258,6 +1274,34 @@ internal data class HomeItemDragState(
     val grid: GridDimensions,
     val pageItems: List<LauncherItem>,
 )
+
+/** [latest], through one instance that never changes: each call goes to the latest actions given. */
+@Composable
+internal fun rememberStableWorkspaceActions(latest: HomeWorkspaceActions): HomeWorkspaceActions {
+    val current = rememberUpdatedState(latest)
+    return remember {
+        HomeWorkspaceActions(
+            onFolderOpen = { folder -> current.value.onFolderOpen(folder) },
+            onFolderRename = { folder -> current.value.onFolderRename(folder) },
+            onDragSessionChanged = { session -> current.value.onDragSessionChanged(session) },
+            currentDragSession = { current.value.currentDragSession() },
+            haptics =
+                object : LauncherHaptics {
+                    override fun longPress() = current.value.haptics.longPress()
+
+                    override fun perform(event: LauncherHapticEvent) = current.value.haptics.perform(event)
+                },
+            onDockInteractionExtentChanged = { extent -> current.value.onDockInteractionExtentChanged(extent) },
+            onDockAreaExtentChanged = { extent -> current.value.onDockAreaExtentChanged(extent) },
+            onBottomControlsHeightChanged = { height -> current.value.onBottomControlsHeightChanged(height) },
+            onWorkspaceGridBoundsChanged = { id, bounds -> current.value.onWorkspaceGridBoundsChanged(id, bounds) },
+            onDockBoundsChanged = { bounds -> current.value.onDockBoundsChanged(bounds) },
+            onBackgroundClick = { current.value.onBackgroundClick() },
+            onDragNewPage = { current.value.onDragNewPage() },
+            onAction = { action -> current.value.onAction(action) },
+        )
+    }
+}
 
 internal data class HomeWorkspaceActions(
     val onFolderOpen: (FolderItem) -> Unit,
