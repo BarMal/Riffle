@@ -85,6 +85,7 @@
     <string name="stream_bring_card_to_front">Bring to front</string>
     <string name="stream_open_tab">%1$s, open</string>
     <string name="stream_action_failed">That did not work.</string>
+    <string name="stream_open_failed">Couldn’t open %1$s</string>
     <string name="stream_card_close">Close card</string>
     <string name="stream_card_actions">Card actions</string>
     <string name="stream_dock_close_card_action">Close card</string>
@@ -103,9 +104,9 @@
     <string name="stream_media_position">Playback position</string>
     <string name="stream_media_position_value">%1$s of %2$s</string>
     <string name="stream_media_unknown_title">Unknown title</string>
-    <string name="stream_media_show_queue">Show queue</string>
-    <string name="stream_media_hide_queue">Hide queue</string>
     <string name="stream_media_up_next">Up next</string>
+    <string name="stream_media_queue_spoken">Up next, %1$s</string>
+    <string name="stream_media_queue_spoken_by">Up next, %1$s by %2$s</string>
     <string name="stream_media_playing">Playing</string>
     <string name="stream_media_paused">Paused</string>
 
@@ -689,6 +690,8 @@
     <string name="setting_feature_stream_keywords">stream switch on off actions centre live pages dock press</string>
     <string name="setting_stream_section_now">Now</string>
     <string name="setting_stream_section_now_keywords">stream now playing media section stack list on off order show as</string>
+    <string name="setting_now_show_up_next">Show up next</string>
+    <string name="setting_now_show_up_next_keywords">now playing media music queue up next upcoming tracks songs cards</string>
     <string name="setting_now_recent_players">Recent players</string>
     <string name="setting_now_recent_players_keywords">now playing media music podcasts player resume source cards recent players remember</string>
     <string name="setting_now_clear_recent_players">Clear recent players</string>
@@ -929,6 +932,7 @@
     <string name="settings_stream_intro">Choose which sections the Stream shows, in what order and how. These are the same choices as long-pressing a section header in the Stream.</string>
     <string name="settings_stream_section_on">On</string>
     <string name="settings_stream_now_on">Now playing and your recent players</string>
+    <string name="settings_now_show_up_next_subtitle">The next tracks in a player’s queue are cards behind it, up to ten. Off shows only what is playing.</string>
     <string name="settings_now_recent_players_subtitle">Players you used lately stay in Now as quiet cards you can resume. Off shows only what is playing.</string>
     <string name="settings_now_clear_recent_players_subtitle">Forgets the players Now remembers. A player comes back when it plays again.</string>
     <string name="settings_now_clear_recent_players_action">Clear</string>

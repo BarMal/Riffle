@@ -17,16 +17,24 @@ import com.riffle.app.launcher.notifications.mediaCommandsForPlaybackActions
 import com.riffle.app.launcher.sources.SourceChangeSource
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamActionResult
+import com.riffle.core.domain.launcher.workspace.sources.MediaItemExt
 import com.riffle.core.domain.launcher.workspace.sources.MediaSessionInfo
 import com.riffle.core.domain.launcher.workspace.sources.MediaSessionReader
 
 /** Drives a media session by package: the platform side of the Stream's transport actions. */
 internal interface MediaTransport {
-    /** [action] must be one of Play, Pause, Previous, Next, SeekTo or Open. */
+    /** [action] must be one of Play, Pause, Previous, Next, SeekTo or SkipToQueueItem. */
     fun perform(
         packageName: String,
         action: StreamAction,
     ): StreamActionResult
+
+    /**
+     * Opens the player through the live session's own `sessionActivity`, resolved from the controller at the time of
+     * the call (the PendingIntent is never part of the content). [StreamActionResult.Unavailable] when the app has no
+     * session now or the session names no activity; [StreamActionResult.Failed] when sending it was refused.
+     */
+    fun openSession(packageName: String): StreamActionResult = StreamActionResult.Unavailable
 }
 
 /**
@@ -40,7 +48,9 @@ internal interface MediaTransport {
 internal class AndroidMediaSessions(
     context: Context,
     private val elapsedRealtime: () -> Long = SystemClock::elapsedRealtime,
+    private val sessionSender: SessionActivitySender = SessionActivitySender(context),
 ) : MediaSessionReader, MediaTransport, SourceChangeSource {
+    private val queueArtwork = MediaQueueArtwork(context.contentResolver)
     private val manager = context.getSystemService(MediaSessionManager::class.java)
     private val listener = ComponentName(context, RiffleNotificationListenerService::class.java)
 
@@ -55,11 +65,28 @@ internal class AndroidMediaSessions(
                 runCatching {
                     val snapshot = controller.snapshot()
                     controller.metadata?.artwork()?.let { artwork[controller.packageName] = it }
-                    snapshot.toMediaSessionInfo(now)
+                    snapshot.toMediaSessionInfo(now).also { info ->
+                        queueThumbnails(controller, info, artwork)
+                    }
                 }.getOrNull()
             }
         MediaArtworkStore.replaceAll(artwork)
         return sessions
+    }
+
+    /** The thumbnails of the queue cards that will be drawn, in memory with the session's artwork. */
+    private fun queueThumbnails(
+        controller: MediaController,
+        info: MediaSessionInfo,
+        into: MutableMap<String, Bitmap>,
+    ) {
+        val wanted = info.queue.filter { it.hasArtwork }.map { it.queueId }.toSet()
+        if (wanted.isEmpty()) return
+        controller.queue.orEmpty().filter { it.queueId in wanted }.forEach { item ->
+            queueArtwork.bitmapOf(controller.packageName, item.description)?.let {
+                into[MediaItemExt.queueArtworkKey(controller.packageName, item.queueId)] = it
+            }
+        }
     }
 
     override fun observe(onChanged: () -> Unit): () -> Unit {
@@ -117,12 +144,17 @@ internal class AndroidMediaSessions(
         return runCatching { controller.run(action) }.getOrDefault(StreamActionResult.Failed)
     }
 
+    override fun openSession(packageName: String): StreamActionResult {
+        val pending =
+            controllers().filter { it.packageName == packageName }
+                .firstNotNullOfOrNull { controller -> runCatching { controller.sessionActivity }.getOrNull() }
+                ?: return StreamActionResult.Unavailable
+        return if (sessionSender.send(pending)) StreamActionResult.Performed else StreamActionResult.Failed
+    }
+
     /** Runs [action] if the session's current actions allow it; otherwise it is not offered. */
     private fun MediaController.run(action: StreamAction): StreamActionResult {
-        val command = commandFor(action)
-        if (command == null) {
-            return if (action == StreamAction.Open) StreamActionResult.Unavailable else StreamActionResult.NotOffered
-        }
+        val command = commandFor(action) ?: return StreamActionResult.NotOffered
         command()
         return StreamActionResult.Performed
     }
@@ -132,11 +164,16 @@ internal class AndroidMediaSessions(
         val allowed = state?.let { mediaCommandsForPlaybackActions(it.actions, it.state) }.orEmpty()
         val controls = transportControls
         return when (action) {
-            StreamAction.Open -> sessionActivity?.let { { it.send() } }
             StreamAction.Play -> controls::play.takeIf { MediaCommand.PLAY in allowed }
             StreamAction.Pause -> controls::pause.takeIf { MediaCommand.PAUSE in allowed }
             StreamAction.Previous -> controls::skipToPrevious.takeIf { MediaCommand.PREVIOUS in allowed }
             StreamAction.Next -> controls::skipToNext.takeIf { MediaCommand.NEXT in allowed }
+            is StreamAction.PlayQueueItem ->
+                if (state != null && state.actions and PlaybackState.ACTION_SKIP_TO_QUEUE_ITEM != 0L) {
+                    { controls.skipToQueueItem(action.queueId) }
+                } else {
+                    null
+                }
             is StreamAction.SeekTo ->
                 if (state != null && state.actions and PlaybackState.ACTION_SEEK_TO != 0L) {
                     { controls.seekTo(action.positionMillis) }
@@ -167,7 +204,15 @@ internal class AndroidMediaSessions(
             positionUpdatedAtElapsed = state?.lastPositionUpdateTime ?: 0L,
             speed = state?.playbackSpeed ?: 1f,
             durationMillis = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L,
-            queue = queue.map { item -> item.description.title?.toString() to item.description.subtitle?.toString() },
+            queue =
+                queue.map { item ->
+                    PlatformQueueItem(
+                        queueId = item.queueId,
+                        title = item.description.title?.toString(),
+                        subtitle = item.description.subtitle?.toString(),
+                        hasArtwork = queueArtwork.has(item.description),
+                    )
+                },
             activeQueueIndex = queue.indexOfFirst { it.queueId == activeId },
         )
     }

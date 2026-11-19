@@ -182,7 +182,7 @@ class StreamContentMapperTest {
         val item = notificationItem("m", source = SourceIds.MEDIA)
         val shown = StreamContentMapper.map(item) as MediaContent
         assertEquals("Artist m", shown.artist)
-        assertEquals(emptyList(), shown.queue)
+        assertNull(shown.queueItem)
         assertEquals(setOf(MediaAction.OPEN), shown.actions)
 
         val body = SourceContentLevels().with(SourceIds.MEDIA, SourceContentLevel.HIDE_BODY)

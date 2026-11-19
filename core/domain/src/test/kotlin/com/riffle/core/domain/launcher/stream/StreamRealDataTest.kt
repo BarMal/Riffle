@@ -202,21 +202,25 @@ class StreamRealDataTest {
             positionMillis = 30_000,
             durationMillis = 200_000,
             controls = setOf(MediaControl.PAUSE, MediaControl.NEXT, MediaControl.SEEK),
-            queue = listOf(MediaSessionQueueEntry("Next song", "Band"), MediaSessionQueueEntry(null)),
+            queue =
+                listOf(
+                    MediaSessionQueueEntry("Next song", "Band", queueId = 7L),
+                    MediaSessionQueueEntry(null, queueId = 8L),
+                ),
         )
 
     private fun mediaItem(privacy: ItemPrivacy = ItemPrivacy.VISIBLE) =
         notificationItem("m", pkg = "player", source = SourceIds.MEDIA, privacy = privacy)
 
     @Test
-    fun `a media session fills play state, position, queue and the transport actions that are really offered`() {
-        val item = MediaSessionItems.enrich(listOf(mediaItem()), listOf(player)).single()
+    fun `a media session fills play state, position and the transport actions that are really offered`() {
+        val item = MediaSessionItems.enrich(listOf(mediaItem()), listOf(player)).first()
         val media = assertIs<MediaContent>(StreamContentMapper.map(item))
 
         assertEquals(true, media.isPlaying)
         assertEquals(30_000L, media.positionMillis)
         assertEquals(200_000L, media.durationMillis)
-        assertEquals(listOf(MediaQueueEntry("Next song", "Band")), media.queue)
+        assertNull(media.queueItem)
         assertEquals(setOf(MediaAction.OPEN, MediaAction.PAUSE, MediaAction.NEXT, MediaAction.SEEK), media.actions)
         assertEquals("Title m", media.title)
     }
@@ -234,17 +238,34 @@ class StreamRealDataTest {
     }
 
     @Test
-    fun `media queue follows the body level and transport follows hide text`() {
-        val item = MediaSessionItems.enrich(listOf(mediaItem()), listOf(player)).single()
+    fun `each upcoming track is a card behind its player with the platform queue id`() {
+        val items = MediaSessionItems.enrich(listOf(mediaItem()), listOf(player))
+        assertEquals(2, items.size)
+        val card = assertIs<MediaContent>(StreamContentMapper.map(items.last()))
+        assertEquals(MediaQueueItem(queueId = 7L, position = 0), card.queueItem)
+        assertEquals("Next song", card.title)
+        assertEquals("Band", card.artist)
+        assertEquals(setOf(MediaAction.PLAY_QUEUE_ITEM), card.actions)
+        assertEquals(StreamAppRef("player", "personal"), card.app)
+        assertTrue(card.id.value.endsWith(":q:7"))
+    }
+
+    @Test
+    fun `queue cards follow the body level and transport follows hide text`() {
+        val items = MediaSessionItems.enrich(listOf(mediaItem()), listOf(player))
+        val item = items.first()
 
         val body = SourceContentLevels().with(SourceIds.MEDIA, SourceContentLevel.HIDE_BODY)
-        val noQueue = assertIs<MediaContent>(StreamContentMapper.map(item, body))
-        assertEquals(emptyList(), noQueue.queue)
-        assertTrue(MediaAction.NEXT in noQueue.actions)
+        val withoutBody = assertIs<MediaContent>(StreamContentMapper.map(item, body))
+        assertNull(
+            StreamContentMapper.map(items.last(), body),
+            "no queue card when the artist and queue text are hidden",
+        )
+        assertTrue(MediaAction.NEXT in withoutBody.actions)
 
         val text = SourceContentLevels().with(SourceIds.MEDIA, SourceContentLevel.HIDE_TEXT)
         val hidden = assertIs<MediaContent>(StreamContentMapper.map(item, text))
-        assertEquals(emptyList(), hidden.queue)
+        assertNull(StreamContentMapper.map(items.last(), text), "no queue card when the source's text is hidden")
         assertNull(hidden.title)
         assertEquals(null, hidden.isPlaying)
         assertEquals(emptySet(), hidden.actions)
@@ -253,7 +274,7 @@ class StreamRealDataTest {
     @Test
     fun `the session only fills what the notification left blank`() {
         val bare = mediaItem().copy(title = null, subtitle = null, image = null)
-        val item = MediaSessionItems.enrich(listOf(bare), listOf(player)).single()
+        val item = MediaSessionItems.enrich(listOf(bare), listOf(player)).first()
         assertEquals("Song", item.title)
         assertEquals("Band", item.subtitle)
         assertEquals("media-art:player", item.image?.key)
@@ -265,7 +286,7 @@ class StreamRealDataTest {
     fun `the policy only lets through what the content offers`() {
         val media =
             assertIs<MediaContent>(
-                StreamContentMapper.map(MediaSessionItems.enrich(listOf(mediaItem()), listOf(player)).single()),
+                StreamContentMapper.map(MediaSessionItems.enrich(listOf(mediaItem()), listOf(player)).first()),
             )
         assertEquals(null, StreamActionPolicy.check(media, StreamAction.Pause))
         assertEquals(StreamActionResult.NotOffered, StreamActionPolicy.check(media, StreamAction.Play))

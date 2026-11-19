@@ -165,18 +165,50 @@ object StreamContentMapper {
         showBody: Boolean,
     ): MediaContent? {
         val app = item.appRef() ?: return null
-        return if ((original.ext[MediaItemExt.SOURCE] as? ItemExtValue.Flag)?.value == true) {
-            mediaSource(item, app, privacy, resumable = original.ext[MediaItemExt.RESUMABLE] != null)
-        } else {
-            activeMedia(item, app, privacy, showBody)
+        return when {
+            (original.ext[MediaItemExt.SOURCE] as? ItemExtValue.Flag)?.value == true ->
+                mediaSource(item, app, privacy, resumable = original.ext[MediaItemExt.RESUMABLE] != null)
+            original.ext[MediaItemExt.QUEUE_ID] != null -> queueCard(item, original, app, privacy, showBody)
+            else -> activeMedia(item, app, privacy)
         }
+    }
+
+    /**
+     * One upcoming track as a card behind its player's. Its title and artist are body text, so they follow the same
+     * rule as the old in-card queue: a redacted player, a source set to hide text or body, and a sensitive item have no
+     * queue cards at all (never a card with the text withheld, which could only say "Hidden content").
+     */
+    private fun queueCard(
+        item: Item,
+        original: Item,
+        app: StreamAppRef,
+        privacy: StreamPrivacy,
+        showBody: Boolean,
+    ): MediaContent? {
+        val queueId = (original.ext[MediaItemExt.QUEUE_ID] as? ItemExtValue.Number)?.value
+        val position = (original.ext[MediaItemExt.QUEUE_POSITION] as? ItemExtValue.Number)?.value?.toInt() ?: 0
+        val hidden = privacy == StreamPrivacy.REDACTED || !showBody || item.title.isNullOrBlank()
+        if (queueId == null || hidden) return null
+        return MediaContent(
+            id = StreamContentId(item.id.value),
+            app = app,
+            appLabel = item.groupLabel,
+            title = item.title,
+            artist = item.subtitle,
+            artwork = item.image,
+            icon = item.icon,
+            target = item.target,
+            actions = setOf(MediaAction.PLAY_QUEUE_ITEM),
+            postedAtEpochMillis = item.timeEpochMillis,
+            privacy = privacy,
+            queueItem = MediaQueueItem(queueId, position),
+        )
     }
 
     private fun activeMedia(
         item: Item,
         app: StreamAppRef,
         privacy: StreamPrivacy,
-        showBody: Boolean,
     ): MediaContent {
         val controls =
             (item.ext[MediaItemExt.CONTROLS] as? ItemExtValue.Text)?.value.orEmpty()
@@ -208,7 +240,6 @@ object StreamContentMapper {
             isPlaying = (item.ext[MediaItemExt.PLAYING] as? ItemExtValue.Flag)?.value,
             positionMillis = (item.ext[MediaItemExt.POSITION] as? ItemExtValue.Number)?.value,
             durationMillis = (item.ext[MediaItemExt.DURATION] as? ItemExtValue.Number)?.value,
-            queue = if (showBody) StreamContentDetails.queue(item) else emptyList(),
             postedAtEpochMillis = item.timeEpochMillis,
             privacy = privacy,
         )

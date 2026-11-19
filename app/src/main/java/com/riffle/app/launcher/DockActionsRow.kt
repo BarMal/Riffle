@@ -228,7 +228,6 @@ private fun DockActionsHeader(
                                     content = content.actions.content,
                                     actions = content.actions.actions,
                                     callbacks = content.actions.callbacks,
-                                    onToggleQueue = content.actions.onToggleQueue,
                                     modifier =
                                         Modifier.padding(horizontal = RiffleSpacing.s, vertical = RiffleSpacing.xxs),
                                 )

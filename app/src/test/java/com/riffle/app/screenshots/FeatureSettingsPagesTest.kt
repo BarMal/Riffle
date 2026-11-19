@@ -21,6 +21,7 @@ import com.riffle.app.launcher.LocalStreamLayoutRepository
 import com.riffle.app.launcher.LocalTasksSettings
 import com.riffle.app.launcher.NOW_CLEAR_RECENT_PLAYERS_TEST_TAG
 import com.riffle.app.launcher.NOW_RECENT_PLAYERS_TEST_TAG
+import com.riffle.app.launcher.NOW_SHOW_UP_NEXT_TEST_TAG
 import com.riffle.app.launcher.SIMPLE_MODE_TEST_TAG
 import com.riffle.app.launcher.SettingKey
 import com.riffle.app.launcher.SettingsPage
@@ -162,6 +163,9 @@ class FeatureSettingsPagesTest {
             recentPlayers = control,
             capture = true,
         )
+
+        composeRule.onNodeWithTag(NOW_SHOW_UP_NEXT_TEST_TAG).assertIsDisplayed().assertIsOn().performClick()
+        composeRule.onNodeWithTag(NOW_SHOW_UP_NEXT_TEST_TAG).assertIsOff()
 
         composeRule.onNodeWithTag(NOW_RECENT_PLAYERS_TEST_TAG).assertIsDisplayed().assertIsOn().performClick()
         composeRule.onNodeWithTag(NOW_RECENT_PLAYERS_TEST_TAG).assertIsOff()

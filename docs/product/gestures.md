@@ -266,10 +266,10 @@ the Dock's accessibility actions.
   - **The actions row** (setting "Where its actions sit": in the Dock, the default, or on the card). While a card is open the
     Dock gains a row above its icons (below them on a top Dock) holding that card's actions, on Thick glass, rising with the
     card and leaving with it: a conversation's reply field and send button, Dismiss and Snooze (as the notification offers
-    them); the player's previous, play or pause, next and the queue control; "Open in calendar" (an alarm: "Open clock");
+    them); the player's previous, play or pause and next (centred as a group, play and pause larger) with "Open player" beside them when it fits and below them, spread evenly, when it does not (`MediaActionRow`, `ActionRowFit`); "Open in calendar" (an alarm: "Open clock");
     Complete for a task; nothing for a recent app or a shortcut (they do not open). Every control is a real focusable control
     with a 48 dp target (`CardActionControls`), and the open card carries the same actions as accessibility actions
-    (`cardActionAccessibility`: Dismiss, Snooze, the transport, the queue, Open in calendar, Complete). The Dock grows
+    (`cardActionAccessibility`: Dismiss, Snooze, the transport, Open player, Open in calendar, Complete). The Dock grows
     upward (it is anchored at its edge) and the room it reserves grows with it, so the Stream makes room and the open card
     is not covered; the keyboard raises the Dock and the card with it (both follow the window insets). A Dock down a side
     holds no row: the actions are on the card then (`StreamCardActions.effectiveActionsPlacement`), and so wherever there

@@ -36,6 +36,9 @@ sealed interface StreamAction {
         }
     }
 
+    /** Play the track of the player's queue with this platform queue item id (a queue card's action; never Open). */
+    data class PlayQueueItem(val queueId: Long) : StreamAction
+
     data object MarkRead : StreamAction
 
     /** Tick a task off. */
@@ -179,6 +182,8 @@ object StreamActionPolicy {
             StreamAction.Pause -> MediaAction.PAUSE in content.actions
             StreamAction.Previous -> MediaAction.PREVIOUS in content.actions
             StreamAction.Next -> MediaAction.NEXT in content.actions
+            is StreamAction.PlayQueueItem ->
+                MediaAction.PLAY_QUEUE_ITEM in content.actions && content.queueItem?.queueId == action.queueId
             is StreamAction.SeekTo ->
                 MediaAction.SEEK in content.actions &&
                     (content.durationMillis == null || action.positionMillis <= content.durationMillis)

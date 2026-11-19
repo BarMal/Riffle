@@ -164,19 +164,30 @@ enum class MediaAction {
 
     /** Offered by a [MediaContent.source] only: forget this recent player (a swipe, the Dismiss button). */
     DISMISS,
+
+    /** Offered by a [MediaContent.queueItem] only: play this track now (skip the session to it). */
+    PLAY_QUEUE_ITEM,
 }
 
-/** One upcoming track; empty queue when the session exposes none. */
-data class MediaQueueEntry(
-    val title: String?,
-    val artist: String? = null,
-    val artwork: ItemImageHandle? = null,
+/**
+ * One upcoming track of an active player's queue, as the card behind the player's own: the platform's [queueId] (what
+ * playing it names, and what keeps the card the same card while the queue moves) and its [position] after the track
+ * playing (0 is next).
+ */
+data class MediaQueueItem(
+    val queueId: Long,
+    val position: Int,
 )
 
 /**
  * Now playing. [actions] holds what the session can really do right now (transport actions only while the session
- * allows them); [isPlaying], the positions and [queue] are null or empty when the session reports none. Never
- * persisted. A redacted card has no queue and no actions beyond what the privacy level lets through.
+ * allows them); [isPlaying] and the positions are null when the session reports none. Never persisted. A redacted card
+ * has no queue cards and no actions beyond what the privacy level lets through.
+ *
+ * A [queueItem] is one upcoming track of the player's queue (ADR 0003, Amendment 16): a card behind the player's own,
+ * with the track's [title] and [artist] (and [artwork] when the queue gives one), the app's [icon] and [appLabel], and
+ * one action, [MediaAction.PLAY_QUEUE_ITEM]. It is the same kind of content as the player (same app, same privacy
+ * rules), not a ninth kind.
  *
  * A [source] is a recent player (ADR 0003, Amendment 4): an app that played lately and has no session now. It is still
  * media content (the quiet card of an app, its last [title] and [artist] when this process saw them, [postedAtEpochMillis]
@@ -194,12 +205,12 @@ data class MediaContent(
     val isPlaying: Boolean? = null,
     val positionMillis: Long? = null,
     val durationMillis: Long? = null,
-    val queue: List<MediaQueueEntry> = emptyList(),
     val target: ItemTarget,
     val actions: Set<MediaAction>,
     val postedAtEpochMillis: Long? = null,
     override val privacy: StreamPrivacy,
     val source: Boolean = false,
+    val queueItem: MediaQueueItem? = null,
 ) : StreamContent {
     override val timeEpochMillis: Long? get() = postedAtEpochMillis
 }

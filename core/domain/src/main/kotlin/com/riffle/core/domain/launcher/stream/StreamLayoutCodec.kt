@@ -144,6 +144,7 @@ object StreamLayoutCodec {
                 obj(
                     "maxActive" to num(options.now.maxActive),
                     "recentPlayers" to StoredValue.Bool(options.now.recentPlayers),
+                    "showUpNext" to StoredValue.Bool(options.now.showUpNext),
                 ),
             "notifications" to
                 obj(
@@ -196,6 +197,8 @@ object StreamLayoutCodec {
         // The retired keys (maxMedia, showNextEvent, showAlarm) are ignored: Now is media only, see NowOptions.
         maxActive = root.count("maxActive", defaults.maxActive),
         recentPlayers = root?.bool("recentPlayers") ?: defaults.recentPlayers,
+        // Layouts stored before the queue became cards have no key: the queue shows, as it always did.
+        showUpNext = root?.bool("showUpNext") ?: defaults.showUpNext,
     )
 
     private fun decodeNotifications(

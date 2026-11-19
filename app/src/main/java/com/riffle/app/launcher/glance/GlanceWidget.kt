@@ -175,9 +175,7 @@ private fun GlanceShowing(
         val cardCallbacks = callbacks.forCards()
         Box(Modifier.fillMaxSize()) {
             when (content) {
-                // The Stream's card, without its queue toggle: there is no room to expand a widget.
-                is MediaContent ->
-                    MediaCard(content.copy(queue = emptyList()), env, cardCallbacks, null, Modifier.fillMaxSize())
+                is MediaContent -> MediaCard(content, env, cardCallbacks, null, Modifier.fillMaxSize())
                 is EventContent -> EventCard(content, env, cardCallbacks, null, Modifier.fillMaxSize())
                 is ArticleContent -> ArticleCard(content, env, cardCallbacks, null, Modifier.fillMaxSize())
                 else -> Unit

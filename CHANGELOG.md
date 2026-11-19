@@ -11,6 +11,15 @@ installing. Entries are in the order they were built; where a later one changes 
 
 ### Added
 
+- One stack per player, and a player that opens ([ADR 0003](docs/architecture/adr/0003-places-and-views.md), Amendment
+  16): in Now each active player is its own stack, its card in front and the tracks after the one playing as cards
+  behind it (at most ten, in queue order, with artwork when the queue has it; "Play" on one skips to it), instead of a
+  list inside the open card; the recent players stay together as one more stack. Settings > Stream > Now > Show up next
+  turns the cards off. The Dock's actions row for the player is laid out deliberately (the transport centred, play and
+  pause larger, "Open player" beside it or on a second row spread evenly), and "Open player" now works: the session's
+  own activity is sent with the Android 14 opt-in it was missing, with the app's launcher entry and any main activity as
+  fallbacks and "Couldn't open <app>" when none starts. Not run on a device: see `dock-modes-plan.md`, "One stack per
+  player".
 - Home dragging, finished ([ADR 0003](docs/architecture/adr/0003-places-and-views.md), Amendment 15): hold an app in the
   Library (any View) and move on, and the menu gives way to a Home drag of a new item with the Library out of the way;
   a **Remove** target shows at the top of the screen while anything on Home or in the Dock is lifted (dropping on it

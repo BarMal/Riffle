@@ -407,8 +407,6 @@ class CustomNotificationLayoutTest {
                     callbacks = StreamCallbacks(),
                     groupKey = null,
                     actionsOnCard = true,
-                    queueShown = false,
-                    onQueueShownChange = {},
                     onClose = {},
                     modifier = Modifier.padding(16.dp),
                 )

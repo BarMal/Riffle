@@ -83,7 +83,7 @@ class MediaSourcesTest {
         assertEquals(ItemTarget.App("music", "personal"), card.target)
         assertEquals(setOf(MediaAction.OPEN, MediaAction.PLAY, MediaAction.DISMISS), card.actions)
         assertNull(card.artwork)
-        assertTrue(card.queue.isEmpty())
+        assertNull(card.queueItem)
     }
 
     @Test

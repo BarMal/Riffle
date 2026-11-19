@@ -80,6 +80,9 @@ internal object StreamCardHeights {
     /** A recent player on Now: the app's icon and name, what it last played, and its Play or Open button. */
     val mediaSource: Dp = 128.dp
 
+    /** One upcoming track behind a player: the track and artist, and its Play button. */
+    val mediaQueue: Dp = 120.dp
+
     /** Today's front card: the event, its countdown and its actions. */
     val nextEvent: Dp = 200.dp
 

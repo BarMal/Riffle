@@ -23,6 +23,18 @@ internal class AndroidItemLaunchPort(
             context.startActivity(intent)
         }.isSuccess
 
+    override fun launchAnyMainActivity(packageName: String): Boolean =
+        runCatching {
+            val pm = context.packageManager
+            val intent =
+                pm.getLeanbackLaunchIntentForPackage(packageName)
+                    ?: pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).setPackage(packageName), 0)
+                        .firstOrNull { it.activityInfo?.exported == true }
+                        ?.let { Intent(Intent.ACTION_MAIN).setClassName(packageName, it.activityInfo.name) }
+            requireNotNull(intent).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+        }.isSuccess
+
     override fun launchShortcut(shortcut: AppShortcut): Boolean = appLauncher.launchShortcut(shortcut)
 
     override fun openDeepLink(uri: String): Boolean =
