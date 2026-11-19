@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +16,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,6 +45,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -283,10 +288,60 @@ internal fun HomeLiftedItem(
                         scaleY = LIFTED_SCALE
                     },
         ) {
-            HomeDraggedItemContent(current.item, presentation, appIconLoader)
+            if (current.group.size > 1) {
+                HomeGroupGhost(current.group, current.item, presentation, appIconLoader)
+            } else {
+                HomeDraggedItemContent(current.item, presentation, appIconLoader)
+            }
         }
     }
 }
+
+/**
+ * The ticked items lifted together: the lifted one on top of up to two more behind it, a little offset, with the count
+ * in a badge. One composable that follows the finger as one (the lifted box moves in the layout phase); it holds no
+ * state of its own, so a move recomposes nothing.
+ */
+@Composable
+internal fun HomeGroupGhost(
+    group: List<LauncherItem>,
+    lifted: LauncherItem,
+    presentation: HomeGridPresentation,
+    appIconLoader: AppIconLoader,
+) {
+    CountRecomposition(HOME_GROUP_GHOST_PROBE_KEY)
+    val behind = group.filter { it.id != lifted.id }.take(GROUP_GHOST_LAYERS - 1)
+    val description = stringResource(R.string.home_selection_group_description, group.size)
+    Box(modifier = Modifier.semantics { contentDescription = description }.testTag(HOME_GROUP_GHOST_TEST_TAG)) {
+        behind.asReversed().forEachIndexed { index, item ->
+            val step = behind.size - index
+            Box(modifier = Modifier.offset(x = (GROUP_GHOST_STEP_DP * step).dp, y = (GROUP_GHOST_STEP_DP * step).dp)) {
+                HomeDraggedItemContent(item, presentation, appIconLoader)
+            }
+        }
+        HomeDraggedItemContent(lifted, presentation, appIconLoader)
+        Box(
+            modifier =
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .size(GROUP_GHOST_BADGE_DP.dp)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = group.size.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onPrimary,
+            )
+        }
+    }
+}
+
+internal const val HOME_GROUP_GHOST_TEST_TAG = "home-group-ghost"
+internal const val HOME_GROUP_GHOST_PROBE_KEY = "home-group-ghost"
+private const val GROUP_GHOST_LAYERS = 3
+private const val GROUP_GHOST_STEP_DP = 6
+private const val GROUP_GHOST_BADGE_DP = 24
 
 /**
  * Home's one pick-up arbitration (ADR 0002: the platform's long-press drag detector, nothing competing with it):
@@ -343,6 +398,7 @@ internal fun Modifier.homeItemDrag(
                                     originCell = latestState.cell,
                                     projectedCell = latestState.cell,
                                     pointerInRoot = toRoot(down),
+                                    group = latestState.groupFor(latestItem),
                                 ),
                             )
                             // Hold still: the menu. Moving past the slop turns it into the drag and closes it.
@@ -416,6 +472,8 @@ internal fun homeDropAction(
 ): LauncherShellAction? {
     val plan = session?.plan
     return when {
+        // The ticked items lifted together drop together (Edit page, multi-select).
+        session != null && session.group.size > 1 -> homeGroupDropAction(session)
         // Over the Remove target: the item goes off Home as its menu's "Remove from Home" does (a stack asks first).
         session != null && session.isOverRemove -> removeFromHomeAction(item, dragState.pageId)
         // Over the Dock there is no plan (nothing is pushed): the item is pinned where the finger hovers.
@@ -457,6 +515,21 @@ internal fun homeDropAction(
     }
 }
 
+/** What releasing the ticked items lifted together does: removal (asked once), or a drop from the landing cell on. */
+internal fun homeGroupDropAction(session: HomeDragSession): LauncherShellAction? {
+    val plan = session.plan
+    return when {
+        session.isOverRemove -> LauncherShellAction.ConfirmRemoveSelectedHomeItems
+        session.isOverDock || plan == null -> null
+        plan.dropOn != null && plan.landing != null ->
+            LauncherShellAction.DropHomeGroup(session.targetPageId, plan.landing!!, plan.dropOn)
+        else ->
+            (plan.landing ?: plan.spillLanding)?.let { cell ->
+                LauncherShellAction.DropHomeGroup(session.targetPageId, cell)
+            }
+    }
+}
+
 internal fun removeFromHomeAction(
     item: LauncherItem,
     pageId: com.riffle.core.domain.launcher.home.LauncherPageId,
@@ -488,6 +561,7 @@ internal fun homeDragSessionForUpdate(
         projectedCell = dragState.projectedCell(dragX = dragOffsetX, dragY = dragOffsetY),
         isOverDock = item.isDockTransferable && dragState.isDraggedBelowGrid(dragOffsetY),
         plan = previousSession?.takeIf { it.item.id == item.id }?.plan,
+        group = dragState.groupFor(item),
     )
 
 @Composable

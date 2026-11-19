@@ -9,6 +9,7 @@ import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.HomeAppPlacement
 import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.HomeSelection
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeSpill
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
@@ -74,6 +75,15 @@ internal fun applyShortcutOrFolderDropEdit(
 
         is LauncherShellAction.DropExternalHomeItem ->
             dropExternalItem(action, layout, shortcutEngine, folderEngine, installedApps)
+
+        is LauncherShellAction.DropHomeGroup ->
+            (
+                if (action.dropOnItemId != null) {
+                    HomeSelection.dropGroupOnFolder(layout, action.targetPageId, action.dropOnItemId)
+                } else {
+                    HomeSelection.dropGroup(layout, action.targetPageId, action.cell)
+                }
+            ).toShortcutOrFolderDropEditResult()
 
         else -> shortcutEngine.applyEdit(action = action, layout = layout).toShortcutOrFolderDropEditResult()
     }

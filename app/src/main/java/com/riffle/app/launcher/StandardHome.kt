@@ -33,6 +33,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -42,6 +44,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.structuralEqualityPolicy
@@ -53,6 +56,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -78,8 +82,10 @@ import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeAppPlacement
+import com.riffle.core.domain.launcher.home.HomeSelection
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -158,6 +164,8 @@ internal fun StandardHome(
         openedFolderId.value = created
     }
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
+    // Taking the ticked items off Home asks once (from the bar or a drop on Remove) and leaves an Undo behind.
+    val groupRemovalAsked = remember { mutableStateOf(false) }
     val removeBounds = remember { mutableStateOf<Rect?>(null) }
     // What composition sees of the drag: everything but where the finger is. The finger moves every frame; the lifted
     // icon and the edge hold read it in the layout phase and from the latest session, so composition (and every cell
@@ -382,7 +390,12 @@ internal fun StandardHome(
                 ) {
                     foldersBeforeDrop.value = folderIds
                 }
-                onAction(action)
+                // Removing the ticked items asks first, here, whether it came from the bar or from a drop on Remove.
+                if (action == LauncherShellAction.ConfirmRemoveSelectedHomeItems) {
+                    groupRemovalAsked.value = true
+                } else {
+                    onAction(action)
+                }
             },
         )
     // One instance for the life of the surface, which hands every call to the latest: the cells compare what they are
@@ -460,6 +473,41 @@ internal fun StandardHome(
             appIconLoader = appIconLoader,
             actions = actions,
             modifier = surfaceModifier,
+        )
+    }
+    val selectionSnackbar = remember { SnackbarHostState() }
+    val selectionScope = rememberCoroutineScope()
+    val resources = LocalContext.current.resources
+    val undoLabel = stringResource(R.string.stream_undo)
+    if (groupRemovalAsked.value) {
+        val count = HomeSelection.selectedItems(visibleLayout).size
+        if (count == 0) {
+            groupRemovalAsked.value = false
+        } else {
+            val before = layout
+            ConfirmRemoveSelectedDialog(
+                count = count,
+                onConfirm = {
+                    groupRemovalAsked.value = false
+                    onAction(LauncherShellAction.RemoveSelectedHomeItems)
+                    selectionScope.announceWithUndo(
+                        snackbar = selectionSnackbar,
+                        message = resources.getQuantityString(R.plurals.home_selection_removed, count, count),
+                        undoLabel = undoLabel,
+                    ) { onAction(LauncherShellAction.UndoHomeBulkEdit(before)) }
+                },
+                onDismiss = { groupRemovalAsked.value = false },
+            )
+        }
+    }
+    Box(modifier = Modifier.fillMaxSize()) {
+        SnackbarHost(
+            hostState = selectionSnackbar,
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .padding(bottom = SELECTION_SNACKBAR_BOTTOM_DP.dp),
         )
     }
     // The Remove target while something that can be removed is lifted (not a Library app, which is not on Home yet).
@@ -955,6 +1003,7 @@ private fun StandardHomeColumn(
             gridState =
                 HomeGridState(
                     isEditing = state.visibleLayout.editMode is HomeEditMode.EditingPage,
+                    selection = HomeSelection.selectedIds(state.visibleLayout),
                     pageCount = state.visibleLayout.pages.size,
                     selectedPageIndex = state.visibleLayout.selectedPageIndex,
                     dragSession = state.dragSession,
@@ -1122,6 +1171,8 @@ private fun HomeBottomControls(
                     pageCount = layout.pages.size,
                     selectedPageIndex = layout.selectedPageIndex,
                     onAction = actions.onAction,
+                    selectedCount = HomeSelection.selectedItems(layout).size,
+                    canMakeFolder = HomeSelection.canMakeFolder(layout),
                 )
 
             HomeEditMode.ManagingPages ->
@@ -1313,6 +1364,8 @@ internal data class HomeDragSession(
     val external: ExternalHomeDragSource? = null,
     /** Whether releasing right now would drop [item] on the Remove target (which removes it from Home). */
     val isOverRemove: Boolean = false,
+    /** The ticked items lifted together with [item] (more than one), or empty for a single item. */
+    val group: List<LauncherItem> = emptyList(),
 )
 
 internal data class StandardHomeInteractions(
@@ -1435,7 +1488,13 @@ internal data class HomeItemDragState(
     val cellSizePx: Float,
     val grid: GridDimensions,
     val pageItems: List<LauncherItem>,
-)
+    /** The ticked apps and folders of the page being edited: a tick on this item makes its drag the whole group's. */
+    val selection: Set<LauncherItemId> = emptySet(),
+) {
+    /** The ticked items lifted together with [item]: more than one, or none (a drag of one item alone). */
+    fun groupFor(item: LauncherItem): List<LauncherItem> =
+        if (item.id in selection && selection.size > 1) pageItems.filter { it.id in selection } else emptyList()
+}
 
 /** [latest], through one instance that never changes: each call goes to the latest actions given. */
 @Composable
@@ -1485,6 +1544,7 @@ internal data class HomeWorkspaceActions(
 )
 
 private const val WIDGET_PICKER_EDGE_HOVER_ZONE_DP = 40
+private const val SELECTION_SNACKBAR_BOTTOM_DP = 120
 private const val WIDGET_PICKER_EDGE_HOVER_DELAY_MILLIS = 650L
 
 internal fun widgetPickerDropCell(
@@ -1584,8 +1644,31 @@ internal fun HomeDragSession.planned(
     val y = (pointerInRoot.y - gridBounds.top) / (gridBounds.height / page.grid.rows)
     val numbers = tuning.coerced()
     val reserved = if (targetPageId == originPageId) setOf(originCell) else emptySet()
+    if (group.size > 1) {
+        val grouped = groupPlan(page, x, y, numbers)
+        return copy(plan = grouped, projectedCell = grouped.landing ?: projectedCell)
+    }
     val plan = HomeDragPush.plan(page, item, x, y, numbers, plan?.pushed?.keys.orEmpty(), reserved)
     return copy(plan = plan, projectedCell = plan.landing ?: plan.spillLanding ?: originCell)
+}
+
+/**
+ * What dropping the ticked items together would do: the first lands on the cell under the finger and the rest follow in
+ * reading order, so nothing is pushed; only a folder of apps (when every ticked item is an app) is a place to drop on.
+ */
+private fun HomeDragSession.groupPlan(
+    page: com.riffle.core.domain.launcher.home.LauncherPage,
+    x: Float,
+    y: Float,
+    tuning: HomeDragTuning,
+): HomeDragPlan {
+    val plan = HomeDragPush.plan(page, item, x, y, tuning.copy(ringRadius = 0f), emptySet(), emptySet())
+    val onFolder =
+        plan.dropOn?.takeIf { id ->
+            group.all { it is AppShortcutItem } && page.items.firstOrNull { it.id == id } is FolderItem
+        }
+    val cell = plan.landing ?: plan.spillLanding
+    return HomeDragPlan(landing = if (onFolder != null) plan.landing else cell, dropOn = onFolder)
 }
 
 private fun homeGridPresentationFor(

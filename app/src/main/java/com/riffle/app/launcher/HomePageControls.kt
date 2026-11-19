@@ -95,9 +95,13 @@ fun PageEditControls(
     pageCount: Int,
     selectedPageIndex: Int,
     onAction: (LauncherShellAction) -> Unit,
+    selectedCount: Int = 0,
+    canMakeFolder: Boolean = false,
 ) {
     val isPageMenuExpanded = remember { mutableStateOf(false) }
 
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    HomeSelectionBar(selectedCount = selectedCount, canMakeFolder = canMakeFolder, onAction = onAction)
     Row(
         modifier =
             Modifier
@@ -135,6 +139,7 @@ fun PageEditControls(
         TextButton(onClick = { onAction(LauncherShellAction.ExitHomeEditMode) }) {
             Text(text = stringResource(R.string.action_done))
         }
+    }
     }
 }
 

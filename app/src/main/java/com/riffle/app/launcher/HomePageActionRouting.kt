@@ -32,6 +32,11 @@ internal fun LauncherShellAction.isHomePageEditAction(): Boolean =
         is LauncherShellAction.SelectLauncherTemplate,
         is LauncherShellAction.SelectHomeLayoutDeviceClass,
         is LauncherShellAction.LeaveLibrary,
+        is LauncherShellAction.ToggleHomeSelection,
+        LauncherShellAction.SelectAllOnHomePage,
+        LauncherShellAction.ClearHomeSelection,
+        LauncherShellAction.RemoveSelectedHomeItems,
+        is LauncherShellAction.MakeFolderOfSelected,
         -> true
 
         else -> false
