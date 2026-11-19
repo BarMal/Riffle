@@ -35,6 +35,7 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotificationMessage
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
+import com.riffle.core.domain.launcher.settings.FeatureSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import java.util.concurrent.ConcurrentHashMap
 
@@ -159,7 +160,7 @@ internal object ScreenshotFixtures {
     /** Cards mode with the three notifying apps as stages; the chat stage is newest and selected. */
     fun cardsState(
         deviceClass: HomeLayoutDeviceClass = HomeLayoutDeviceClass.PHONE,
-        launcherSettings: LauncherSettings = LauncherSettings(),
+        launcherSettings: LauncherSettings = LauncherSettings(features = FeatureSettings(library = true)),
         notificationGroups: List<AppNotificationGroup> = this.notificationGroups,
         notificationAccessStatus: NotificationAccessStatus = NotificationAccessStatus.GRANTED,
     ): LauncherShellState =
@@ -185,7 +186,9 @@ internal object ScreenshotFixtures {
     private fun shellState(
         layout: HomeLayout,
         deviceClass: HomeLayoutDeviceClass,
-        launcherSettings: LauncherSettings = LauncherSettings(),
+        // The Library switch defaults off in the product; the fixtures set it on explicitly, as most tests are about
+        // the sheet it opens. A test of the default builds its own settings.
+        launcherSettings: LauncherSettings = LauncherSettings(features = FeatureSettings(library = true)),
         notificationGroups: List<AppNotificationGroup> = this.notificationGroups,
         notificationAccessStatus: NotificationAccessStatus = NotificationAccessStatus.GRANTED,
     ): LauncherShellState {

@@ -117,7 +117,11 @@ class LauncherShellViewModelTest {
 
     @Test
     fun navigatesBetweenShellDestinations() {
-        val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                launcherSettingsRepository = LibraryOnSettingsRepository(),
+            )
 
         viewModel.onNavigationActionSelected(ShellNavigationAction.OpenAppDrawer)
         assertEquals(ShellDestination.APP_DRAWER, viewModel.state.value.destination)

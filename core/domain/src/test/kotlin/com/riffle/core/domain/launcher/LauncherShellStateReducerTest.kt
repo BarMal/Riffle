@@ -180,7 +180,7 @@ class LauncherShellStateReducerTest {
     fun navigationActionsSelectShellDestinations() {
         val appDrawerState =
             reducer.navigationActionSelected(
-                currentState = LauncherShellState(firstRunStatus = FirstRunStatus.COMPLETE),
+                currentState = LauncherShellState(firstRunStatus = FirstRunStatus.COMPLETE, launcherSettings = libraryOn),
                 action = ShellNavigationAction.OpenAppDrawer,
             )
         val searchState =
@@ -213,13 +213,13 @@ class LauncherShellStateReducerTest {
 
     @Test
     fun theLibraryRemembersWhetherItOpenedOverTheStream() {
-        val stream = LauncherShellState(destination = ShellDestination.STREAM)
+        val stream = LauncherShellState(destination = ShellDestination.STREAM, launcherSettings = libraryOn)
 
         val overStream = reducer.navigationActionSelected(stream, ShellNavigationAction.OpenAppDrawer)
         val searching = reducer.navigationActionSelected(overStream, ShellNavigationAction.OpenSearch)
         val closed = reducer.navigationActionSelected(searching, ShellNavigationAction.OpenStream)
         val overHome =
-            reducer.navigationActionSelected(LauncherShellState(), ShellNavigationAction.OpenAppDrawer)
+            reducer.navigationActionSelected(LauncherShellState(launcherSettings = libraryOn), ShellNavigationAction.OpenAppDrawer)
 
         assertTrue(overStream.libraryOverStream)
         assertTrue(searching.libraryOverStream)
@@ -229,6 +229,9 @@ class LauncherShellStateReducerTest {
         assertFalse(ShellDestination.STREAM.isLibrary)
     }
 
+    /** The Library switch set on: it defaults off, and these tests are about the sheet it opens. */
+    private val libraryOn = LauncherSettings(features = FeatureSettings(library = true))
+
     private fun withFeatures(features: FeatureSettings) =
         LauncherShellState(
             launcherSettings = LauncherSettings(features = features),
@@ -236,7 +239,7 @@ class LauncherShellStateReducerTest {
 
     @Test
     fun theStreamHasNoWayInWhileItsSwitchIsOff() {
-        val state = withFeatures(FeatureSettings(stream = false))
+        val state = withFeatures(FeatureSettings(stream = false, library = true))
         val after = reducer.navigationActionSelected(state, ShellNavigationAction.OpenStream)
         assertEquals(ShellDestination.HOME, after.destination)
         assertEquals(state, after)

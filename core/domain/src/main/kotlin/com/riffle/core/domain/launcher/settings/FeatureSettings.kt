@@ -26,8 +26,8 @@ enum class HomeMode(
 
 /**
  * The feature switches (ADR 0003, Amendment 1): the Stream, the Dock's live apps and the Library each on or off, and
- * Simple mode, the preset that leaves only the app library (as Home) and the Dock. Each switch defaults to today's
- * behaviour (on); Simple mode defaults off.
+ * Simple mode, the preset that leaves only the app library (as Home) and the Dock. The Stream and the Dock's live apps
+ * default on; the Library (the pull away from the Dock) and Simple mode default off. Search stays either way.
  *
  * Simple mode is not a copy of other values: while it is on it overrides the switches ([effective]), and the stored
  * switches and the Home mode come back untouched when it is turned off.
@@ -35,7 +35,7 @@ enum class HomeMode(
 data class FeatureSettings(
     val stream: Boolean = true,
     val dockLiveApps: Boolean = true,
-    val library: Boolean = true,
+    val library: Boolean = false,
     val simpleMode: Boolean = false,
 ) {
     /** What is actually on, given the stored Home mode. */
@@ -84,7 +84,7 @@ data class EffectiveFeatures(
     /** The Dock's dynamic side (live apps and now playing) draws. */
     val dockLiveApps: Boolean = true,
     /** The Library sheet exists: the pull away from the Dock, "Open Library" and the gesture that opens it. */
-    val library: Boolean = true,
+    val library: Boolean = false,
     val homeMode: HomeMode = HomeMode.PlacedItems,
     val simpleMode: Boolean = false,
 )
