@@ -193,6 +193,7 @@ private fun encodeHomeBehaviour(settings: HomeBehaviourSettings): JSONObject =
     JSONObject()
         .put("returnBehavior", settings.returnBehavior.name)
         .put("mode", settings.mode.storedId)
+        .put("addNewApps", settings.addNewApps)
 
 /*
  * The layout per posture (ADR 0003, Amendment 2): `layout.folded` and `layout.unfolded`, each `pageScroll`,
@@ -271,6 +272,7 @@ private fun JSONObject.toHomeBehaviour(defaults: HomeBehaviourSettings): HomeBeh
                 ?: defaults.returnBehavior,
         // Absent (settings saved before Home mode) or a name this build does not know: Placed items.
         mode = HomeMode.fromStoredId(optString("mode").takeIf(String::isNotEmpty)) ?: defaults.mode,
+        addNewApps = (opt("addNewApps") as? Boolean) ?: defaults.addNewApps,
     )
 
 private fun encodePrivacy(settings: PrivacySettings): JSONObject =

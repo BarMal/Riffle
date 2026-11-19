@@ -155,11 +155,11 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
-                is LauncherShellAction.SelectHomeMode ->
+                is LauncherShellAction.SetAddNewApps ->
                     state.withLauncherSettings(
                         settings =
                             state.launcherSettings.copy(
-                                home = state.launcherSettings.home.copy(mode = action.mode),
+                                home = state.launcherSettings.home.copy(addNewApps = action.enabled),
                             ),
                         launcherSettingsRepository = launcherSettingsRepository,
                     )

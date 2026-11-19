@@ -44,7 +44,6 @@ import com.riffle.core.domain.launcher.settings.DockMotionSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeGesture
-import com.riffle.core.domain.launcher.settings.HomeMode
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherFeature
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
@@ -451,9 +450,9 @@ sealed interface LauncherShellAction {
         val settings: DockMotionSettings,
     ) : LauncherShellAction
 
-    /** Settings > Home: what Home shows. The placed layout is kept either way. */
-    data class SelectHomeMode(
-        val mode: HomeMode,
+    /** Settings > Home > "Add new apps to Home": a newly installed app is placed on Home, or only in the Library. */
+    data class SetAddNewApps(
+        val enabled: Boolean,
     ) : LauncherShellAction
 
     /** Settings: one feature switch (Stream, Dock live apps, Library) on or off. */

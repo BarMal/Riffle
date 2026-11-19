@@ -1532,6 +1532,19 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
+    fun addNewAppsDefaultsOnKeepsAStoredChoiceAndAnOldAppLibraryModeStillDecodes() {
+        val home = { json: String -> decodeLauncherSettings(json).home }
+        assertEquals(true, home("""{"version": 11}""").addNewApps)
+        assertEquals(true, home("""{"home": {"returnBehavior": "RESTORE", "mode": "placed_items"}}""").addNewApps)
+        assertEquals(false, home("""{"home": {"addNewApps": false}}""").addNewApps)
+        assertEquals(true, home("""{"home": {"addNewApps": "no"}}""").addNewApps)
+        // A blob written while the Home mode was a choice still decodes; the migration reads it.
+        assertEquals(HomeMode.AppLibrary, home("""{"home": {"mode": "app_library"}}""").mode)
+        val off = LauncherSettings(home = HomeBehaviourSettings(addNewApps = false))
+        assertEquals(off.home, decodeLauncherSettings(encodeLauncherSettings(off)).home)
+    }
+
+    @Test
     fun theStoredPagedLibraryViewRoundTripsAndOtherViewsKeepTheirs() {
         val settings =
             LauncherSettings(

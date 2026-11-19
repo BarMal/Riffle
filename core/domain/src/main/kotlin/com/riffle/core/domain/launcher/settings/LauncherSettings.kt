@@ -34,8 +34,13 @@ data class LauncherSettings(
  */
 data class HomeBehaviourSettings(
     val returnBehavior: ReturnBehavior = ReturnBehavior.RESTORE,
-    /** What Home shows: the placed items (the default) or the app library pages. The placed layout is kept. */
+    /**
+     * Retired as a choice (ADR 0003, Amendment 8: one Home). Only read to migrate: a stored [HomeMode.AppLibrary]
+     * gets a placed Home built once from the apps, after which this is written back as [HomeMode.PlacedItems].
+     */
     val mode: HomeMode = HomeMode.DEFAULT,
+    /** Settings > Home > "Add new apps to Home": a new app is placed after the last item (on by default). */
+    val addNewApps: Boolean = true,
 )
 
 /**

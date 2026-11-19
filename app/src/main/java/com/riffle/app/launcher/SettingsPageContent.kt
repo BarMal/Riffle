@@ -113,7 +113,7 @@ private fun SettingsHomePageContent(
 
     SettingsHomeModeSections(
         features = state.settings.features,
-        homeMode = state.settings.home.mode,
+        addNewApps = state.settings.home.addNewApps,
         onAction = onAction,
     )
     SettingsDeviceConfigurationTabs(state = state, onAction = onAction)

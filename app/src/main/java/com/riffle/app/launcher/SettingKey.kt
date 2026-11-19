@@ -14,7 +14,7 @@ enum class SettingKey(
     @StringRes val keywordsRes: Int,
 ) {
     SIMPLE_MODE(SettingsPage.HOME, R.string.setting_simple_mode, R.string.setting_simple_mode_keywords),
-    HOME_MODE(SettingsPage.HOME, R.string.setting_home_mode, R.string.setting_home_mode_keywords),
+    ADD_NEW_APPS(SettingsPage.HOME, R.string.setting_add_new_apps, R.string.setting_add_new_apps_keywords),
     HOME_GRID_COLUMNS(
         SettingsPage.HOME,
         R.string.setting_home_grid_columns,
