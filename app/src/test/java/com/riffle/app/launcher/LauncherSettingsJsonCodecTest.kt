@@ -1505,7 +1505,7 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun roundTripsTheFeatureSwitchesAndOldBlobsDecodeToTheDefaults() {
+    fun roundTripsTheFeatureSwitchesAndOldBlobsDecodeToTodaysBehaviour() {
         val features = FeatureSettings(stream = false, dockLiveApps = false, library = false, simpleMode = true)
         val settings = LauncherSettings(features = features)
         assertEquals(features, decodeLauncherSettings(encodeLauncherSettings(settings)).features)
@@ -1519,17 +1519,16 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun theLibrarySwitchKeepsAStoredChoiceAndAMissingOneIsOff() {
-        // Changed on purpose: a missing value used to decode to on; the Library now defaults off.
+    fun theLibrarySwitchKeepsAStoredChoiceAndAMissingOneIsOn() {
+        // The Library holds every app, so it defaults on again (it was off for one release; a stored value is kept).
         val stored = { library: String -> decodeLauncherSettings("""{"features": {"library": $library}}""").features }
         assertEquals(true, stored("true").library)
         assertEquals(false, stored("false").library)
-        assertEquals(false, decodeLauncherSettings("""{"features": {"stream": true}}""").features.library)
-        assertEquals(false, decodeLauncherSettings("""{"version": 11}""").features.library)
-        assertEquals(false, decodeLauncherSettings("""{"features": {"library": "yes"}}""").features.library)
-        // A stored true survives the round trip of the whole settings.
-        val on = LauncherSettings(features = FeatureSettings(library = true))
-        assertEquals(true, decodeLauncherSettings(encodeLauncherSettings(on)).features.library)
+        assertEquals(true, decodeLauncherSettings("""{"features": {"stream": true}}""").features.library)
+        assertEquals(true, decodeLauncherSettings("""{"version": 11}""").features.library)
+        assertEquals(true, decodeLauncherSettings("""{"features": {"library": "yes"}}""").features.library)
+        val off = LauncherSettings(features = FeatureSettings(library = false))
+        assertEquals(false, decodeLauncherSettings(encodeLauncherSettings(off)).features.library)
     }
 
     @Test

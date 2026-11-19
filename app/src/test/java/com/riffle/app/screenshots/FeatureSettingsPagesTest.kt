@@ -156,25 +156,13 @@ class FeatureSettingsPagesTest {
     }
 
     @Test
-    fun theLibrarySwitchShowsItsStateAndTurnsOff() {
-        render(SettingsPage.LIBRARY, features = FeatureSettings(library = true), capture = true)
+    fun theLibrarySwitchIsOnByDefaultAndTurnsOff() {
+        render(SettingsPage.LIBRARY, capture = true)
 
         composeRule.onNodeWithTag(featureSwitchTestTag(LauncherFeature.LIBRARY)).assertIsOn().performClick()
 
         assertEquals(
             listOf<LauncherShellAction>(LauncherShellAction.SetFeatureEnabled(LauncherFeature.LIBRARY, false)),
-            actions,
-        )
-    }
-
-    @Test
-    fun theLibrarySwitchIsOffByDefaultAndTurnsOn() {
-        render(SettingsPage.LIBRARY)
-
-        composeRule.onNodeWithTag(featureSwitchTestTag(LauncherFeature.LIBRARY)).assertIsOff().performClick()
-
-        assertEquals(
-            listOf<LauncherShellAction>(LauncherShellAction.SetFeatureEnabled(LauncherFeature.LIBRARY, true)),
             actions,
         )
     }

@@ -253,8 +253,7 @@ private fun encodeFeatures(settings: FeatureSettings): JSONObject =
         .put("library", settings.library)
         .put("simpleMode", settings.simpleMode)
 
-// Absent (settings saved before the switches) or not a boolean: the default (the Library defaults off since the Dock
-// became the handle; a stored true or false is kept).
+// Absent (settings saved before the switches) or not a boolean: the default, today's behaviour.
 private fun JSONObject.toFeatures(defaults: FeatureSettings): FeatureSettings =
     FeatureSettings(
         stream = (opt("stream") as? Boolean) ?: defaults.stream,
