@@ -58,11 +58,18 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.Riffle">
+        <!-- The Home activity declares what AOSP's Launcher3 does (home-gesture-after-update investigation): its saved
+             state is never needed, re-launching it from Home returns to its root (nothing the app relies on lives
+             above it in its task: the diagnostics activities start their own tasks), and it resumes while another
+             activity is still pausing. -->
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize"
+            android:clearTaskOnLaunch="true"
             android:exported="true"
             android:launchMode="singleTask"
+            android:resumeWhilePausing="true"
+            android:stateNotNeeded="true"
             android:theme="@style/Theme.Riffle"
             android:windowSoftInputMode="adjustNothing">
             <intent-filter>

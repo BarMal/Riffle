@@ -478,6 +478,13 @@
     <string name="app_pair_log_copied">Log copied</string>
     <string name="app_pair_log_empty">No launches yet.</string>
     <string name="settings_section_diagnostics">Diagnostics</string>
+    <string name="settings_page_after_update">After-update starts</string>
+    <string name="settings_page_after_update_summary">What the first start after each update looked like, for checking only</string>
+    <string name="settings_page_after_update_keywords">diagnostics debug developer update install home gesture intent task start time first frame</string>
+    <string name="after_update_empty">Nothing recorded yet. The first start after the next update is noted here.</string>
+    <string name="after_update_copy">Copy</string>
+    <string name="after_update_copied">Copied</string>
+    <string name="after_update_clipboard_label">After-update starts</string>
     <string name="settings_page_app_publish">What apps publish</string>
     <string name="settings_page_app_publish_summary">What each app shares with a launcher, for checking only</string>
     <string name="settings_page_app_publish_keywords">diagnostics debug developer shortcuts notifications media widgets publish</string>

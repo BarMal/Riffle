@@ -49,6 +49,7 @@ import com.riffle.app.launcher.canPerformStageAction
 import com.riffle.app.launcher.completeGlanceWidgetAdd
 import com.riffle.app.launcher.completeWidgetAdd
 import com.riffle.app.launcher.deleteHostedWidgetIdWhenRejected
+import com.riffle.app.launcher.diagnostics.AfterUpdateProcess
 import com.riffle.app.launcher.diagnostics.pair.PairActivityHub
 import com.riffle.app.launcher.failureMessage
 import com.riffle.app.launcher.fallbackWallpaperSourceAction
@@ -527,6 +528,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         wallpaperController.applySource(shellViewModel.state.value.launcherSettings.appearance.wallpaper.source)
+        // Diagnostics only (Settings > About > Diagnostics > After-update starts): what this start looked like.
+        AfterUpdateProcess.start(this)
         activeNotificationRefreshCoordinator.start()
         lifecycle.addObserver(activeNotificationRefreshCoordinator)
         lifecycle.addObserver(packageChangeObserver)
@@ -600,6 +603,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        AfterUpdateProcess.onNewIntent(intent)
         refreshPlatformStatuses()
         if (shouldOpenDefaultHomeOnLaunch(intent.action, intent.categories)) {
             // A Home press: back to Home's first page (closing the drawer, search and any overlay), then to the active

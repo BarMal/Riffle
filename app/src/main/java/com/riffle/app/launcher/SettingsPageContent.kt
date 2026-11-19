@@ -81,6 +81,7 @@ internal fun SettingsPageContent(
             SettingsPage.APP_PAIR -> SettingsAppPairPageContent(state = state)
             SettingsPage.PAIR_RECIPE -> SettingsPairRecipePageContent(state = state, onAction = onAction)
             SettingsPage.DRAG_TUNING -> SettingsDragTuningPageContent(state = state, onAction = onAction)
+            SettingsPage.AFTER_UPDATE -> SettingsAfterUpdatePageContent()
         }
     }
 }
