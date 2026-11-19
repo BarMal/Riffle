@@ -117,7 +117,8 @@ sealed interface LauncherShellAction {
 
     /**
      * Settings > About > Reset settings (confirmed first): every setting back to its default, keeping Home, the Dock,
-     * saved Home layouts, hidden apps and the feeds and tokens (`SettingsReset`).
+     * saved Home layouts, hidden apps and the feeds and tokens (`SettingsReset`). The Stream's sections, stored apart,
+     * are reset by the Reset row alongside it.
      */
     data object ResetSettings : LauncherShellAction
 

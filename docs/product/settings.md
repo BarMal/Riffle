@@ -343,7 +343,10 @@ made by a newer version, or damaged; a file that cannot be read keeps the generi
 ## About > Reset settings
 
 `SettingsReset` (`:core:domain`): every `LauncherSettings` value returns to its default, including Developer options
-(hidden again), Simple mode and the hints seen. Kept: the feed list and the Floating dock's apps (inside
-`LauncherSettings`), and everything stored elsewhere: Home, the Dock, saved Home layouts, hidden apps, calendar feeds,
-the Tasks token and the Stream's sections. The confirmation lists these exactly; "Settings reset" offers Undo, which
-saves the previous settings back unchanged.
+(hidden again), Simple mode and the hints seen. **The Stream's sections go back too**: they live in their own store
+(`CachedStreamLayoutRepository`, apart from the settings), so the Reset row resets it in the same step: every posture's
+layout returns to `StreamLayout.DEFAULT` (which sections are on, their order, how each is shown, and the per-section
+options such as Now > Show up next). Kept: the feed list and the Floating dock's apps (inside `LauncherSettings`), and
+everything else stored elsewhere: Home, the Dock, saved Home layouts, hidden apps and exclusions, calendar feeds and the
+Tasks token. The confirmation lists these exactly; "Settings reset" offers Undo, which puts the previous settings back
+unchanged and, with them, the Stream's layouts exactly as they were (`restoreAll` of what `resetAll` returned).

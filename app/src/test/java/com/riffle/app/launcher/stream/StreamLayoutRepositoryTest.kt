@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.stream.NowOptions
 import com.riffle.core.domain.launcher.stream.StreamLayout
 import com.riffle.core.domain.launcher.stream.StreamLayoutAction
+import com.riffle.core.domain.launcher.stream.StreamLayoutReducer
 import com.riffle.core.domain.launcher.stream.StreamLayouts
 import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.stream.StreamSectionOptions
@@ -164,5 +165,66 @@ class StreamLayoutRepositoryTest {
             val stored = StreamLayouts().with(phone, StreamLayout.DEFAULT)
             assertEquals(stored, repository(FakeStore(stored)).currentOrStored())
             assertNull(repository(FakeStore(null)).currentOrStored())
+        }
+
+    private fun StreamLayout.then(action: StreamLayoutAction) = StreamLayoutReducer.reduce(this, action)
+
+    private val custom =
+        StreamLayouts()
+            .with(
+                phone,
+                StreamLayout.DEFAULT
+                    .then(StreamLayoutAction.SetEnabled(StreamSection.RECENTS, false))
+                    .then(StreamLayoutAction.Move(StreamSection.FEEDS, -2))
+                    .then(StreamLayoutAction.SetView(StreamSection.NOW, StreamView.LIST)),
+            )
+            .with(
+                HomeLayoutDeviceClass.TABLET,
+                StreamLayout.DEFAULT.copy(options = StreamSectionOptions(now = NowOptions(showUpNext = false))),
+            )
+
+    @Test
+    fun resetAllPutsEveryPostureBackToTheDefaultAndWritesIt() =
+        runBlocking {
+            val store = FakeStore(custom)
+            val repository = repository(store)
+            var told = 0
+            repository.observe { told++ }
+
+            val before = repository.resetAll()
+
+            assertEquals(custom, before)
+            assertEquals(StreamLayout.DEFAULT, repository.layoutFor(phone))
+            assertEquals(StreamLayout.DEFAULT, repository.layoutFor(HomeLayoutDeviceClass.TABLET))
+            assertEquals(StreamLayout.DEFAULT, store.stored!!.forPosture(phone))
+            assertTrue(store.stored!!.isDefault)
+            assertTrue("observers hear the options change", told > 0)
+        }
+
+    @Test
+    fun restoreAllPutsThePreviousLayoutsBackExactly() =
+        runBlocking {
+            val store = FakeStore(custom)
+            val repository = repository(store)
+            val before = repository.resetAll()
+
+            repository.restoreAll(before)
+
+            assertEquals(custom, repository.layouts.value)
+            assertEquals(custom, store.stored)
+            assertEquals(false, repository.layoutFor(phone).layoutOf(StreamSection.RECENTS).enabled)
+        }
+
+    @Test
+    fun resetAllBeforeTheFirstReadStillResetsWhatWasStored() =
+        runBlocking {
+            val store = FakeStore(custom)
+            val repository = repository(store)
+
+            repository.resetAll()
+            repository.initialize()
+
+            assertEquals(StreamLayout.DEFAULT, repository.layoutFor(phone))
+            assertTrue(store.stored!!.isDefault)
         }
 }

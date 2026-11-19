@@ -7,7 +7,9 @@ package com.riffle.core.domain.launcher.settings
  * Kept: the feed list (the feeds the user added), and the Floating dock's apps (a Dock). Everything else in
  * [LauncherSettings] returns to its default, including the Developer options state (hidden again), the hints seen,
  * Simple mode and the hide rules of notifications. Not part of [LauncherSettings] and so never touched: Home, the
- * Dock, saved Home layouts, hidden apps, the calendar feeds, the Tasks token and the Stream's sections.
+ * Dock, saved Home layouts, hidden apps, the calendar feeds and the Tasks token. The Stream's sections (which are on,
+ * their order, view and options) are stored apart from the settings and are reset with them by the Reset row
+ * (`CachedStreamLayoutRepository.resetAll`), with Undo.
  */
 object SettingsReset {
     fun reset(current: LauncherSettings): LauncherSettings =
