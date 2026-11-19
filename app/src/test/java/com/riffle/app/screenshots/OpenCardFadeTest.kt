@@ -5,7 +5,6 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeRight
 import com.riffle.app.launcher.GridFadeAlphaKey
 import com.riffle.app.launcher.HOME_DOCK_SURFACE_TEST_TAG
 import com.riffle.app.launcher.stream.STREAM_OPEN_CARD_TEST_TAG
@@ -96,10 +95,10 @@ internal class OpenCardFadeTest : OpenCardPolishHarness(HomeLayoutDeviceClass.FO
         composeRule.waitForIdle()
         composeRule.runOnUiThread { stream.dock.openCards.closeByPress() }
         composeRule.waitForIdle()
-        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG, useUnmergedTree = true).performTouchInput { swipeRight() }
+        composeRule.streamPage(next = false)
         composeRule.waitForIdle()
         if (composeRule.onAllNodesWithText("Ledger").fetchSemanticsNodes().isEmpty()) {
-            composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG, useUnmergedTree = true).performTouchInput { swipeRight() }
+            composeRule.streamPage(next = false)
             composeRule.waitForIdle()
         }
         tapFront("Ledger")

@@ -435,7 +435,8 @@ class StreamSwipeDismissTest {
     }
 
     @Test
-    fun aSwipeOnTheEmptyRoomAboveTheStackChangesThePage() {
+    fun aSidewaysSwipeOnTheEmptyRoomAboveTheStackDoesNothing() {
+        // Changed on purpose: the room above the stack used to change the page; only the Dock does that now.
         show()
         val before = pagerPosition()
         composeRule.onRoot().performTouchInput {
@@ -443,7 +444,56 @@ class StreamSwipeDismissTest {
         }
         composeRule.waitForIdle()
         assertTrue("nothing was sent: $sent", sent.isEmpty())
-        assertTrue("the page changed: $before -> ${pagerPosition()}", pagerPosition() != before)
+        assertEquals("the page changed", before, pagerPosition(), 0.5f)
+    }
+
+    @Test
+    fun aSwipeThatDismissesTheFrontCardLeavesThePageAlone() {
+        show()
+        val before = pagerPosition()
+        composeRule.onNodeWithText("First").swipeSideways(250f, durationMillis = 300)
+        composeRule.waitUntil(timeoutMillis = WAIT_MILLIS) { sent.isNotEmpty() }
+        waitForTheFrontCardToBe("Second")
+        assertEquals("the page changed", before, pagerPosition(), 0.5f)
+    }
+
+    @Test
+    fun aSwipeOnACardThatCannotBeDismissedResistsAndLeavesThePageAlone() {
+        show(firstDismissible = false)
+        val before = pagerPosition()
+        composeRule.onNodeWithText("First").swipeSideways(-250f, durationMillis = 300)
+        composeRule.waitForIdle()
+        assertTrue("something was sent: $sent", sent.isEmpty())
+        assertEquals("the page changed", before, pagerPosition(), 0.5f)
+        assertEquals("First", frontTitle())
+    }
+
+    @Test
+    fun aSwipeOnAStripDoesNotChangeThePage() {
+        show()
+        val before = pagerPosition()
+        composeRule.onNode(hasContentDescription("Second", substring = true)).swipeSideways(-250f, durationMillis = 300)
+        composeRule.waitForIdle()
+        assertTrue("a strip was dismissed: $sent", sent.isEmpty())
+        assertEquals("the page changed", before, pagerPosition(), 0.5f)
+    }
+
+    @Test
+    fun aPageChangeFromTheDockStillAnimates() {
+        show(reducedMotion = false)
+        val before = pagerPosition()
+        val next =
+            composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).fetchSemanticsNode()
+                .config[SemanticsActions.CustomActions].first { it.label == "Next page" }
+        composeRule.mainClock.autoAdvance = false
+        composeRule.runOnUiThread { next.action() }
+        repeat(3) { composeRule.mainClock.advanceTimeByFrame() }
+        val inFlight = pagerPosition()
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+        val settled = pagerPosition()
+        assertTrue("the page never moved: $before -> $settled", settled != before)
+        assertTrue("the page jumped instead of animating: $before, $inFlight, $settled", inFlight != settled)
     }
 
     @Test

@@ -10,8 +10,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeLeft
-import androidx.compose.ui.test.swipeRight
 import com.riffle.app.launcher.stream.OpenCardAlphaKey
 import com.riffle.app.launcher.stream.STREAM_OPEN_CARD_TEST_TAG
 import com.riffle.app.launcher.stream.STREAM_OPEN_STRIP_TEST_TAG
@@ -48,8 +46,8 @@ internal class OpenCardAcrossPagesTest : OpenCardPolishHarness(HomeLayoutDeviceC
     }
 
     private fun swipePage(left: Boolean) {
-        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG, useUnmergedTree = true)
-            .performTouchInput { if (left) swipeLeft() else swipeRight() }
+        // A left swipe went to the next page and a right swipe to the previous one: the pager's actions do that now.
+        composeRule.streamPage(next = left)
     }
 
     private fun goToLedger() {
