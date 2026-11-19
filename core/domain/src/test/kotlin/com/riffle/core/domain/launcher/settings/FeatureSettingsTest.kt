@@ -9,11 +9,9 @@ import kotlin.test.assertTrue
 
 class FeatureSettingsTest {
     @Test
-    fun theStreamAndLiveAppsDefaultOnAndTheLibraryAndSimpleModeDefaultOff() {
-        // Changed on purpose: the Library (the pull away from the Dock) used to default on.
+    fun everySwitchDefaultsToTodaysBehaviourAndSimpleModeIsOff() {
         val features = FeatureSettings()
-        assertTrue(features.stream && features.dockLiveApps)
-        assertFalse(features.library)
+        assertTrue(features.stream && features.dockLiveApps && features.library)
         assertFalse(features.simpleMode)
         assertEquals(HomeMode.PlacedItems, LauncherSettings().home.mode)
         assertEquals(EffectiveFeatures(), LauncherSettings().effectiveFeatures())
@@ -39,7 +37,7 @@ class FeatureSettingsTest {
 
     @Test
     fun theStreamSwitchTakesTheLiveAppsWithIt() {
-        val effective = FeatureSettings(stream = false, library = true).effective(HomeMode.PlacedItems)
+        val effective = FeatureSettings(stream = false).effective(HomeMode.PlacedItems)
         assertFalse(effective.stream)
         assertFalse(effective.dockLiveApps)
         assertTrue(effective.library)
@@ -83,10 +81,10 @@ class FeatureSettingsTest {
             HomeGestureSettings()
                 .withAction(HomeGesture.TWO_FINGER_LEFT, LauncherGestureAction.OPEN_STREAM)
                 .withAction(HomeGesture.TWO_FINGER_RIGHT, LauncherGestureAction.OPEN_LIBRARY)
-        val on = EffectiveFeatures(library = true)
+        val on = EffectiveFeatures()
         assertSame(gestures, gestures.without(on))
 
-        val noStream = gestures.without(EffectiveFeatures(stream = false, library = true))
+        val noStream = gestures.without(EffectiveFeatures(stream = false))
         assertEquals(LauncherGestureAction.NONE, noStream.actionFor(HomeGesture.TWO_FINGER_LEFT))
         assertEquals(LauncherGestureAction.OPEN_LIBRARY, noStream.actionFor(HomeGesture.TWO_FINGER_RIGHT))
 
@@ -95,15 +93,6 @@ class FeatureSettingsTest {
         assertEquals(LauncherGestureAction.NONE, noLibrary.actionFor(HomeGesture.TWO_FINGER_RIGHT))
         // The other bindings are untouched.
         assertEquals(LauncherGestureAction.OPEN_SEARCH, noLibrary.actionFor(HomeGesture.ONE_FINGER_DOWN))
-    }
-
-    @Test
-    fun withTheLibraryOffByDefaultASwipeBoundToSearchIsKept() {
-        // Search stays with the Library off: the default swipe down on Home is Search and nothing unbinds it.
-        val off = EffectiveFeatures()
-        assertEquals(false, off.library)
-        val gestures = HomeGestureSettings()
-        assertEquals(LauncherGestureAction.OPEN_SEARCH, gestures.without(off).actionFor(HomeGesture.ONE_FINGER_DOWN))
     }
 
     @Test

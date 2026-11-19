@@ -747,10 +747,11 @@ private fun LibraryHomeSurface(
 }
 
 /**
- * Home in the App library Home mode: the paged Library View in Home's place, laid out as Home is (inside what the Dock
- * reserves, under it in the draw order, inside the system bar insets). The placed layout is untouched and comes back
- * with the other mode. Home's gestures still work, except the ones that act on the placed pages. Long-pressing
- * the empty space offers Settings and, outside Simple mode, a way back to the placed items.
+ * Home in Simple mode: the paged Library View in Home's place, laid out as Home is (inside what the Dock reserves,
+ * under it in the draw order, inside the system bar insets). The arranged Home is untouched and comes back when Simple
+ * mode is turned off. (A stored app-library Home mode shows it too until the one-time migration to an arranged Home has
+ * run, see `AppLibraryHomeMigration`.) Home's gestures still work, except the ones that act on the placed pages.
+ * Long-pressing the empty space offers Settings.
  */
 @Composable
 private fun AppLibraryHome(
@@ -780,14 +781,9 @@ private fun AppLibraryHome(
             haptics = haptics,
             onAction = { action -> latestOnAction.value(action) },
         )
-    val placedLabel = stringResource(R.string.home_mode_show_placed)
     val settingsLabel = stringResource(R.string.home_mode_settings)
     val actions =
-        listOfNotNull(
-            CustomAccessibilityAction(placedLabel) {
-                onAction(LauncherShellAction.SelectHomeMode(HomeMode.PlacedItems))
-                true
-            }.takeIf { !features.simpleMode },
+        listOf(
             CustomAccessibilityAction(settingsLabel) {
                 onAction(LauncherShellAction.OpenSettings)
                 true
@@ -828,15 +824,6 @@ private fun AppLibraryHome(
             handleHidden = handleHidden,
             contentPadding = contentPadding,
         ) { dismiss ->
-            if (!features.simpleMode) {
-                DropdownMenuItem(
-                    text = { Text(placedLabel) },
-                    onClick = {
-                        dismiss()
-                        onAction(LauncherShellAction.SelectHomeMode(HomeMode.PlacedItems))
-                    },
-                )
-            }
             DropdownMenuItem(
                 text = { Text(settingsLabel) },
                 onClick = {
@@ -1015,6 +1002,7 @@ private fun standardHomePresentation(
         homeInsetPolicy = homeInsetPolicy(state.launcherSettings.appearance),
         layout = state.postureLayout(),
         libraryEnabled = state.launcherSettings.effectiveFeatures().library,
+        dragTuning = state.launcherSettings.home.dragTuning,
     )
 
 /** The layout of the posture the device is being held in (ADR 0003, Amendment 2). */

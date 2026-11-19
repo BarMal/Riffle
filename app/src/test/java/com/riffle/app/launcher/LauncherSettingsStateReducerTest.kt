@@ -133,21 +133,22 @@ class LauncherSettingsStateReducerTest {
     }
 
     @Test
-    fun persistsTheHomeModeTheFeatureSwitchesAndSimpleMode() {
+    fun persistsAddNewAppsTheFeatureSwitchesAndSimpleMode() {
         val repository = FakeLauncherSettingsRepository()
         val reducer = reducer(launcherSettingsRepository = repository)
         val start = LauncherShellState()
         assertEquals(HomeMode.PlacedItems, start.launcherSettings.home.mode)
+        assertEquals(true, start.launcherSettings.home.addNewApps)
         assertEquals(FeatureSettings(), start.launcherSettings.features)
 
-        val library = reducer.reduce(start, LauncherShellAction.SelectHomeMode(HomeMode.AppLibrary))
+        val library = reducer.reduce(start, LauncherShellAction.SetAddNewApps(false))
         val noStream = reducer.reduce(library, LauncherShellAction.SetFeatureEnabled(LauncherFeature.STREAM, false))
         val noLive =
             reducer.reduce(noStream, LauncherShellAction.SetFeatureEnabled(LauncherFeature.DOCK_LIVE_APPS, false))
         val noLibrary = reducer.reduce(noLive, LauncherShellAction.SetFeatureEnabled(LauncherFeature.LIBRARY, false))
         val simple = reducer.reduce(noLibrary, LauncherShellAction.SetSimpleMode(true))
 
-        assertEquals(HomeMode.AppLibrary, library.launcherSettings.home.mode)
+        assertEquals(false, library.launcherSettings.home.addNewApps)
         assertEquals(false, noStream.launcherSettings.features.stream)
         assertEquals(false, noLive.launcherSettings.features.dockLiveApps)
         assertEquals(false, noLibrary.launcherSettings.features.library)
@@ -157,9 +158,9 @@ class LauncherSettingsStateReducerTest {
         // Simple mode off gives every earlier choice back untouched, and a switch back on is just that switch.
         val off = reducer.reduce(simple, LauncherShellAction.SetSimpleMode(false))
         assertEquals(noLibrary.launcherSettings, off.launcherSettings)
-        val placed = reducer.reduce(off, LauncherShellAction.SelectHomeMode(HomeMode.PlacedItems))
-        assertEquals(HomeMode.PlacedItems, placed.launcherSettings.home.mode)
-        assertEquals(off.launcherSettings.features, placed.launcherSettings.features)
+        val again = reducer.reduce(off, LauncherShellAction.SetAddNewApps(true))
+        assertEquals(true, again.launcherSettings.home.addNewApps)
+        assertEquals(off.launcherSettings.features, again.launcherSettings.features)
     }
 
     @Test

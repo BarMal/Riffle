@@ -79,6 +79,8 @@ internal fun SettingsPageContent(
             SettingsPage.VERSION -> SettingsVersionPageContent(state = state, onPageSelected = onPageSelected)
             SettingsPage.APP_PUBLISH -> SettingsAppPublishPageContent(state = state)
             SettingsPage.APP_PAIR -> SettingsAppPairPageContent(state = state)
+            SettingsPage.PAIR_RECIPE -> SettingsPairRecipePageContent(state = state, onAction = onAction)
+            SettingsPage.DRAG_TUNING -> SettingsDragTuningPageContent(state = state, onAction = onAction)
         }
     }
 }
@@ -113,7 +115,7 @@ private fun SettingsHomePageContent(
 
     SettingsHomeModeSections(
         features = state.settings.features,
-        homeMode = state.settings.home.mode,
+        addNewApps = state.settings.home.addNewApps,
         onAction = onAction,
     )
     SettingsDeviceConfigurationTabs(state = state, onAction = onAction)

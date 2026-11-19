@@ -59,7 +59,8 @@ class LibraryLongPressBehaviorTest : LongPressBehaviorBase() {
     fun theAppLibraryHomesMarginOpensItsOwnMenu() {
         show(folded().withHomeMode(HomeMode.AppLibrary))
         longPressAt(3f, 400f)
-        composeRule.onNodeWithText("Show placed items").assertIsDisplayed()
+        // Changed on purpose: "Show placed items" is gone with the Home mode choice; the menu is Settings only.
+        composeRule.onAllNodesWithText("Show placed items").assertCountEquals(0)
         composeRule.onNodeWithText("Settings").assertIsDisplayed()
         assertEquals(1, haptics.count)
         composeRule.onAllNodesWithText("Edit page").assertCountEquals(0)

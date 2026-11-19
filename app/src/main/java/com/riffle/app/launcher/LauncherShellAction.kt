@@ -20,6 +20,7 @@ import com.riffle.core.domain.launcher.home.FolderItemMoveDirection
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
+import com.riffle.core.domain.launcher.home.HomeDragTuning
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HostedWidgetId
@@ -44,7 +45,6 @@ import com.riffle.core.domain.launcher.settings.DockMotionSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeGesture
-import com.riffle.core.domain.launcher.settings.HomeMode
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherFeature
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
@@ -61,6 +61,7 @@ import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
 import com.riffle.core.domain.launcher.settings.PageIndicatorPlacement
 import com.riffle.core.domain.launcher.settings.PageScrollDirection
+import com.riffle.core.domain.launcher.settings.PairRecipeKind
 import com.riffle.core.domain.launcher.settings.PairsMode
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
@@ -329,6 +330,15 @@ sealed interface LauncherShellAction {
         val cell: GridCell,
     ) : LauncherShellAction
 
+    /** The drop of a Home drag: the item lands at [cell] on [targetPageId] after [pushed] neighbours moved aside. */
+    data class DropHomeItem(
+        val itemId: LauncherItemId,
+        val sourcePageId: LauncherPageId,
+        val targetPageId: LauncherPageId,
+        val cell: GridCell,
+        val pushed: Map<LauncherItemId, GridCell> = emptyMap(),
+    ) : LauncherShellAction
+
     data class MoveHomeItemToPage(
         val itemId: LauncherItemId,
         val sourcePageId: LauncherPageId,
@@ -451,9 +461,19 @@ sealed interface LauncherShellAction {
         val settings: DockMotionSettings,
     ) : LauncherShellAction
 
-    /** Settings > Home: what Home shows. The placed layout is kept either way. */
-    data class SelectHomeMode(
-        val mode: HomeMode,
+    /** Settings > About > Diagnostics > Drag tuning: the numbers of a Home drag (held to their ranges). */
+    data class SetDragTuning(
+        val tuning: HomeDragTuning,
+    ) : LauncherShellAction
+
+    /** Settings > About > Diagnostics > Pair recipe: how the Pairs stack starts a pair. */
+    data class SetPairRecipe(
+        val recipe: PairRecipeKind,
+    ) : LauncherShellAction
+
+    /** Settings > Home > "Add new apps to Home": a newly installed app is placed on Home, or only in the Library. */
+    data class SetAddNewApps(
+        val enabled: Boolean,
     ) : LauncherShellAction
 
     /** Settings: one feature switch (Stream, Dock live apps, Library) on or off. */

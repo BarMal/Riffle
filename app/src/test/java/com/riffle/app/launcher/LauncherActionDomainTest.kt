@@ -21,6 +21,7 @@ import com.riffle.core.domain.launcher.home.FolderItemMoveDirection
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
+import com.riffle.core.domain.launcher.home.HomeDragTuning
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
@@ -45,7 +46,6 @@ import com.riffle.core.domain.launcher.settings.DockMotionSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeGesture
-import com.riffle.core.domain.launcher.settings.HomeMode
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherFeature
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
@@ -61,6 +61,7 @@ import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
 import com.riffle.core.domain.launcher.settings.PageIndicatorPlacement
 import com.riffle.core.domain.launcher.settings.PageScrollDirection
+import com.riffle.core.domain.launcher.settings.PairRecipeKind
 import com.riffle.core.domain.launcher.settings.PairsMode
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
@@ -332,6 +333,16 @@ class LauncherActionDomainTest {
                     "MoveHomeItemToPage",
                     LauncherShellAction.MoveHomeItemToPage(itemId, pageId, LauncherPageId("page-2"), GridCell(1, 2)),
                 ),
+                activity(
+                    "DropHomeItem",
+                    LauncherShellAction.DropHomeItem(
+                        itemId,
+                        pageId,
+                        LauncherPageId("page-2"),
+                        GridCell(1, 2),
+                        mapOf(itemId to GridCell(2, 2)),
+                    ),
+                ),
                 activity("ResizeHomeWidget", LauncherShellAction.ResizeHomeWidget(itemId, GridSpan(2, 2))),
                 app("OpenWidgetPicker", LauncherShellAction.OpenWidgetPicker),
                 app("OpenWidgetPickerForDockPanel", LauncherShellAction.OpenWidgetPickerForDockPanel),
@@ -394,7 +405,9 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SelectCardActionsPlacement(CardActionsPlacement.ON_CARD),
                 ),
                 settings("SetDockMotion", LauncherShellAction.SetDockMotion(DockMotionSettings(speedMillis = 300))),
-                settings("SelectHomeMode", LauncherShellAction.SelectHomeMode(HomeMode.AppLibrary)),
+                settings("SetAddNewApps", LauncherShellAction.SetAddNewApps(enabled = false)),
+                settings("SetDragTuning", LauncherShellAction.SetDragTuning(HomeDragTuning())),
+                settings("SetPairRecipe", LauncherShellAction.SetPairRecipe(PairRecipeKind.TWO_STARTS)),
                 settings(
                     "SelectPageScroll",
                     LauncherShellAction.SelectPageScroll(LayoutPosture.FOLDED, PageScrollDirection.VERTICAL),

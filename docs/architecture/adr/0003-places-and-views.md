@@ -675,6 +675,28 @@ each app icon can take up half the card's ground." This supersedes Amendment 5. 
 
 See "Pairs" in `docs/product/dock-modes-plan.md`.
 
+## Amendment 8 (owner, 2026-11-19): one Home
+
+"Let's combine 'standard' and 'library' mode so that everything can be rearranged." The rest of Amendments 1 to 7 stands,
+except what is said here about the Home mode and the Library default.
+
+- **There is one Home**: a user-arranged grid of placed items (apps, folders, widgets) on pages. The app-library Home mode
+  (every app shown by itself, not arrangeable) is retired as a mode. Simple mode stays as the locked-down option: while it
+  is on Home shows every app A to Z and cannot be rearranged; the arranged Home comes back untouched when it is off.
+- **Moving the old data.** A stored Home mode of `app_library` (and a backup made in it, in either mode) gets a placed Home
+  built once from the apps the user saw: every visible (not hidden) launchable app in the Library's A to Z order, pages
+  filled fully. The placed items that Home had are not merged in. They are kept, unused, as a separate stored copy (the
+  recovery snapshot cannot serve: it follows every pool write); the stored mode is then written back as `placed_items`,
+  which makes the migration idempotent. Standard users are unchanged.
+- **The Library holds every app**, including those hidden or removed from Home, and the Library switch defaults **on** again
+  (reversing Amendment 6's default; a stored choice is kept). Removing an item from Home never uninstalls or hides the app.
+  "Add to Home" in the Library places it in the first free cell after the last occupied one.
+- **New apps.** Settings > Home > "Add new apps to Home" (default on): a newly installed launchable app is placed in the
+  first free cell after the last occupied one (a new page if needed); off keeps it in the Library only. Apps present at the
+  first run or restored are not placed. The per-workspace "New apps" setting is no longer read.
+- **Drag and drop always works** and has its own rules: see `gestures.md`, "Dragging on Home", and the defaults table in
+  `places-views-plan.md`, "Home drag".
+
 ## Superseded documents
 
 These describe the workspace model or its UI and are superseded by this ADR. They stay in the repository as

@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppProfileType
+import com.riffle.core.domain.launcher.home.HomeDragTuning
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
@@ -21,6 +22,7 @@ import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
+import com.riffle.core.domain.launcher.settings.DiagnosticsSettings
 import com.riffle.core.domain.launcher.settings.FeatureSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
@@ -42,6 +44,7 @@ import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import com.riffle.core.domain.launcher.settings.PageIndicatorPlacement
 import com.riffle.core.domain.launcher.settings.PageScrollDirection
+import com.riffle.core.domain.launcher.settings.PairRecipeKind
 import com.riffle.core.domain.launcher.settings.PairsMode
 import com.riffle.core.domain.launcher.settings.PostureLayoutSettings
 import com.riffle.core.domain.launcher.settings.PrivacySettings
@@ -68,6 +71,7 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
         .put("haptics", encodeHaptics(settings.haptics))
         .put("hints", encodeHints(settings.hints))
         .put("home", encodeHomeBehaviour(settings.home))
+        .put("diagnostics", JSONObject().put("pairRecipe", settings.diagnostics.pairRecipe.storedId))
         .put("layout", encodeLayoutSettings(settings.layout))
         .put("liquidGlass", encodeLiquidGlass(settings.liquidGlass))
         .put("motion", encodeMotionSettings(settings.motion))
@@ -116,6 +120,10 @@ private fun decodeLauncherSections(
         haptics = json.guarded("haptics", defaults.haptics, JSONObject::toHaptics),
         hints = json.guarded("hints", defaults.hints, JSONObject::toHints),
         home = json.guarded("home", defaults.home, JSONObject::toHomeBehaviour),
+        diagnostics =
+            DiagnosticsSettings(
+                pairRecipe = PairRecipeKind.decode(json.optJSONObject("diagnostics")?.optString("pairRecipe")),
+            ),
         layout = json.guarded("layout", defaults.layout, JSONObject::toLayoutSettings),
         liquidGlass = json.guarded("liquidGlass", defaults.liquidGlass, JSONObject::toLiquidGlass),
         motion = json.guarded("motion", defaults.motion, JSONObject::toMotionSettings),
@@ -193,6 +201,8 @@ private fun encodeHomeBehaviour(settings: HomeBehaviourSettings): JSONObject =
     JSONObject()
         .put("returnBehavior", settings.returnBehavior.name)
         .put("mode", settings.mode.storedId)
+        .put("addNewApps", settings.addNewApps)
+        .put("dragTuning", encodeDragTuning(settings.dragTuning))
 
 /*
  * The layout per posture (ADR 0003, Amendment 2): `layout.folded` and `layout.unfolded`, each `pageScroll`,
@@ -253,8 +263,7 @@ private fun encodeFeatures(settings: FeatureSettings): JSONObject =
         .put("library", settings.library)
         .put("simpleMode", settings.simpleMode)
 
-// Absent (settings saved before the switches) or not a boolean: the default (the Library defaults off since the Dock
-// became the handle; a stored true or false is kept).
+// Absent (settings saved before the switches) or not a boolean: the default, today's behaviour.
 private fun JSONObject.toFeatures(defaults: FeatureSettings): FeatureSettings =
     FeatureSettings(
         stream = (opt("stream") as? Boolean) ?: defaults.stream,
@@ -262,6 +271,24 @@ private fun JSONObject.toFeatures(defaults: FeatureSettings): FeatureSettings =
         library = (opt("library") as? Boolean) ?: defaults.library,
         simpleMode = (opt("simpleMode") as? Boolean) ?: defaults.simpleMode,
     )
+
+private fun encodeDragTuning(tuning: HomeDragTuning): JSONObject =
+    JSONObject()
+        .put("ring", tuning.ringRadius.toDouble())
+        .put("deadZone", tuning.deadZoneRadius.toDouble())
+        .put("folderHold", tuning.folderHoldMillis)
+        .put("edgeHold", tuning.edgeHoldMillis)
+        .put("pageRepeat", tuning.pageRepeatMillis)
+
+// A missing or malformed value keeps its default; every value is held to its range.
+private fun JSONObject.toDragTuning(defaults: HomeDragTuning): HomeDragTuning =
+    HomeDragTuning(
+        ringRadius = (opt("ring") as? Number)?.toFloat() ?: defaults.ringRadius,
+        deadZoneRadius = (opt("deadZone") as? Number)?.toFloat() ?: defaults.deadZoneRadius,
+        folderHoldMillis = (opt("folderHold") as? Number)?.toInt() ?: defaults.folderHoldMillis,
+        edgeHoldMillis = (opt("edgeHold") as? Number)?.toInt() ?: defaults.edgeHoldMillis,
+        pageRepeatMillis = (opt("pageRepeat") as? Number)?.toInt() ?: defaults.pageRepeatMillis,
+    ).coerced()
 
 private fun JSONObject.toHomeBehaviour(defaults: HomeBehaviourSettings): HomeBehaviourSettings =
     HomeBehaviourSettings(
@@ -272,6 +299,8 @@ private fun JSONObject.toHomeBehaviour(defaults: HomeBehaviourSettings): HomeBeh
                 ?: defaults.returnBehavior,
         // Absent (settings saved before Home mode) or a name this build does not know: Placed items.
         mode = HomeMode.fromStoredId(optString("mode").takeIf(String::isNotEmpty)) ?: defaults.mode,
+        addNewApps = (opt("addNewApps") as? Boolean) ?: defaults.addNewApps,
+        dragTuning = optJSONObject("dragTuning")?.toDragTuning(defaults.dragTuning) ?: defaults.dragTuning,
     )
 
 private fun encodePrivacy(settings: PrivacySettings): JSONObject =

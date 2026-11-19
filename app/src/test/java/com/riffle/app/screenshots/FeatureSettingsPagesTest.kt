@@ -1,15 +1,20 @@
 package com.riffle.app.screenshots
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
-import com.riffle.app.launcher.HOME_MODE_TEST_TAG_PREFIX
+import com.riffle.app.launcher.ADD_NEW_APPS_TEST_TAG
+import com.riffle.app.launcher.DRAG_TUNING_RESET_TEST_TAG
+import com.riffle.app.launcher.DRAG_TUNING_VALUES_TEST_TAG
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.LocalRecentPlayers
 import com.riffle.app.launcher.LocalStreamLayoutRepository
@@ -25,7 +30,6 @@ import com.riffle.app.launcher.settingsSurfaceState
 import com.riffle.app.launcher.stream.RecentPlayersControl
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.settings.FeatureSettings
-import com.riffle.core.domain.launcher.settings.HomeMode
 import com.riffle.core.domain.launcher.settings.LauncherFeature
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -52,7 +56,6 @@ class FeatureSettingsPagesTest {
     private fun render(
         page: SettingsPage,
         features: FeatureSettings = FeatureSettings(),
-        mode: HomeMode = HomeMode.PlacedItems,
         anchor: SettingKey? = null,
         capture: Boolean = false,
         recentPlayers: RecentPlayersControl? = null,
@@ -61,10 +64,7 @@ class FeatureSettingsPagesTest {
         val state =
             base.copy(
                 launcherSettings =
-                    base.launcherSettings.copy(
-                        features = features,
-                        home = base.launcherSettings.home.copy(mode = mode),
-                    ),
+                    base.launcherSettings.copy(features = features),
             ).settingsSurfaceState(appVersionLabel = "Riffle 1.0 (test)", appBuildIdentityLabel = "Build identity")
         composeRule.setContent {
             ScreenshotBackdrop {
@@ -87,16 +87,16 @@ class FeatureSettingsPagesTest {
     }
 
     @Test
-    fun homePageOffersHomeShowsAndSimpleModeFirstAndEachSendsItsAction() {
+    fun homePageOffersSimpleModeAndAddNewAppsFirstAndEachSendsItsAction() {
         render(SettingsPage.HOME, capture = true)
 
         composeRule.onNodeWithTag(SIMPLE_MODE_TEST_TAG).assertIsDisplayed().assertIsOff()
-        composeRule.onNodeWithTag("${HOME_MODE_TEST_TAG_PREFIX}AppLibrary").performClick()
+        composeRule.onNodeWithTag(ADD_NEW_APPS_TEST_TAG).assertIsDisplayed().assertIsOn().performClick()
         composeRule.onNodeWithTag(SIMPLE_MODE_TEST_TAG).performClick()
 
         assertEquals(
             listOf<LauncherShellAction>(
-                LauncherShellAction.SelectHomeMode(HomeMode.AppLibrary),
+                LauncherShellAction.SetAddNewApps(false),
                 LauncherShellAction.SetSimpleMode(true),
             ),
             actions,
@@ -104,18 +104,33 @@ class FeatureSettingsPagesTest {
     }
 
     @Test
-    fun homePageWithTheAppLibraryChosen() {
-        render(SettingsPage.HOME, mode = HomeMode.AppLibrary, capture = true)
-        composeRule.onNodeWithTag("${HOME_MODE_TEST_TAG_PREFIX}AppLibrary").assertIsDisplayed()
-    }
-
-    @Test
-    fun homePageWithSimpleModeOnShowsTheAppLibraryAndCannotChangeIt() {
+    fun homePageWithSimpleModeOnShowsTheSwitchOn() {
         render(SettingsPage.HOME, FeatureSettings(simpleMode = true), capture = true)
 
         composeRule.onNodeWithTag(SIMPLE_MODE_TEST_TAG).assertIsOn().assertIsEnabled()
-        composeRule.onNodeWithTag("${HOME_MODE_TEST_TAG_PREFIX}PlacedItems").assertIsNotEnabled()
-        composeRule.onNodeWithTag("${HOME_MODE_TEST_TAG_PREFIX}AppLibrary").assertIsNotEnabled()
+    }
+
+    @Test
+    fun theDragTuningPageShowsTheValuesAsCopyableTextAndResetSendsTheDefaults() {
+        render(SettingsPage.DRAG_TUNING, capture = true)
+
+        composeRule.onNodeWithTag(DRAG_TUNING_VALUES_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(DRAG_TUNING_VALUES_TEST_TAG).assertTextContains("ring=0.75", substring = true)
+        composeRule.onNodeWithTag(DRAG_TUNING_RESET_TEST_TAG).performClick()
+
+        assertEquals(
+            listOf<LauncherShellAction>(
+                LauncherShellAction.SetDragTuning(com.riffle.core.domain.launcher.home.HomeDragTuning()),
+            ),
+            actions,
+        )
+    }
+
+    @Test
+    fun homePageHasNoHomeShowsChoiceAnyMore() {
+        // Deleted with the retired Home mode: the "Home shows" rows (placed items, app library).
+        render(SettingsPage.HOME)
+        composeRule.onAllNodesWithText("Home shows").assertCountEquals(0)
     }
 
     @Test
@@ -156,25 +171,13 @@ class FeatureSettingsPagesTest {
     }
 
     @Test
-    fun theLibrarySwitchShowsItsStateAndTurnsOff() {
-        render(SettingsPage.LIBRARY, features = FeatureSettings(library = true), capture = true)
+    fun theLibrarySwitchIsOnByDefaultAndTurnsOff() {
+        render(SettingsPage.LIBRARY, capture = true)
 
         composeRule.onNodeWithTag(featureSwitchTestTag(LauncherFeature.LIBRARY)).assertIsOn().performClick()
 
         assertEquals(
             listOf<LauncherShellAction>(LauncherShellAction.SetFeatureEnabled(LauncherFeature.LIBRARY, false)),
-            actions,
-        )
-    }
-
-    @Test
-    fun theLibrarySwitchIsOffByDefaultAndTurnsOn() {
-        render(SettingsPage.LIBRARY)
-
-        composeRule.onNodeWithTag(featureSwitchTestTag(LauncherFeature.LIBRARY)).assertIsOff().performClick()
-
-        assertEquals(
-            listOf<LauncherShellAction>(LauncherShellAction.SetFeatureEnabled(LauncherFeature.LIBRARY, true)),
             actions,
         )
     }
