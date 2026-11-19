@@ -453,6 +453,16 @@ no longer be available for the hand-off.
 
 ## Known limitations / remaining work
 
+- **Home drag, not yet done:** the drop and cancel spring (the lifted item springing to its cell, pushed neighbours settling
+  on the same spring, reduced motion jumping); the source ghost and the push ring for a Dock item dragged out onto Home (the
+  Dock item is placed at the cell under the finger on release); the Dock reorder shows the lifted scale and shadow, not Home's
+  source ghost.
+- **Legacy `HOME_SCREEN_LIBRARY` layouts keep auto-filling.** The One Home migration rewrites the stored Home *mode*
+  (`HomeMode`), not a layout's view mode. A layout whose view mode is `HOME_SCREEN_LIBRARY` (a workspace migrated from the old
+  Library mode brings it back through `WorkspaceHome.homeModeFor`) is still re-filled with every missing app and compacted
+  (`withHomeScreenLibraryApps`), so an item removed from Home can reappear there. Retiring the view mode means changing the
+  workspace ids that derive from it and about twenty legacy tests; it is a separate slice.
+
 - **Hand-off is vertical only.** Leftover horizontal travel (e.g. past the last stage in the
   `HorizontalPager`, or a horizontal side-rail stack) is not handed to home gestures. Enabling it
   would turn a pager overscroll into a page/stage action; that needs a product decision first.
@@ -494,8 +504,18 @@ outline of its span); the lifted icon follows the finger, slightly enlarged, abo
   name ready to type; a folder's dead zone is its whole icon (the app is added). Empty space: the item is placed there.
 - **Edges.** Held within 24 dp of the trailing screen edge for the edge hold (500 ms) turns to the next page, and keeps
   turning every 700 ms while held; the leading edge goes back (top and bottom when the pages scroll up and down; mirrored in
-  right-to-left). Every page stays composed during a drag so the gesture survives. Dragging past the last page does not
-  create a page yet.
+  right-to-left). Every page stays composed during a drag so the gesture survives. **A new page past the last**: held at the
+  trailing edge on the last page (which has items), the drag offers an empty page after it (`HomeDragPages`); it is created
+  for the drag, kept when the item is dropped on it and discarded (`DiscardEmptyHomePage`) when the drag is cancelled or
+  ends elsewhere. The page dots show the page the drag is over.
 - **To and from the Dock.** An app or folder dragged below the grid onto the Dock is pinned at the slot it hovers; a pinned
   item dragged out is placed on the Home page and cell under the finger (see "Pinned items" above). Both are moves.
+- **Across pages.** After a page turn the dead zone works on the new page as on the first: a drop on top of one of its
+  items moves the dragged item to that page's first free cell and makes the folder there (or adds it to the folder); a
+  full page refuses and the item stays. The suggested folder name is a string resource.
+- **Ghosts.** An app leaves a baked desaturated, dimmed icon and shows the baked outline of the same icon at its landing; a
+  folder leaves its desaturated, dimmed tile and four icons (the apps' baked ghosts); a widget leaves the outline of its span
+  with the card corners at the source and at the landing. Nothing is tinted or blurred at runtime.
+- **Frame stability.** Composition never reads the finger's place: the lifted icon and the edge hold read it in the layout
+  phase, and a cell recomposes only when its own item, landing marker or folder state changes.
 - **Cancel.** A drop with no valid landing (a blocker that cannot move) does nothing: the item stays where it was.

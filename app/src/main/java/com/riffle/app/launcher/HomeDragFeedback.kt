@@ -29,6 +29,7 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -38,6 +39,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -94,12 +96,38 @@ internal fun HomeDragPlaceholder(
         } else {
             Modifier.size(iconSizeDp.dp)
         }
+    if (fillSpan) {
+        // A widget: the outline of its span with the card corners.
+        WidgetSpanOutline(modifier = sizeModifier)
+        return
+    }
     Box(
         modifier =
             sizeModifier.drawBehind {
+                // A folder: the outline of its tile (the same corners as FolderPreviewIcon).
                 drawRoundRect(
                     color = outlineColor,
                     cornerRadius = CornerRadius(DRAG_PLACEHOLDER_CORNER_RADIUS_DP.dp.toPx()),
+                    style = Stroke(width = DRAG_PLACEHOLDER_STROKE_WIDTH_DP.dp.toPx()),
+                )
+            },
+    )
+}
+
+/**
+ * The outline of a widget's span, with the launcher's card corners (a widget is drawn in that shape): what a lifted
+ * widget leaves where it was, and where it would land. Stroke only, drawn in the draw phase.
+ */
+@Composable
+internal fun WidgetSpanOutline(modifier: Modifier = Modifier) {
+    val color = MaterialTheme.colorScheme.outline
+    val shape = LocalLauncherCardShape.current
+    Box(
+        modifier =
+            modifier.testTag(HOME_DRAG_WIDGET_OUTLINE_TEST_TAG).drawBehind {
+                drawOutline(
+                    outline = shape.createOutline(size, layoutDirection, this),
+                    color = color,
                     style = Stroke(width = DRAG_PLACEHOLDER_STROKE_WIDTH_DP.dp.toPx()),
                 )
             },
@@ -507,6 +535,9 @@ private val LauncherItem.dragLabel: String
             is FolderItem -> label
             is WidgetItem -> label
         }
+
+/** The outline of a widget's span a drag leaves (where it was) and shows (where it would land). */
+internal const val HOME_DRAG_WIDGET_OUTLINE_TEST_TAG = "home-drag-widget-outline"
 
 private const val DRAG_PLACEHOLDER_STROKE_WIDTH_DP = 2
 private const val DRAG_PLACEHOLDER_CORNER_RADIUS_DP = 12

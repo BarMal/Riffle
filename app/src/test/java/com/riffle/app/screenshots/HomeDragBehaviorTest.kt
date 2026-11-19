@@ -6,11 +6,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.cancel
 import androidx.compose.ui.test.down
+import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.moveBy
 import androidx.compose.ui.test.moveTo
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
@@ -284,6 +286,77 @@ class HomeDragBehaviorTest {
         composeRule.waitForIdle()
         assertTrue(actions.toString(), actions.any { it is LauncherShellAction.DiscardEmptyHomePage })
         assertEquals(pagesBefore, shell.homeLayout.pages.size)
+    }
+
+    /** A folder and a two-column widget on the page's lower rows, so a drag can lift each. */
+    private fun withFolderAndWidget() {
+        val layout = shell.homeLayout
+        val page = layout.selectedPage
+        val apps = page.items.filterIsInstance<AppShortcutItem>().take(2)
+        val folder =
+            FolderItem(
+                id = com.riffle.core.domain.launcher.home.LauncherItemId("folder-x"),
+                label = "Group",
+                items = apps.map { it.copy(placement = null) },
+                placement =
+                    com.riffle.core.domain.launcher.home.GridPlacement(
+                        com.riffle.core.domain.launcher.home.GridCell(0, 3),
+                    ),
+            )
+        val widget =
+            com.riffle.core.domain.launcher.home.WidgetItem(
+                id = com.riffle.core.domain.launcher.home.LauncherItemId("widget-x"),
+                appWidgetId = com.riffle.core.domain.launcher.home.HostedWidgetId(7),
+                label = "Gauge",
+                placement =
+                    com.riffle.core.domain.launcher.home.GridPlacement(
+                        com.riffle.core.domain.launcher.home.GridCell(2, 3),
+                        com.riffle.core.domain.launcher.home.GridSpan(2, 1),
+                    ),
+            )
+        val updated =
+            layout.copy(
+                pages = listOf(page.copy(items = page.items.drop(0) + folder + widget)) + layout.pages.drop(1),
+            )
+        shell = shell.copy(homeLayout = updated, homeLayoutSet = shell.homeLayoutSet.withActiveLayout(updated))
+        show()
+    }
+
+    @Test
+    fun aLiftedFolderLeavesADesaturatedGhostAndALiftedWidgetLeavesItsSpanOutline() {
+        withFolderAndWidget()
+        val step = cellWidth()
+        composeRule.onNodeWithText("Group").performTouchInput {
+            down(center)
+            advanceEventTime(700)
+            moveBy(Offset(step * 0.6f, 0f))
+        }
+        composeRule.mainClock.advanceTimeBy(300)
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(
+            com.riffle.app.launcher.HOME_DRAG_FOLDER_GHOST_TEST_TAG,
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onAllNodes(isRoot())[0].performTouchInput { up() }
+        composeRule.waitForIdle()
+
+        val widgetPlace =
+            composeRule.onAllNodesWithTag(
+                HOME_GRID_CELL_TEST_TAG,
+            )[2 * 0 + 3 * 4 + 2].fetchSemanticsNode().boundsInRoot.center
+        composeRule.onAllNodes(isRoot())[0].performTouchInput {
+            down(widgetPlace)
+            advanceEventTime(700)
+            moveBy(Offset(0f, -step * 0.6f))
+        }
+        composeRule.mainClock.advanceTimeBy(300)
+        composeRule.waitForIdle()
+        val outlines =
+            composeRule.onAllNodesWithTag(
+                com.riffle.app.launcher.HOME_DRAG_WIDGET_OUTLINE_TEST_TAG,
+            ).fetchSemanticsNodes()
+        assertTrue("the widget left no outline at its source and its landing: ${outlines.size}", outlines.size >= 2)
+        composeRule.onAllNodes(isRoot())[0].performTouchInput { up() }
     }
 
     private fun LauncherShellAction.isHomeDrop() =

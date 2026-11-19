@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -196,9 +197,6 @@ private fun GeneratedContentOverflowButton(
 private val LauncherPage.hasGeneratedContentOverflowAffordance: Boolean
     get() = type is LauncherPageType.Generated && generatedContentOverflowCount > 0
 
-/** How dim the item a drag lifted stays where it was (folders and widgets; an app is a baked ghost). */
-private const val DRAG_SOURCE_DIM = 0.3f
-
 internal const val HOME_WORKSPACE_GRID_TEST_TAG = "home-workspace-grid"
 internal const val HOME_WORKSPACE_GRID_OVERFLOW_TEST_TAG = "home-workspace-grid-overflow"
 
@@ -362,12 +360,9 @@ private fun HomeGridItem(
             )
 
         is FolderItem ->
-            Box(
-                modifier =
-                    state.dragSourceModifier.fillMaxSize()
-                        .graphicsLayer { alpha = if (state.isDragSource) DRAG_SOURCE_DIM else 1f },
-            ) {
+            Box(modifier = state.dragSourceModifier.fillMaxSize()) {
                 HomeFolder(
+                    isDragSource = state.isDragSource,
                     folder = item,
                     dragState =
                         HomeItemDragState(
@@ -415,27 +410,31 @@ private fun HomeGridWidget(
                 .requiredWidth(state.cellSize * span.columns)
                 .requiredHeight(state.cellSize * span.rows)
                 .graphicsLayer {
-                    alpha = if (state.isDragSource) DRAG_SOURCE_DIM else 1f
                     translationX = ((span.columns - 1) * state.cellSizePx) / 2f
                     translationY = ((span.rows - 1) * state.cellSizePx) / 2f
                 },
     ) {
-        HomeWidgetPlaceholder(
-            widget = widget,
-            isEditing = state.isEditing,
-            contextSurface = presentation.contextSurface,
-            widgetViewFactory = presentation.widgetViewFactory,
-            dragState =
-                HomeItemDragState(
-                    pageId = state.pageId,
-                    cell = state.cell,
-                    cellSizePx = state.cellSizePx,
-                    grid = state.grid,
-                    pageItems = state.pageItems,
-                ),
-            workspaceActions = actions,
-            onAction = actions.onAction,
-        )
+        // Lifted, the widget leaves the outline of its span (the widget itself stays composed, unseen, to keep the
+        // gesture it started).
+        if (state.isDragSource) WidgetSpanOutline(modifier = Modifier.matchParentSize())
+        Box(modifier = Modifier.fillMaxSize().then(if (state.isDragSource) Modifier.alpha(0f) else Modifier)) {
+            HomeWidgetPlaceholder(
+                widget = widget,
+                isEditing = state.isEditing,
+                contextSurface = presentation.contextSurface,
+                widgetViewFactory = presentation.widgetViewFactory,
+                dragState =
+                    HomeItemDragState(
+                        pageId = state.pageId,
+                        cell = state.cell,
+                        cellSizePx = state.cellSizePx,
+                        grid = state.grid,
+                        pageItems = state.pageItems,
+                    ),
+                workspaceActions = actions,
+                onAction = actions.onAction,
+            )
+        }
     }
 }
 

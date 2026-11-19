@@ -64,6 +64,8 @@ internal fun HomeFolder(
     presentation: HomeFolderPresentation,
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
+    /** The folder is the item a drag lifted: its icon is the desaturated ghost it left (the lifted one is above). */
+    isDragSource: Boolean = false,
 ) {
     val metrics = HomeGridLayoutMetrics()
     val isContextMenuExpanded = remember(folder.id) { mutableStateOf(false) }
@@ -106,11 +108,19 @@ internal fun HomeFolder(
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Box(modifier = Modifier.size(presentation.labelSettings.iconSizeDp.dp)) {
-                FolderPreviewIcon(
-                    folder = folder,
-                    appIconLoader = appIconLoader,
-                    iconSizeDp = presentation.labelSettings.iconSizeDp,
-                )
+                if (isDragSource) {
+                    FolderGhostIcon(
+                        folder = folder,
+                        appIconLoader = appIconLoader,
+                        iconSizeDp = presentation.labelSettings.iconSizeDp,
+                    )
+                } else {
+                    FolderPreviewIcon(
+                        folder = folder,
+                        appIconLoader = appIconLoader,
+                        iconSizeDp = presentation.labelSettings.iconSizeDp,
+                    )
+                }
                 if (!isEditing) {
                     NotificationCountBadge(
                         count = presentation.notificationCount,
