@@ -386,7 +386,8 @@ internal fun StandardHome(
                 }
                 if (action is LauncherShellAction.MoveHomeShortcutToCell ||
                     (action is LauncherShellAction.DropHomeItem && action.dropOnItemId != null) ||
-                    (action is LauncherShellAction.DropExternalHomeItem && action.dropOnItemId != null)
+                    (action is LauncherShellAction.DropExternalHomeItem && action.dropOnItemId != null) ||
+                    (action is LauncherShellAction.DropHomeGroup && layout.makesFolderOfGroup(action))
                 ) {
                     foldersBeforeDrop.value = folderIds
                 }
@@ -1662,7 +1663,7 @@ internal fun HomeDragSession.planned(
 
 /**
  * What dropping the ticked items together would do: the first lands on the cell under the finger and the rest follow in
- * reading order, so nothing is pushed; only a folder of apps (when every ticked item is an app) is a place to drop on.
+ * reading order, so nothing is pushed; only a folder or an app (when every ticked item is an app) is a drop target.
  */
 private fun HomeDragSession.groupPlan(
     page: com.riffle.core.domain.launcher.home.LauncherPage,
@@ -1671,12 +1672,16 @@ private fun HomeDragSession.groupPlan(
     tuning: HomeDragTuning,
 ): HomeDragPlan {
     val plan = HomeDragPush.plan(page, item, x, y, tuning.copy(ringRadius = 0f), emptySet(), emptySet())
-    val onFolder =
+    val groupIds = group.mapTo(HashSet()) { it.id }
+    // Dropped on a folder the apps join it; on an app (not one of the ticked) they make a folder with it, as a single
+    // app does. A group holding a folder is dropped on nothing.
+    val onTarget =
         plan.dropOn?.takeIf { id ->
-            group.all { it is AppShortcutItem } && page.items.firstOrNull { it.id == id } is FolderItem
+            val under = page.items.firstOrNull { it.id == id }
+            group.all { it is AppShortcutItem } && id !in groupIds && (under is FolderItem || under is AppShortcutItem)
         }
     val cell = plan.landing ?: plan.spillLanding
-    return HomeDragPlan(landing = if (onFolder != null) plan.landing else cell, dropOn = onFolder)
+    return HomeDragPlan(landing = if (onTarget != null) plan.landing else cell, dropOn = onTarget)
 }
 
 private fun homeGridPresentationFor(
@@ -1695,3 +1700,9 @@ private fun homeGridPresentationFor(
         dragTuning = presentation.dragTuning,
         generatedPage = GeneratedPagePresentation(onAction = actions.onAction),
     )
+
+/** Whether this group drop is onto an app, so it makes a folder (which opens for its name, as a single drop's). */
+private fun HomeLayout.makesFolderOfGroup(action: LauncherShellAction.DropHomeGroup): Boolean =
+    action.dropOnItemId != null &&
+        pages.firstOrNull { it.id == action.targetPageId }?.items
+            ?.firstOrNull { it.id == action.dropOnItemId } is AppShortcutItem

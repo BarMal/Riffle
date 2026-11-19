@@ -137,4 +137,67 @@ class HomeSelectionTest {
             HomeSelection.dropGroupOnFolder(withFolderSelected, LauncherPageId("p1"), LauncherItemId("f")),
         )
     }
+
+    private fun tick(
+        layout: HomeLayout,
+        vararg ids: String,
+    ) = ids.fold(layout) { acc, id -> HomeSelection.toggle(acc, LauncherItemId(id)) }
+
+    @Test
+    fun theGroupDroppedOnAnAppMakesOneFolderOfThatAppAndTheGroupWhereTheAppStood() {
+        val layout = tick(editing(app("a", 0, 0), app("b", 1, 0), app("t", 2, 1)), "a", "b")
+
+        val result =
+            HomeSelection.dropGroupOnApp(layout, LauncherPageId("p1"), LauncherItemId("t"), LauncherItemId("fo"), "Mix")
+
+        val updated = assertIs<HomeShortcutResult.Updated>(result).layout
+        val folder = updated.pages.single().items.single() as FolderItem
+        assertEquals(LauncherItemId("fo"), folder.id)
+        assertEquals("Mix", folder.label)
+        assertEquals(listOf("t", "a", "b"), folder.items.map { it.id.value })
+        assertEquals(GridPlacement(GridCell(2, 1)), folder.placement)
+        assertTrue(HomeSelection.selectedIds(updated).isEmpty())
+    }
+
+    @Test
+    fun aTickedTargetMakesTheFolderAroundItWithTheRestOfTheGroup() {
+        val layout = tick(editing(app("a", 0, 0), app("b", 1, 0), app("c", 2, 0)), "a", "b", "c")
+
+        val result =
+            HomeSelection.dropGroupOnApp(layout, LauncherPageId("p1"), LauncherItemId("b"), LauncherItemId("fo"), "F")
+
+        val folder = assertIs<HomeShortcutResult.Updated>(result).layout.pages.single().items.single() as FolderItem
+        assertEquals(listOf("b", "a", "c"), folder.items.map { it.id.value })
+        assertEquals(GridPlacement(GridCell(1, 0)), folder.placement)
+    }
+
+    @Test
+    fun theGroupLeavesItsOwnPageWhenTheAppIsOnAnother() {
+        val other = LauncherPage(LauncherPageId("p2"), grid = grid, items = listOf(app("t", 1, 1)))
+        val layout = tick(editing(app("a", 0, 0), app("b", 1, 0), extraPages = listOf(other)), "a", "b")
+
+        val result =
+            HomeSelection.dropGroupOnApp(layout, LauncherPageId("p2"), LauncherItemId("t"), LauncherItemId("fo"), "F")
+        val updated = assertIs<HomeShortcutResult.Updated>(result).layout
+
+        assertTrue(updated.pages[0].items.isEmpty())
+        assertEquals(listOf("t", "a", "b"), (updated.pages[1].items.single() as FolderItem).items.map { it.id.value })
+    }
+
+    @Test
+    fun aGroupHoldingAFolderOrDroppedOnNothingMakesNoFolder() {
+        val folder = FolderItem(LauncherItemId("f"), "F", emptyList(), GridPlacement(GridCell(1, 0)))
+        val withFolder = tick(editing(app("a", 0, 0), folder, app("t", 2, 1)), "a", "f")
+        val plain = tick(editing(app("a", 0, 0), app("t", 2, 1)), "a")
+
+        fun drop(
+            layout: HomeLayout,
+            on: String,
+        ) = HomeSelection.dropGroupOnApp(layout, LauncherPageId("p1"), LauncherItemId(on), LauncherItemId("fo"), "F")
+
+        assertIs<HomeShortcutResult.Rejected>(drop(withFolder, "t"))
+        assertIs<HomeShortcutResult.Rejected>(drop(plain, "nowhere"))
+        assertIs<HomeShortcutResult.Rejected>(drop(plain, "a"))
+        assertIs<HomeShortcutResult.Rejected>(drop(tick(editing(app("t", 0, 0)), "t"), "t"))
+    }
 }

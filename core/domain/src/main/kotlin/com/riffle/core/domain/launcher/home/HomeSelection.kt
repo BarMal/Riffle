@@ -117,4 +117,47 @@ object HomeSelection {
         }
         return HomeShortcutResult.Updated(working.copy(selectedPageId = layout.selectedPageId))
     }
+
+    /**
+     * The ticked apps dropped on the app [appId] of [targetPageId]: that app and the group become one folder named
+     * [label] with id [folderId], standing where the app stood, the app first. Rejected when the group holds a folder
+     * (a folder does not join a folder), when [appId] is not an app of that page, or when nothing would join it. The
+     * target may itself be ticked (the group then makes the folder around it). The selection is cleared.
+     */
+    fun dropGroupOnApp(
+        layout: HomeLayout,
+        targetPageId: LauncherPageId,
+        appId: LauncherItemId,
+        folderId: LauncherItemId,
+        label: String,
+    ): HomeShortcutResult {
+        val items = selectedItems(layout)
+        val apps = items.filterIsInstance<AppShortcutItem>()
+        val target =
+            layout.pages.firstOrNull { it.id == targetPageId }?.items?.firstOrNull { it.id == appId }
+                as? AppShortcutItem
+        val joining = apps.filter { it.id != appId }
+        val folderPlacement = target?.placement
+        val onlyApps = items.isNotEmpty() && apps.size == items.size
+        if (!onlyApps || folderPlacement == null || joining.isEmpty()) {
+            return HomeShortcutResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
+        }
+        val leaving = joining.map { it.id }.toSet()
+        val folder =
+            FolderItem(
+                id = folderId,
+                label = label,
+                items = (listOf(target) + joining).map { it.copy(placement = null) },
+                placement = folderPlacement,
+            )
+        val pages =
+            layout.pages.map { page ->
+                page.copy(
+                    items =
+                        page.items.filterNot { it.id in leaving }
+                            .map { if (page.id == targetPageId && it.id == appId) folder else it },
+                )
+            }
+        return HomeShortcutResult.Updated(clear(layout.copy(pages = pages)))
+    }
 }

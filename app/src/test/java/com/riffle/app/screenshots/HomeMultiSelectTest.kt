@@ -228,6 +228,67 @@ class HomeMultiSelectTest {
         assertEquals(appsBefore, shell.homeLayout.pages.flatMap { it.items }.filterIsInstance<AppShortcutItem>().size)
     }
 
+    private fun holdOver(target: Offset) {
+        composeRule.onRoot().performTouchInput {
+            moveTo(target)
+            moveBy(Offset(1f, 1f))
+        }
+        // The folder hold, as for a single app (Drag tuning: 250 ms by default).
+        composeRule.mainClock.advanceTimeBy(400)
+        composeRule.waitForIdle()
+    }
+
+    @Test
+    fun holdingTheGroupOnAnAppMakesAFolderOfThatAppAndTheGroup() {
+        show()
+        val target = apps[2]
+        val group = setOf(apps[0].appIdentity, apps[1].appIdentity)
+        liftGroup()
+        val centre = composeRule.onNodeWithText(target.label).fetchSemanticsNode().boundsInRoot.center
+        holdOver(centre)
+        composeRule.captureScreen()
+        composeRule.onRoot().performTouchInput { up() }
+        composeRule.waitForIdle()
+
+        val drop = actions.filterIsInstance<LauncherShellAction.DropHomeGroup>().single()
+        assertEquals(target.id, drop.dropOnItemId)
+        val folder = shell.homeLayout.selectedPage.items.filterIsInstance<FolderItem>().single()
+        assertEquals(target.appIdentity, folder.items.first().appIdentity)
+        assertEquals(group + target.appIdentity, folder.items.map { it.appIdentity }.toSet())
+        assertEquals(target.placement, folder.placement)
+        assertTrue("the selection is spent: ${selected()}", selected().isEmpty())
+    }
+
+    @Test
+    fun aGroupHoldingAFolderIsNotOfferedTheDropOnAnApp() {
+        show()
+        tap(apps[0].label)
+        tap(apps[1].label)
+        composeRule.onNodeWithTag(HOME_SELECTION_FOLDER_TEST_TAG).performClick()
+        composeRule.waitForIdle()
+        val folder = shell.homeLayout.selectedPage.items.filterIsInstance<FolderItem>().single()
+        val other = apps.first { it.id != folder.id }
+        val third = apps.first { it.id != other.id }
+        // Tick the folder and one app, lift them and hold over a third app.
+        tap(folder.label)
+        tap(other.label)
+        val start = composeRule.onNodeWithText(other.label).fetchSemanticsNode().boundsInRoot.center
+        composeRule.onRoot().performTouchInput {
+            down(start)
+            advanceEventTime(700)
+            moveBy(Offset(40f, 40f))
+        }
+        composeRule.waitForIdle()
+        val centre = composeRule.onNodeWithText(third.label).fetchSemanticsNode().boundsInRoot.center
+        holdOver(centre)
+        composeRule.onRoot().performTouchInput { up() }
+        composeRule.waitForIdle()
+
+        val drops = actions.filterIsInstance<LauncherShellAction.DropHomeGroup>()
+        assertTrue(drops.toString(), drops.all { it.dropOnItemId == null })
+        assertEquals(1, shell.homeLayout.selectedPage.items.filterIsInstance<FolderItem>().size)
+    }
+
     @Test
     fun droppingTheGroupOnRemoveAsksOnceAndRemovesNothingUntilAnswered() {
         show()

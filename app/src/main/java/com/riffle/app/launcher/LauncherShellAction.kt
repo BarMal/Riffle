@@ -403,12 +403,14 @@ sealed interface LauncherShellAction {
 
     /**
      * The drop of the ticked items dragged together: they land from [cell] of [targetPageId] onward in reading order
-     * (spilling to the next pages), or, with [dropOnItemId], join that folder.
+     * (spilling to the next pages), or, with [dropOnItemId], join that folder, or (dropped on an app, apps only) make
+     * a folder of that app and the group, named [folderLabel] unless their shared category names it.
      */
     data class DropHomeGroup(
         val targetPageId: LauncherPageId,
         val cell: GridCell,
         val dropOnItemId: LauncherItemId? = null,
+        val folderLabel: String? = null,
     ) : LauncherShellAction
 
     data class MoveHomeItemToPage(

@@ -473,7 +473,7 @@ internal fun homeDropAction(
     val plan = session?.plan
     return when {
         // The ticked items lifted together drop together (Edit page, multi-select).
-        session != null && session.group.size > 1 -> homeGroupDropAction(session)
+        session != null && session.group.size > 1 -> homeGroupDropAction(session, folderLabel)
         // Over the Remove target: the item goes off Home as its menu's "Remove from Home" does (a stack asks first).
         session != null && session.isOverRemove -> removeFromHomeAction(item, dragState.pageId)
         // Over the Dock there is no plan (nothing is pushed): the item is pinned where the finger hovers.
@@ -516,13 +516,16 @@ internal fun homeDropAction(
 }
 
 /** What releasing the ticked items lifted together does: removal (asked once), or a drop from the landing cell on. */
-internal fun homeGroupDropAction(session: HomeDragSession): LauncherShellAction? {
+internal fun homeGroupDropAction(
+    session: HomeDragSession,
+    folderLabel: String? = null,
+): LauncherShellAction? {
     val plan = session.plan
     return when {
         session.isOverRemove -> LauncherShellAction.ConfirmRemoveSelectedHomeItems
         session.isOverDock || plan == null -> null
         plan.dropOn != null && plan.landing != null ->
-            LauncherShellAction.DropHomeGroup(session.targetPageId, plan.landing!!, plan.dropOn)
+            LauncherShellAction.DropHomeGroup(session.targetPageId, plan.landing!!, plan.dropOn, folderLabel)
         else ->
             (plan.landing ?: plan.spillLanding)?.let { cell ->
                 LauncherShellAction.DropHomeGroup(session.targetPageId, cell)
