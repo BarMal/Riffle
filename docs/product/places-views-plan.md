@@ -377,6 +377,10 @@ The rules are in `gestures.md`, "Dragging on Home"; the rule is `HomeDragPush` (
 | Edge zone | 24 dp | fixed |
 | Ring hysteresis | 0.12 cell | fixed |
 
+**Widget stacks** (ADR 0003, Amendment 14) add no setting and no tuning number: a widget's dead zone is its span inset by
+the dead-zone radius, and the stack uses the folder hold. Rules in `gestures.md`, "Widget stacks"; the model is
+`WidgetItem.stack` and `WidgetStackEngine` (`:core:domain`), stored as `PoolWidget.stack` and in the layout JSON.
+
 What the old pick-up got wrong (fixed): the pointer-input block captured the item, grid and page at the start of the
 gesture; the page turn was measured from the drag's origin offset, in the wrong direction (a drag to the right went to the
 previous page) and could happen once only; the pager dropped the page the drag started on after a turn, killing the gesture;

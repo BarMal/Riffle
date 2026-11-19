@@ -12,6 +12,7 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
@@ -66,6 +67,12 @@ data class LauncherShellState(
     val isWidgetPickerOpen: Boolean = false,
     /** Whether the open picker is placing onto the dock's panel rather than onto home or the dock. */
     val isWidgetPickerTargetingDockPanel: Boolean = false,
+    /** The widget stack the open picker is filling (ADR 0003, Amendment 14), or null. */
+    val widgetPickerStackItemId: LauncherItemId? = null,
+    /** The stack whose widgets the open editor sheet edits, or null. */
+    val widgetStackEditorItemId: LauncherItemId? = null,
+    /** The stack whose removal waits for the person's confirmation, or null. */
+    val widgetStackRemovalItemId: LauncherItemId? = null,
     /**
      * The Home-role request came back (or could not start) and Riffle is still not the Home app: the setup card then
      * explains, in one line, that the Home button may open another launcher. Never shown before a request.

@@ -829,6 +829,34 @@ No behaviour changes except the first item. The rest of Amendments 1 to 12 stand
 - **Counts.** `AGENTS.md` counts eight typed kinds of Stream content (notification, media, event, article, task, recent
   app, app shortcut, app pair); the Typed content table above lists the original six.
 
+## Amendment 14 (owner, 2026-11-19): widget stacks
+
+Home widgets could only sit side by side, one to a slot. Several of one size now share one slot and are swiped through,
+the familiar phone pattern. The rest of Amendments 1 to 13 stands; this adds nothing to the list of Places and no
+setting.
+
+- **A stack is a widget item with members.** `WidgetItem` carries an ordered `stack` (two or more `StackedWidget`, at
+  most ten) and the `shownIndex` last shown; empty means a plain widget, so every stored layout decodes unchanged. The
+  item's own widget fields are the first member's and its resize constraints are what every member permits, so code
+  that does not know about stacks reads a consistent widget and move, resize and remove already act on the whole stack.
+  Members keep their own host ids (a glance widget has none); a member that leaves is released exactly as a removed
+  widget is. `WidgetStackEngine` (`:core:domain`) holds the rules: stack onto, add, show, reorder, remove, move out,
+  the cap and the resize constraints.
+- **Stored both ways.** The placed-items pool stores `PoolWidget.stack` (members with their provider and host id) and
+  `shown`, written only for a stack; the layout JSON (`HomeLayoutSet`, the recovery snapshot, the backup) adds `stack`
+  and `shown` the same way. A backup carries the stack and, as always, no host id. The pool's host-id rules (one holder
+  per id, release on removal, startup reconciliation) count every member.
+- **Make and edit.** A widget dropped on a widget or stack of the same span stacks it (the folder's dead zone, hold and
+  feedback, the target's span inset by the dead-zone radius); a widget of another span is pushed as before. "Add widget
+  to stack" in the widget menu opens the picker for the stack's span; "Edit stack" is a sheet to reorder, remove and move
+  out. Removing a stack asks first.
+- **One arbitration.** The stack swipes across the pager's axis; a swipe on the dots strip always switches, anywhere on
+  the stack only while the shown widget is Riffle's own, because a platform widget may scroll (`gestures.md`, "Widget
+  stacks").
+- **Seam, not feature.** No auto-rotation and no smart suggestions: the model has no field for either and no timer
+  exists. Adding one later means a new stored field with a safe default.
+- **Home only.** The Dock and its panel never hold a stack; Simple mode's generated Home cannot be edited.
+
 ## Superseded documents
 
 These describe the workspace model or its UI and are superseded by this ADR. They stay in the repository as

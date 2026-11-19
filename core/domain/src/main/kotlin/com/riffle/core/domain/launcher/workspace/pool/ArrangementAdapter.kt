@@ -9,6 +9,7 @@ import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageType
+import com.riffle.core.domain.launcher.home.StackedWidget
 import com.riffle.core.domain.launcher.home.WidgetItem
 
 /**
@@ -45,8 +46,26 @@ object ArrangementAdapter {
                     resizeConstraints = item.resizeConstraints,
                     placement = at,
                     glance = GlanceWidgets.kindOf(item.provider),
+                    stack = item.stack.map(::toStackedWidget),
+                    shownIndex = item.shown,
                 )
         }
+
+    private fun toStackedWidget(member: PoolStackMember): StackedWidget =
+        StackedWidget(
+            appWidgetId = member.hostedId ?: UNBOUND_HOST_ID,
+            label = member.label,
+            resizeConstraints = member.resizeConstraints,
+            glance = GlanceWidgets.kindOf(member.provider),
+        )
+
+    fun toStackMember(member: StackedWidget): PoolStackMember =
+        PoolStackMember(
+            label = member.label,
+            resizeConstraints = member.resizeConstraints,
+            provider = member.glance?.let(GlanceWidgets::identity),
+            hostedId = hostedIdOrNull(member.appWidgetId),
+        )
 
     /** A placement whose item is missing from [pool] is skipped (it draws as an empty cell). */
     fun toLauncherPage(

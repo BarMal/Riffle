@@ -46,6 +46,7 @@ import com.riffle.app.launcher.WallpaperPickerLaunchResult
 import com.riffle.app.launcher.apps.AppCatalogChange
 import com.riffle.app.launcher.calendar.CalendarAccessCoordinator
 import com.riffle.app.launcher.canPerformStageAction
+import com.riffle.app.launcher.completeGlanceStackAdd
 import com.riffle.app.launcher.completeGlanceWidgetAdd
 import com.riffle.app.launcher.completeWidgetAdd
 import com.riffle.app.launcher.deleteHostedWidgetIdWhenRejected
@@ -215,6 +216,7 @@ class MainActivity : ComponentActivity() {
             selectedGrid = { shellViewModel.state.value.homeLayout.selectedPage.grid },
             completeWidgetAdd = shellViewModel::completeWidgetAdd,
             completeGlanceAdd = shellViewModel::completeGlanceWidgetAdd,
+            completeGlanceStackAdd = shellViewModel::completeGlanceStackAdd,
         )
     }
 

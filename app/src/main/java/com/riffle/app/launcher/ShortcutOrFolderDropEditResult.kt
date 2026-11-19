@@ -6,6 +6,9 @@ import com.riffle.core.domain.launcher.home.FolderEngine
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
+import com.riffle.core.domain.launcher.home.WidgetItem
+import com.riffle.core.domain.launcher.home.WidgetStackEngine
+import com.riffle.core.domain.launcher.home.WidgetStackResult
 
 internal fun applyShortcutOrFolderDropEdit(
     action: LauncherShellAction,
@@ -16,15 +19,16 @@ internal fun applyShortcutOrFolderDropEdit(
 ): ShortcutOrFolderDropEditResult =
     when (action) {
         is LauncherShellAction.MoveHomeShortcutToCell ->
-            folderEngine
-                .createFolderFromDropOnSelectedPage(
-                    layout = layout,
-                    sourceItemId = action.itemId,
-                    targetCell = action.cell,
-                    installedApps = installedApps,
-                    fallbackLabel = action.folderLabel,
-                )
-                ?.toShortcutOrFolderDropEditResult()
+            stackedByDrop(layout, action)
+                ?: folderEngine
+                    .createFolderFromDropOnSelectedPage(
+                        layout = layout,
+                        sourceItemId = action.itemId,
+                        targetCell = action.cell,
+                        installedApps = installedApps,
+                        fallbackLabel = action.folderLabel,
+                    )
+                    ?.toShortcutOrFolderDropEditResult()
                 ?: shortcutEngine.applyEdit(action = action, layout = layout).toShortcutOrFolderDropEditResult()
 
         is LauncherShellAction.MoveHomeItemToPage ->
@@ -54,6 +58,28 @@ internal fun applyShortcutOrFolderDropEdit(
 
         else -> shortcutEngine.applyEdit(action = action, layout = layout).toShortcutOrFolderDropEditResult()
     }
+
+/**
+ * A widget dropped on top of a widget (or a stack) of the same span: it joins the stack and the stack shows it. Null
+ * when the drop is not that (anything else is a folder or a move), so the ordinary rules decide.
+ */
+private fun stackedByDrop(
+    layout: HomeLayout,
+    action: LauncherShellAction.MoveHomeShortcutToCell,
+): ShortcutOrFolderDropEditResult? {
+    val items = layout.selectedPage.items
+    val dragged = items.firstOrNull { it.id == action.itemId } as? WidgetItem ?: return null
+    val target = items.firstOrNull { it.id != dragged.id && it.placement?.cell == action.cell } as? WidgetItem
+    return target
+        ?.takeIf { WidgetStackEngine().canStack(it, dragged) }
+        ?.let { WidgetStackEngine().stackOnto(layout, dragged.id, it.id) }
+        ?.let { result ->
+            when (result) {
+                is WidgetStackResult.Updated -> ShortcutOrFolderDropEditResult.Updated(result.layout)
+                is WidgetStackResult.Rejected -> null
+            }
+        }
+}
 
 /**
  * A drop on top of an item of another page: the dragged item first takes the first free cell of that page, then the

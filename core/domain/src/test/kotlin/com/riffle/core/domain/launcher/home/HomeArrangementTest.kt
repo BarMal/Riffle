@@ -276,6 +276,29 @@ class HomeArrangementTest {
     }
 
     @Test
+    fun aStackIsOneWidgetThatStaysWhereItIsWhileIconsFlowAroundIt() {
+        val stack =
+            widget(column = 0, row = 0)
+                .restacked(
+                    listOf(
+                        StackedWidget(HostedWidgetId(1), "First"),
+                        StackedWidget(HostedWidgetId(2), "Second"),
+                        StackedWidget(HostedWidgetId(3), "Third"),
+                    ),
+                    shown = 2,
+                )
+        val before = layout(page("a", stack, item(app("Zulu"), 3, 1), item(app("Alpha"), 2, 1)))
+
+        val after = HomeArrangement.arrange(before, compact = true)
+
+        val kept = after.pages.single().items.filterIsInstance<WidgetItem>().single()
+        assertEquals(stack, kept)
+        assertEquals(3, kept.members.size)
+        assertEquals(2, kept.shownIndex)
+        assertEquals(GridCell(0, 0), kept.placement!!.cell)
+    }
+
+    @Test
     fun aWidgetPageIsNotFilledPastTheRoomyBudgetAndTheNextPageTakesTheRest() {
         // 8 cells, a widget on 2 of them, a budget of 6 cells: 4 icons fit; the other 3 go on the next page.
         val apps = names(7)

@@ -182,7 +182,7 @@ private fun LauncherItem.identities(): List<Any> =
     when (this) {
         is AppShortcutItem -> listOf(identity)
         is FolderItem -> items.map { app -> app.identity }
-        is WidgetItem -> listOf(appWidgetId)
+        is WidgetItem -> members.map { member -> member.appWidgetId }
     }
 
 /**

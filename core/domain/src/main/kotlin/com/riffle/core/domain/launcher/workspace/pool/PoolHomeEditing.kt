@@ -244,7 +244,9 @@ object PoolHostIds {
     fun referencedHostIds(state: PoolStoreState): Set<HostedWidgetId> =
         state.pools.values.flatMapTo(HashSet()) { pool ->
             val referenced = PoolReferences.referenced(pool)
-            pool.items.values.mapNotNull { item -> (item as? PoolWidget)?.takeIf { it.id in referenced }?.hostedId }
+            pool.items.values.flatMap { item ->
+                (item as? PoolWidget)?.takeIf { it.id in referenced }?.hostIds.orEmpty()
+            }
         }
 
     /**

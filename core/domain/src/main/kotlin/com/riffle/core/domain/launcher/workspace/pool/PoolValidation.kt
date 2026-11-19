@@ -153,13 +153,12 @@ object PoolValidation {
 
         /** Whether [item] may hold its host id: it is not a widget, is unbound, or no OTHER widget holds the id. */
         private fun ownsHostId(item: PoolItem): Boolean {
-            val hostId = (item as? PoolWidget)?.hostedId ?: return true
-            val owner = hostOwners[hostId]
-            return owner == null || owner == item.id
+            val hostIds = (item as? PoolWidget)?.hostIds ?: return true
+            return hostIds.all { hostId -> hostOwners[hostId].let { owner -> owner == null || owner == item.id } }
         }
 
         private fun claimHostId(item: PoolItem) {
-            (item as? PoolWidget)?.hostedId?.let { hostOwners.putIfAbsent(it, item.id) }
+            (item as? PoolWidget)?.hostIds?.forEach { hostOwners.putIfAbsent(it, item.id) }
         }
     }
 }

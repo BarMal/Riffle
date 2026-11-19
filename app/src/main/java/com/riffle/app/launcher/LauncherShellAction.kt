@@ -357,6 +357,49 @@ sealed interface LauncherShellAction {
         val span: GridSpan,
     ) : LauncherShellAction
 
+    /**
+     * Aims the widget picker at the stack of [itemId] (a lone widget becomes one): it lists the widgets that can take
+     * the stack's span and the pick joins the stack instead of taking a cell (ADR 0003, Amendment 14).
+     */
+    data class OpenWidgetPickerForStack(val itemId: LauncherItemId) : LauncherShellAction
+
+    /** Opens, and closes, the sheet that edits the widgets of the stack [itemId]. */
+    data class OpenWidgetStackEditor(val itemId: LauncherItemId) : LauncherShellAction
+
+    data object CloseWidgetStackEditor : LauncherShellAction
+
+    /** Asks before removing the stack [itemId] (it holds more than one widget); the answer is [RemoveHomeShortcut]. */
+    data class ConfirmRemoveWidgetStack(val itemId: LauncherItemId) : LauncherShellAction
+
+    data object DismissRemoveWidgetStack : LauncherShellAction
+
+    /** Remembers which widget of the stack [itemId] shows. */
+    data class ShowStackedWidget(val itemId: LauncherItemId, val index: Int) : LauncherShellAction
+
+    data class MoveStackedWidget(val itemId: LauncherItemId, val from: Int, val to: Int) : LauncherShellAction
+
+    /** Removes one widget from a stack, as removing a widget does (its host id is deleted). */
+    data class RemoveStackedWidget(val itemId: LauncherItemId, val index: Int) : LauncherShellAction
+
+    /** "Move out to Home": the widget becomes an item of its own in the nearest free cells. */
+    data class MoveStackedWidgetOut(val itemId: LauncherItemId, val index: Int) : LauncherShellAction
+
+    /** The pick of [OpenWidgetPickerForStack], bound and configured: it joins the stack [itemId]. */
+    data class AddHostedWidgetToStack(
+        val itemId: LauncherItemId,
+        override val hostedWidgetId: HostedWidgetId,
+        override val label: String,
+        val resizeConstraints: WidgetResizeConstraints = WidgetResizeConstraints(),
+    ) : LauncherShellAction,
+        HostedWidgetAddAction
+
+    /** One of Riffle's own widgets joins the stack [itemId]. */
+    data class AddGlanceWidgetToStack(
+        val itemId: LauncherItemId,
+        val kind: GlanceWidgetKind,
+        val label: String,
+    ) : LauncherShellAction
+
     data object OpenWidgetPicker : LauncherShellAction
 
     /**
@@ -380,6 +423,8 @@ sealed interface LauncherShellAction {
         val targetPageId: LauncherPageId? = null,
         val targetCell: GridCell? = null,
         val dockIndex: Int? = null,
+        /** With [WidgetAddTarget.HOME_STACK]: the stack the widget joins. */
+        val targetStackId: LauncherItemId? = null,
     ) : LauncherShellAction
 
     data class AddHostedWidgetToHome(
@@ -701,6 +746,9 @@ enum class WidgetAddTarget {
 
     /** The dock's panel -- a grid like a home page, reached through the dock rather than [HOME]. */
     DOCK_PANEL,
+
+    /** A widget stack of Home: the widget joins it instead of taking a cell. */
+    HOME_STACK,
 }
 
 sealed interface HostedWidgetAddAction {

@@ -164,7 +164,7 @@ object PoolCopy {
         when (item) {
             is PoolApp -> item.copy(id = id)
             is PoolFolder -> item.copy(id = id)
-            is PoolWidget -> item.copy(id = id, hostedId = null)
+            is PoolWidget -> item.withoutHosts().copy(id = id)
         }
 
     /** The arrangement with every reference rewritten by [map]; a reference mapped to null is dropped. */

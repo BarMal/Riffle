@@ -48,7 +48,7 @@ object PoolReferences {
 
     /** Host ids still held by a bound widget of [pool]. */
     fun hostIds(pool: PlacedItemPool): Set<HostedWidgetId> =
-        pool.items.values.mapNotNull { (it as? PoolWidget)?.hostedId }.toSet()
+        pool.items.values.flatMap { (it as? PoolWidget)?.hostIds.orEmpty() }.toSet()
 }
 
 /**
@@ -138,7 +138,8 @@ object PoolGc {
         val collected = collect(after)
         val removed = before.items.filterKeys { it !in collected.items }.values.toList()
         val held = PoolReferences.hostIds(collected)
-        val released = removed.mapNotNull { (it as? PoolWidget)?.hostedId }.filterNot { it in held }.toSet()
+        // An id the widgets of [before] held and no surviving widget holds: a removed widget's, or one a stack gave up.
+        val released = (PoolReferences.hostIds(before) - held)
         return PoolEdit(
             pool = collected,
             removedItems = removed,

@@ -25,7 +25,8 @@ object PoolWidgets {
             null -> rejected(PoolRejection.UNKNOWN_ITEM)
             !is PoolWidget -> rejected(PoolRejection.NOT_A_WIDGET)
             else ->
-                if (source.provider == null) {
+                // A stack is not cloned (its members are separate instances; copy a member by adding it again).
+                if (source.provider == null || source.stack.isNotEmpty()) {
                     rejected(PoolRejection.PROVIDER_UNKNOWN)
                 } else {
                     val copy = source.copy(id = PoolIds.fresh(pool.items.keys, ids), hostedId = newHostedId)
@@ -48,7 +49,7 @@ object PoolWidgets {
                     hostedId in PoolReferences.hostIds(pool) -> rejected(PoolRejection.HOST_ID_IN_USE)
                     else ->
                         PoolResult.Done(
-                            PoolEdit(pool.copy(items = pool.items + (widgetId to widget.copy(hostedId = hostedId)))),
+                            PoolEdit(pool.copy(items = pool.items + (widgetId to widget.withLeadHost(hostedId)))),
                         )
                 }
         }
@@ -64,7 +65,7 @@ object PoolWidgets {
             else ->
                 PoolResult.Done(
                     PoolEdit(
-                        pool = pool.copy(items = pool.items + (widgetId to widget.copy(hostedId = null))),
+                        pool = pool.copy(items = pool.items + (widgetId to widget.withLeadHost(null))),
                         releasedHostIds = setOfNotNull(widget.hostedId),
                     ),
                 )

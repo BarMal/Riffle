@@ -105,6 +105,6 @@ object WorkspaceBackup {
 private fun isHostedWidget(item: PoolItem): Boolean = item is PoolWidget && GlanceWidgets.kindOf(item.provider) == null
 
 private fun PlacedItemPool.withoutHostIds(): PlacedItemPool {
-    if (items.values.none { it is PoolWidget && it.hostedId != null }) return this
-    return copy(items = items.mapValues { (_, item) -> if (item is PoolWidget) item.copy(hostedId = null) else item })
+    if (items.values.none { it is PoolWidget && it.hostIds.isNotEmpty() }) return this
+    return copy(items = items.mapValues { (_, item) -> if (item is PoolWidget) item.withoutHosts() else item })
 }

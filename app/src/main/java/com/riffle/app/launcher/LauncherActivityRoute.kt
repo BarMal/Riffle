@@ -58,6 +58,12 @@ private fun LauncherShellAction.isHomeShortcutEditAction(): Boolean =
         is LauncherShellAction.AddGlanceWidgetToHome,
         is LauncherShellAction.AddHostedWidgetToDockPanel,
         is LauncherShellAction.ResizeHomeWidget,
+        is LauncherShellAction.ShowStackedWidget,
+        is LauncherShellAction.MoveStackedWidget,
+        is LauncherShellAction.RemoveStackedWidget,
+        is LauncherShellAction.MoveStackedWidgetOut,
+        is LauncherShellAction.AddHostedWidgetToStack,
+        is LauncherShellAction.AddGlanceWidgetToStack,
         -> true
 
         else -> false
