@@ -23,6 +23,7 @@ import com.riffle.app.launcher.LocalRecompositionProbe
 import com.riffle.app.launcher.RIFFLE_CONTEXT_MENU_TEST_TAG
 import com.riffle.app.launcher.RecompositionProbe
 import com.riffle.app.launcher.dockDynamicSectionTileTestTag
+import com.riffle.app.launcher.dockItemTestTag
 import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.core.domain.launcher.home.DockPosition
 import org.junit.After
@@ -59,6 +60,7 @@ class DockScrubTest {
     private val ticks = mutableListOf<LauncherHapticEvent>()
     private var vertical = false
     private val probe = RecompositionProbe()
+    private var pinnedFirstId = com.riffle.core.domain.launcher.home.LauncherItemId("none")
 
     @After
     fun stop() {
@@ -76,6 +78,7 @@ class DockScrubTest {
                 dockPosition = edge.takeIf { it != DockPosition.BOTTOM },
                 sizing = ScreenshotFixtures.HomeSizing(pins = if (pinned) null else emptyList()),
             )
+        state.homeLayout.dock.items.firstOrNull()?.let { pinnedFirstId = it.id }
         composeRule.setContent {
             ScreenshotBackdrop {
                 CompositionLocalProvider(LocalRecompositionProbe provides probe) {
@@ -333,6 +336,37 @@ class DockScrubTest {
         composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
         landed(second.lowercase())
     }
+
+    @Test
+    fun aHoldThenAMoveOnAPinnedAppInTheContextualModeScrubsAndNeverReorders() {
+        show()
+        val pinnedItem = shellPinnedTag()
+        val node = composeRule.onNodeWithTag(pinnedItem).fetchSemanticsNode()
+        val start =
+            if (vertical) {
+                node.positionInRoot.y + node.size.height / 2f
+            } else {
+                node.positionInRoot.x + node.size.width / 2f
+            }
+        val dock = composeRule.onNodeWithTag(HOME_DOCK_PULL_TEST_TAG).fetchSemanticsNode()
+        val tile = visibleTiles().first()
+        val from = start - (if (vertical) dock.positionInRoot.y else dock.positionInRoot.x)
+        ticks.clear()
+        hold(from)
+        slideTo(along(tile)!!)
+        lift()
+        composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
+        composeRule.waitForIdle()
+        assertTrue(
+            "the pinned item was reordered in the contextual mode: $sent",
+            sent.none {
+                it is LauncherShellAction.MoveDockShortcutToIndex || it is LauncherShellAction.MoveDockItemToHome
+            },
+        )
+        assertTrue("the hold then slide did not scrub", detents() >= 2)
+    }
+
+    private fun shellPinnedTag(): String = dockItemTestTag(pinnedFirstId)
 
     @Test
     fun scrubbingAcrossThreeTilesRecomposesNoTile() {

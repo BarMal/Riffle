@@ -92,6 +92,7 @@ import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.handleAxis
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
@@ -254,6 +255,14 @@ internal fun StandardHome(
             activeWidgetPickerEdgeHoverSide.value = null
         }
     }
+    // A Dock item dragged out onto Home lands on the page and cell under the finger.
+    val latestHomeDrop = rememberUpdatedState(Pair(visibleLayout.selectedPage, workspaceGridBounds.value))
+    DisposableEffect(dockHostState) {
+        dockHostState.homeDropAt = { point ->
+            homeDropTargetAt(latestHomeDrop.value.first, latestHomeDrop.value.second, point)
+        }
+        onDispose { dockHostState.homeDropAt = null }
+    }
     val actions =
         HomeWorkspaceActions(
             onFolderOpen = { folder ->
@@ -271,7 +280,18 @@ internal fun StandardHome(
                 ) {
                     interactions.haptics.perform(LauncherHapticEvent.DETENT)
                 }
-                homeDragSession.value = planned
+                // Over the Dock, the slot the finger hovers is where the item is pinned.
+                val hovered =
+                    planned?.takeIf { it.isOverDock }?.let { over ->
+                        val slots = layout.dock.items.mapNotNull { item -> dockHostState.pinnedSlotBounds[item.id] }
+                        if (slots.size == layout.dock.items.size && slots.isNotEmpty()) {
+                            dockInsertionIndexAmong(over.pointerInRoot, dockBounds.value, slots, isRtl, dockPosition)
+                        } else {
+                            val count = layout.dock.items.size
+                            dockInsertionIndex(over.pointerInRoot, dockBounds.value, count, isRtl, dockPosition)
+                        }
+                    }
+                homeDragSession.value = planned?.copy(dockIndex = hovered)
                 dockHostState.isDropTargetHighlighted.value = planned?.isOverDock == true
             },
             currentDragSession = { homeDragSession.value },
@@ -1076,6 +1096,8 @@ internal data class HomeDragSession(
     val projectedCell: GridCell,
     /** Whether releasing right now would drop [item] on the dock instead of a home cell. */
     val isOverDock: Boolean = false,
+    /** Over the Dock: the slot the finger hovers, where the item is pinned (null: at the end). */
+    val dockIndex: Int? = null,
     /** Where the finger is, in the root; [Offset.Unspecified] until the first move. */
     val pointerInRoot: Offset = Offset.Unspecified,
     /** What dropping now would do on the target page (the push ring and dead zone); null: not planned. */
@@ -1278,11 +1300,28 @@ private fun FadingHandle(
 }
 
 /**
+ * The page and cell of [page] under [point] in the root, given the page's grid at [gridBounds]; null where the point is
+ * off the grid (or the page is generated, which takes no placed items).
+ */
+internal fun homeDropTargetAt(
+    page: LauncherPage,
+    gridBounds: Rect?,
+    point: Offset,
+): HomeDropTarget? {
+    if (gridBounds == null || page.type is LauncherPageType.Generated || !gridBounds.contains(point)) return null
+    val column = ((point.x - gridBounds.left) / (gridBounds.width / page.grid.columns)).toInt()
+    val row = ((point.y - gridBounds.top) / (gridBounds.height / page.grid.rows)).toInt()
+    val cell = GridCell(column.coerceIn(0, page.grid.columns - 1), row.coerceIn(0, page.grid.rows - 1))
+    return HomeDropTarget(page.id, cell, free = page.items.none { item -> item.occupies(cell) })
+}
+
+/**
  * This drag with its [HomeDragPlan] for the page it is over: the pointer in cells of that page's grid (whose bounds in
  * the root are [gridBounds]), through [HomeDragPush]. Unplanned while the pointer, the bounds or the page are unknown,
  * or over the Dock. Dropping on top is only offered on the item's own page: another page takes the item by the ring
  * alone (the existing placement rules reject a collision).
  */
+
 internal fun HomeDragSession.planned(
     layout: HomeLayout,
     gridBounds: Rect?,

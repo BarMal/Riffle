@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.gestures.HoldMenuRule
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
@@ -53,7 +54,6 @@ import com.riffle.core.domain.launcher.home.WidgetItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import kotlin.math.hypot
 import kotlin.math.roundToInt
 
 /**
@@ -297,7 +297,7 @@ internal fun Modifier.homeItemDrag(
                             dragX += dragAmount.x
                             dragY += dragAmount.y
                             local = change.position
-                            if (!moved && hypot(dragX, dragY) > slop) {
+                            if (!moved && HoldMenuRule.leavesMenu(dragX, dragY, slop)) {
                                 moved = true
                                 latestDismiss?.invoke()
                             }
@@ -339,10 +339,11 @@ internal fun homeDropAction(
 ): LauncherShellAction? {
     val plan = session?.plan
     return when {
+        // Over the Dock there is no plan (nothing is pushed): the item is pinned where the finger hovers.
+        session != null && session.isOverDock && item.isDockTransferable ->
+            LauncherShellAction.MoveHomeItemToDock(item.id, targetIndex = session.dockIndex, pageId = dragState.pageId)
         session == null || plan == null ->
             homeItemDragDropAction(item, dragState, dragX, dragY, session?.targetPageId ?: dragState.pageId)
-        session.isOverDock && item.isDockTransferable ->
-            LauncherShellAction.MoveHomeItemToDock(item.id, pageId = dragState.pageId)
         plan.landing == null -> null
         plan.dropOn != null -> LauncherShellAction.MoveHomeShortcutToCell(item.id, plan.landing!!)
         plan.landing == dragState.cell && plan.pushed.isEmpty() && session.targetPageId == dragState.pageId -> null

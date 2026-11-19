@@ -31,21 +31,26 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
@@ -64,6 +69,7 @@ import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
+import com.riffle.core.domain.launcher.gestures.HoldMenuRule
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
@@ -903,6 +909,16 @@ private fun DockSlot(
     onDragStateChanged: (DockDragState?) -> Unit,
     onDragDroppedAction: (LauncherShellAction) -> Unit,
 ) {
+    // The drag sits on the icon itself, inside its click: a tap detector with a long-click consumes the rest of the
+    // press after the hold, which would end a drag held by something above it.
+    val slotDrag =
+        dockSlotDragModifier(
+            state = state,
+            presentation = presentation,
+            dragViewport = dragViewport,
+            onDragStateChanged = onDragStateChanged,
+            onDragDroppedAction = onDragDroppedAction,
+        )
     Box(
         modifier =
             dockSlotModifier(
@@ -910,66 +926,77 @@ private fun DockSlot(
                 state = state,
                 presentation = presentation,
                 dragState = dragState,
-                dragViewport = dragViewport,
-                onDragStateChanged = onDragStateChanged,
-                onDragDroppedAction = onDragDroppedAction,
             ),
         contentAlignment = Alignment.Center,
     ) {
-        when (val item = state.item) {
-            null -> Unit
-            is DockSlotItemState.Shortcut ->
-                DockShortcut(
-                    shortcut = item.shortcut,
-                    state =
-                        DockShortcutState(
-                            iconSizeDp = state.iconSizeDp,
-                            shortcutIndex = state.shortcutIndex,
-                            shortcutCount = state.shortcutCount,
-                            isEditing = state.isEditing,
-                            notificationCount =
-                                presentation.notificationGroupsByApp.notificationCountFor(
-                                    item.shortcut,
-                                ),
-                            appShortcuts = presentation.appShortcutsByApp[item.shortcut.appIdentity].orEmpty(),
-                        ),
-                    presentation = presentation,
-                    appIconLoader = appIconLoader,
-                )
-            is DockSlotItemState.Folder ->
-                DockFolder(
-                    folder = item.folder,
-                    state = state,
-                    presentation = presentation,
-                )
-            is DockSlotItemState.Widget ->
-                DockWidgetSlot(
-                    widget = item.widget,
-                    iconSizeDp = state.iconSizeDp,
-                    isEditing = state.isEditing,
-                    shortcutIndex = state.shortcutIndex,
-                    shortcutCount = state.shortcutCount,
-                    presentation = presentation,
-                )
-            is DockSlotItemState.Placeholder ->
-                DockItemPlaceholder(
-                    item = item,
-                    iconSizeDp = state.iconSizeDp,
-                )
+        CompositionLocalProvider(LocalDockSlotDrag provides slotDrag) {
+            DockSlotContent(state, presentation, appIconLoader)
         }
     }
 }
 
-@Suppress("LongParameterList")
+/** Where each pinned item's slot lies, reported to the Home surface so a Home item dropped on the Dock lands at one. */
+internal val LocalDockPinnedSlotBoundsSink =
+    staticCompositionLocalOf<(LauncherItemId, Rect?) -> Unit> { { _, _ -> } }
+
+/** The pick-up drag of the Dock slot an icon stands in: the icon applies it after its own click handling. */
+private val LocalDockSlotDrag = compositionLocalOf<Modifier> { Modifier }
+
+@Composable
+private fun DockSlotContent(
+    state: DockSlotState,
+    presentation: DockPresentation,
+    appIconLoader: AppIconLoader,
+) {
+    when (val item = state.item) {
+        null -> Unit
+        is DockSlotItemState.Shortcut ->
+            DockShortcut(
+                shortcut = item.shortcut,
+                state =
+                    DockShortcutState(
+                        iconSizeDp = state.iconSizeDp,
+                        shortcutIndex = state.shortcutIndex,
+                        shortcutCount = state.shortcutCount,
+                        isEditing = state.isEditing,
+                        notificationCount =
+                            presentation.notificationGroupsByApp.notificationCountFor(
+                                item.shortcut,
+                            ),
+                        appShortcuts = presentation.appShortcutsByApp[item.shortcut.appIdentity].orEmpty(),
+                    ),
+                presentation = presentation,
+                appIconLoader = appIconLoader,
+            )
+        is DockSlotItemState.Folder ->
+            DockFolder(
+                folder = item.folder,
+                state = state,
+                presentation = presentation,
+            )
+        is DockSlotItemState.Widget ->
+            DockWidgetSlot(
+                widget = item.widget,
+                iconSizeDp = state.iconSizeDp,
+                isEditing = state.isEditing,
+                shortcutIndex = state.shortcutIndex,
+                shortcutCount = state.shortcutCount,
+                presentation = presentation,
+            )
+        is DockSlotItemState.Placeholder ->
+            DockItemPlaceholder(
+                item = item,
+                iconSizeDp = state.iconSizeDp,
+            )
+    }
+}
+
 @Composable
 private fun dockSlotModifier(
     modifier: Modifier,
     state: DockSlotState,
     presentation: DockPresentation,
     dragState: DockDragState?,
-    dragViewport: DockDragViewport,
-    onDragStateChanged: (DockDragState?) -> Unit,
-    onDragDroppedAction: (LauncherShellAction) -> Unit,
 ): Modifier {
     val editingSlotColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.10f)
     val lift =
@@ -986,8 +1013,50 @@ private fun dockSlotModifier(
             },
         )
         .then(state.item?.let { item -> Modifier.testTag(dockItemTestTag(item.id)) } ?: Modifier)
+        .graphicsLayer {
+            scaleX = lift.scale
+            scaleY = lift.scale
+            shadowElevation = lift.elevation
+        }
+}
+
+/**
+ * The slot's pick-up drag, to be applied by its icon. Reordering needs no edit mode in Home mode: a long-press then a
+ * move lifts a pinned item. In the contextual mode the same hold-then-move is the scrub (the Dock's one pointer loop),
+ * so a pinned item does not lift there.
+ */
+@Suppress("LongParameterList")
+@Composable
+private fun dockSlotDragModifier(
+    state: DockSlotState,
+    presentation: DockPresentation,
+    dragViewport: DockDragViewport,
+    onDragStateChanged: (DockDragState?) -> Unit,
+    onDragDroppedAction: (LauncherShellAction) -> Unit,
+): Modifier {
+    val contextual = LocalDockPinnedStream.current?.contextual == true
+    val choice = LocalDockChoice.current
+    val homeDropAt = LocalDockHomeDropAt.current
+    val coordinates = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    val slotBoundsSink = LocalDockPinnedSlotBoundsSink.current
+    val itemId = state.item?.id
+    DisposableEffect(itemId, slotBoundsSink) { onDispose { itemId?.let { slotBoundsSink(it, null) } } }
+    return Modifier
+        .onGloballyPositioned { positioned ->
+            coordinates[0] = positioned
+            if (itemId != null && positioned.isAttached) {
+                slotBoundsSink(itemId, Rect(positioned.positionInRoot(), positioned.size.toSize()))
+            }
+        }
         .dockItemDrag(
             state = state,
+            enabled = state.isEditing || !contextual,
+            home =
+                DockDragHome(
+                    toRoot = { local -> coordinates[0]?.takeIf { it.isAttached }?.localToRoot(local) ?: local },
+                    dropAt = { homeDropAt() },
+                    onHoldMoved = { choice?.dismissMenus() },
+                ),
             slotSizeDp = state.iconSizeDp,
             itemSpacingDp = state.itemSpacingDp,
             dragViewport = dragViewport,
@@ -995,11 +1064,6 @@ private fun dockSlotModifier(
             haptics = presentation.interactions.haptics,
             onAction = onDragDroppedAction,
         )
-        .graphicsLayer {
-            scaleX = lift.scale
-            scaleY = lift.scale
-            shadowElevation = lift.elevation
-        }
 }
 
 private data class DockDragLift(val scale: Float, val elevation: Float)
@@ -1025,9 +1089,11 @@ private fun dockDragLift(
     return DockDragLift(scale, elevation)
 }
 
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "CyclomaticComplexMethod")
 private fun Modifier.dockItemDrag(
     state: DockSlotState,
+    enabled: Boolean,
+    home: DockDragHome,
     slotSizeDp: Int,
     itemSpacingDp: Int,
     dragViewport: DockDragViewport,
@@ -1036,7 +1102,7 @@ private fun Modifier.dockItemDrag(
     onAction: (LauncherShellAction) -> Unit,
 ): Modifier {
     return state.item
-        ?.takeIf { item -> state.isEditing && item.isDirectDockDragEligible() }
+        ?.takeIf { item -> enabled && item.isDirectDockDragEligible() }
         ?.id
         ?.let { itemId ->
             pointerInput(itemId, state.shortcutIndex, state.shortcutCount, slotSizeDp, itemSpacingDp, state.position) {
@@ -1047,6 +1113,8 @@ private fun Modifier.dockItemDrag(
                     var initialScrollOffset = 0
                     var edgeAutoScrollDelta = 0f
                     var autoScrollJob: Job? = null
+                    var moved = false
+                    var lastLocal = Offset.Zero
 
                     fun updateCandidate(slotSizePx: Float) {
                         targetIndex =
@@ -1087,6 +1155,7 @@ private fun Modifier.dockItemDrag(
                             targetIndex = state.shortcutIndex
                             initialScrollOffset = dragViewport.scrollState.value
                             edgeAutoScrollDelta = 0f
+                            moved = false
                             haptics.longPress()
                             onDragStateChanged(DockDragState(itemId, state.shortcutIndex, state.shortcutIndex))
                         },
@@ -1094,6 +1163,12 @@ private fun Modifier.dockItemDrag(
                             change.consume()
                             dragXPx += amount.x
                             dragYPx += amount.y
+                            lastLocal = change.position
+                            // Menu unless it moves: the hold's menu closes once the finger leaves touch slop.
+                            if (!moved && HoldMenuRule.leavesMenu(dragXPx, dragYPx, viewConfiguration.touchSlop)) {
+                                moved = true
+                                home.onHoldMoved()
+                            }
                             val slotSizePx = density * (slotSizeDp + itemSpacingDp)
                             val viewportSizePx = density * dragViewport.contentViewportMainAxisDp
                             val pointerAlongRunPx =
@@ -1110,14 +1185,18 @@ private fun Modifier.dockItemDrag(
                         },
                         onDragEnd = {
                             autoScrollJob?.cancel()
-                            dockDragDropAction(
-                                itemId = itemId,
-                                originIndex = state.shortcutIndex,
-                                targetIndex = targetIndex,
-                                awayFromEdgePx =
-                                    state.position.dragAwayFromEdgePx(dragXPx, dragYPx),
-                                dockItemSizePx = density * slotSizeDp,
-                            )?.let(onAction)
+                            // A hold that never moved is the menu, not a drag: nothing to drop.
+                            if (moved) {
+                                dockDragDropAction(
+                                    itemId = itemId,
+                                    originIndex = state.shortcutIndex,
+                                    targetIndex = targetIndex,
+                                    awayFromEdgePx =
+                                        state.position.dragAwayFromEdgePx(dragXPx, dragYPx),
+                                    dockItemSizePx = density * slotSizeDp,
+                                )?.let { action -> dockDropOnHome(action, home.dropAt(), home.toRoot(lastLocal)) }
+                                    ?.let(onAction)
+                            }
                             onDragStateChanged(null)
                         },
                         onDragCancel = {
@@ -1128,6 +1207,44 @@ private fun Modifier.dockItemDrag(
                 }
             }
         } ?: this
+}
+
+/** What a Dock item's drag needs of Home: where a finger is in the root, what Home has under it, the menu rule. */
+private class DockDragHome(
+    val toRoot: (Offset) -> Offset,
+    /** Where a Dock item dropped on Home lands (the page under the finger), or null while Home does not say. */
+    val dropAt: () -> ((Offset) -> HomeDropTarget?)?,
+    /** The hold's menu closes: the finger moved past slop. */
+    val onHoldMoved: () -> Unit,
+)
+
+/** The Home cell a Dock item dropped at a finger would land in. */
+internal data class HomeDropTarget(
+    val pageId: LauncherPageId,
+    val cell: GridCell,
+    /** Whether no item stands there: otherwise the first free cell of the page takes it. */
+    val free: Boolean,
+)
+
+/** Where Home takes a Dock item dropped in the root: set by the Home surface, read by the Dock's drag. */
+internal val LocalDockHomeDropAt =
+    staticCompositionLocalOf<() -> ((Offset) -> HomeDropTarget?)?> { { null } }
+
+/**
+ * A Dock item dragged out onto Home is placed where it is dropped: the cell under the finger when it is free, else
+ * the first free cell of that page. Dropped where Home has no page under the finger (the margin, the Dock's own room)
+ * it is not a valid target and the item returns (nothing changes). Without a Home surface to ask (a Dock shown on
+ * its own) the
+ * older rule applies: the first free cell of the selected page.
+ */
+internal fun dockDropOnHome(
+    action: LauncherShellAction,
+    homeDropAt: ((Offset) -> HomeDropTarget?)?,
+    fingerInRoot: Offset,
+): LauncherShellAction? {
+    if (action !is LauncherShellAction.MoveDockItemToHome || homeDropAt == null) return action
+    val target = homeDropAt(fingerInRoot)
+    return target?.let { action.copy(pageId = it.pageId, cell = it.cell.takeIf { _ -> it.free }) }
 }
 
 /**
@@ -1158,11 +1275,13 @@ private fun DockFolder(
 ) {
     val isContextMenuExpanded = remember(folder.id) { mutableStateOf(false) }
     val modifier =
-        if (state.isEditing) {
-            Modifier.clickable(onClick = { isContextMenuExpanded.value = true })
-        } else {
-            Modifier.clickable(onClick = { presentation.interactions.onFolderOpen(folder) })
-        }
+        (
+            if (state.isEditing) {
+                Modifier.clickable(onClick = { isContextMenuExpanded.value = true })
+            } else {
+                Modifier.clickable(onClick = { presentation.interactions.onFolderOpen(folder) })
+            }
+        ).then(LocalDockSlotDrag.current)
 
     Box(modifier = Modifier.requiredSize(state.iconSizeDp.dp)) {
         DockItemPlaceholder(
@@ -1306,7 +1425,8 @@ private fun DockShortcut(
                                     },
                             )
                         },
-                    ),
+                    )
+                    .then(LocalDockSlotDrag.current),
         )
 
         if (!state.isEditing) {

@@ -145,6 +145,23 @@ The Dock has two gestures along the axis across its run, in opposite directions 
   `DockChoiceState` (one selection that follows the finger) and the Dock's one pointer loop (`dockPullInput`). Draw-phase
   only: scrubbing recomposes no tile (the choice mark is drawn in the draw phase). Equivalents are unchanged (the tiles,
   "Previous page" and "Next page"); there is nothing gesture-only.
+- **Pinned items: pick up and reorder, no edit mode (Home mode).** A long-press then a move on a pinned app or folder in
+  the Dock lifts it and reorders the run, with the same scale and shadow lift the edit mode had; the run scrolls at its ends
+  while the finger is held there. Hold without moving: the item's menu opens (and stays), as today. Hold, then move past
+  touch slop: the menu closes and the item is dragged (`HoldMenuRule`, the rule the Home drag and the scrub share; the
+  Dock closes menus through `DockChoiceState.dismissMenus`). Dragged away from the Dock's edge by more than its own size
+  and dropped on a Home page it is **moved** (not copied) to the free cell under the finger, else to the page's first free
+  cell; dropped where no Home page lies under the finger it returns. A Home item dropped on the Dock is **moved** into it
+  at the slot it hovers, between the pinned items whose centres the finger has passed (`dockInsertionIndexAmong`), under
+  the existing capacity rule (a full Dock refuses and the item stays). The drag sits on the icon, inside its click handling
+  (`LocalDockSlotDrag`): a tap detector with a long-click consumes the press after the hold, which would end a drag held
+  above it.
+  *Against hold to choose.* They do not meet: hold to choose is a press **claimed before the long-press timeout** (a drag
+  toward the Dock's edge past slop), then held or slid; a long-press is **after** it, and the Dock's pointer loop claims
+  nothing at the timeout in Home mode. So on a pinned icon a press that is drawn toward the edge is hold to choose (the
+  Stream is the target), and a press that is held still for the long-press timeout and then moved is the reorder; a quick
+  slide along the run still scrolls the pinned run. Nothing had to give. In the contextual mode there is no reordering:
+  the same hold then move is the scrub.
 - **Expanded postures.** The P6 split and its divider are gone (dock modes U2): the press opens the Stream in a column attached
   to the Dock, as folded, with Home beside and under it.
 - **Library pull (P7).** Unchanged: the sheet rises from the Dock's edge as the finger moves, 1:1, while what is under it
@@ -479,4 +496,6 @@ outline of its span); the lifted icon follows the finger, slightly enlarged, abo
   turning every 700 ms while held; the leading edge goes back (top and bottom when the pages scroll up and down; mirrored in
   right-to-left). Every page stays composed during a drag so the gesture survives. Dragging past the last page does not
   create a page yet.
+- **To and from the Dock.** An app or folder dragged below the grid onto the Dock is pinned at the slot it hovers; a pinned
+  item dragged out is placed on the Home page and cell under the finger (see "Pinned items" above). Both are moves.
 - **Cancel.** A drop with no valid landing (a blocker that cannot move) does nothing: the item stays where it was.
