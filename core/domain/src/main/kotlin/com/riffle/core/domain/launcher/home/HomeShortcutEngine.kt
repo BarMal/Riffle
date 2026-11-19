@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 
+@Suppress("TooManyFunctions")
 class HomeShortcutEngine(
     private val gridPlacementEngine: GridPlacementEngine = GridPlacementEngine(),
 ) {
@@ -132,14 +133,16 @@ class HomeShortcutEngine(
         val grid =
             layout.pages.firstOrNull { it.id == targetPageId }?.grid
                 ?: return HomeShortcutResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
-        var last: HomeShortcutResult = HomeShortcutResult.Rejected(PlacementRejectionReason.NO_AVAILABLE_CELL)
-        for (row in 0 until grid.rows) {
-            for (column in 0 until grid.columns) {
-                last = moveItemToPage(layout, itemId, sourcePageId, targetPageId, GridCell(column, row))
-                if (last is HomeShortcutResult.Updated) return last
+        val cells =
+            (0 until grid.rows).flatMap {
+                    row ->
+                (0 until grid.columns).map { column -> GridCell(column, row) }
             }
-        }
-        return last
+        return cells
+            .asSequence()
+            .map { cell -> moveItemToPage(layout, itemId, sourcePageId, targetPageId, cell) }
+            .firstOrNull { result -> result is HomeShortcutResult.Updated }
+            ?: HomeShortcutResult.Rejected(PlacementRejectionReason.NO_AVAILABLE_CELL)
     }
 
     /** Moves any placed Home item between editable pages without relying on transient UI state. */

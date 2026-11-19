@@ -333,6 +333,7 @@ internal fun Modifier.homeItemDrag(
  * or land at the planned cell with the pushed neighbours moved aside; nowhere valid (no landing), nothing, so the item
  * returns to where it was. Without a plan (no bounds known yet) the older cell-delta rule applies.
  */
+@Suppress("CyclomaticComplexMethod")
 internal fun homeDropAction(
     item: LauncherItem,
     dragState: HomeItemDragState,
