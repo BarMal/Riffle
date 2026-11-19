@@ -31,6 +31,8 @@ import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherGestureLaunchTarget
+import com.riffle.core.domain.launcher.settings.PageScrollDirection
+import com.riffle.core.domain.launcher.settings.pagerScrollDirection
 
 /**
  * Gestures: the fourteen swipes and pinches on Home, each a row whose menu picks its action. Draws as sections (one per
@@ -104,6 +106,15 @@ fun HomeSwipeGestureSetting(
     }
 }
 
+/** A second line saying when Home's own pages take this swipe, or nothing when no pager does. */
+@Composable
+private fun HomeGesture.pagerHint(): String =
+    when (pagerScrollDirection) {
+        PageScrollDirection.HORIZONTAL -> "\n" + stringResource(R.string.gesture_pager_hint_sideways)
+        PageScrollDirection.VERTICAL -> "\n" + stringResource(R.string.gesture_pager_hint_vertical)
+        null -> ""
+    }
+
 @Composable
 private fun HomeGestureRow(
     gesture: HomeGesture,
@@ -120,7 +131,7 @@ private fun HomeGestureRow(
         SettingsClickableRow(
             modifier = Modifier.settingAnchor(gesture.settingKey()),
             title = gesture.label(text),
-            subtitle = action.targetLabel(launchTarget, installedApps, text),
+            subtitle = action.targetLabel(launchTarget, installedApps, text) + gesture.pagerHint(),
             onClick = { isExpanded.value = true },
             trailingContent = { SettingsButtonText(text = stringResource(R.string.settings_gestures_change)) },
         )
