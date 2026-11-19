@@ -469,12 +469,20 @@ sealed interface LauncherShellAction {
         val settings: DockMotionSettings,
     ) : LauncherShellAction
 
-    /** Settings > About > Diagnostics > Drag tuning: the numbers of a Home drag (held to their ranges). */
+    /** Settings > About > Developer options > Drag tuning: the numbers of a Home drag (held to their ranges). */
     data class SetDragTuning(
         val tuning: HomeDragTuning,
     ) : LauncherShellAction
 
-    /** Settings > About > Diagnostics > Pair recipe: how the Pairs stack starts a pair. */
+    /** Settings > About: the Version row was tapped seven times, so the "Developer options" switch shows. */
+    data object RevealDeveloperOptions : LauncherShellAction
+
+    /** Settings > About > "Developer options" switch: offers (or hides) the Developer options page. */
+    data class SetDeveloperOptions(
+        val enabled: Boolean,
+    ) : LauncherShellAction
+
+    /** Settings > About > Developer options > Pair recipe: how the Pairs stack starts a pair. */
     data class SetPairRecipe(
         val recipe: PairRecipeKind,
     ) : LauncherShellAction

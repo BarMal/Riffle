@@ -1196,7 +1196,7 @@ internal data class StandardHomePresentation(
      * with the handle whenever the Stream is out.
      */
     val handleHidden: Boolean = false,
-    /** The numbers of a Home drag (Settings > About > Diagnostics > Drag tuning). */
+    /** The numbers of a Home drag (Settings > About > Developer options > Drag tuning). */
     val dragTuning: HomeDragTuning = HomeDragTuning(),
 )
 

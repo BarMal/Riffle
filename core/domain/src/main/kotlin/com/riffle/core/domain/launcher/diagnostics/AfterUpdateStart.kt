@@ -11,7 +11,7 @@ import com.riffle.core.domain.launcher.workspace.str
 import com.riffle.core.domain.launcher.workspace.string
 
 /**
- * What the launcher saw on the first process start after an update (Settings > About > Diagnostics > After-update
+ * What the launcher saw on the first process start after an update (Settings > About > After-update
  * starts), kept to look into "the home gesture stops reaching the launcher after an update" (see
  * `docs/product/places-views-plan.md`, "After-update starts"). Facts only; nothing here changes behaviour.
  */

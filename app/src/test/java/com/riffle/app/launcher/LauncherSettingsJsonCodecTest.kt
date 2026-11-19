@@ -1603,6 +1603,30 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
+    fun theDeveloperOptionsSwitchDefaultsOffReadsOldDataAndRoundTrips() {
+        val diagnostics = { json: String -> decodeLauncherSettings(json).diagnostics }
+        // Settings written before Developer options: no switch, the stored pair recipe keeps working.
+        val old = diagnostics("""{"version": 11, "diagnostics": {"pairRecipe": "plain_then_adjacent"}}""")
+        assertEquals(PairRecipeKind.PLAIN_THEN_ADJACENT, old.pairRecipe)
+        assertFalse(old.developerOptionsRevealed)
+        assertFalse(old.developerOptions)
+        assertEquals(DiagnosticsSettings(), diagnostics("""{"version": 11}"""))
+        assertEquals(DiagnosticsSettings(), diagnostics("""{"diagnostics": "x"}"""))
+        // A stored drag tuning also keeps working while the page is hidden.
+        val tuned = HomeDragTuning(0.9f, 0.2f, 300, 400, 900)
+        val withDrag =
+            LauncherSettings(
+                home = HomeBehaviourSettings(dragTuning = tuned),
+                diagnostics = DiagnosticsSettings(PairRecipeKind.TWO_STARTS, developerOptionsRevealed = true),
+            )
+        val decoded = decodeLauncherSettings(encodeLauncherSettings(withDrag))
+        assertEquals(tuned, decoded.home.dragTuning)
+        assertEquals(withDrag.diagnostics, decoded.diagnostics)
+        val on = DiagnosticsSettings(developerOptionsRevealed = true, developerOptions = true)
+        assertEquals(on, decodeLauncherSettings(encodeLauncherSettings(LauncherSettings(diagnostics = on))).diagnostics)
+    }
+
+    @Test
     fun theStoredPagedLibraryViewRoundTripsAndOtherViewsKeepTheirs() {
         val settings =
             LauncherSettings(

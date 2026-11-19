@@ -33,7 +33,8 @@ internal fun SettingsMainPageContent(
 ) {
     val text = rememberSettingsText()
     val query = rememberSaveable { mutableStateOf("") }
-    val index = remember(text) { settingsSearchIndex(text) }
+    val developer = state.settings.diagnostics.developerVisibility()
+    val index = remember(text, developer) { settingsSearchIndex(text, developer) }
     val dismissKeyboard = rememberKeyboardDismisser()
 
     AppSearchField(

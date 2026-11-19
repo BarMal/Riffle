@@ -11,7 +11,7 @@ internal fun settingsLauncherSearchEntries(
     status: SettingsOverviewStatus = SettingsOverviewStatus(),
 ): List<LauncherSearchSettingsEntry> {
     val text = SettingsTextHolder.current ?: return emptyList()
-    return SettingsTextHolder.launcherSearchEntries().map { entry ->
+    return SettingsTextHolder.launcherSearchEntries(status.developerVisibility).map { entry ->
         val page = entry.id.settingsTarget()?.takeIf { it.anchor == null }?.page
         if (page == SettingsPage.PRIVACY || page == SettingsPage.LIBRARY) {
             entry.copy(subtitle = status.rowSummary(page, text))

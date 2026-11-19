@@ -2076,7 +2076,7 @@ Three recipes are kept behind `PairLauncher` (`PairRecipeKind`, `PairRecipe`):
 | Two starts (`TWO_STARTS`) | both `LAUNCH_ADJACENT \| NEW_TASK` from the launcher, 600 ms apart (the earlier recipe) | |
 | Plain, then beside (`PLAIN_THEN_ADJACENT`) | first `NEW_TASK`, 600 ms later second `LAUNCH_ADJACENT \| NEW_TASK` | |
 
-Never `MULTIPLE_TASK`, never `CLEAR_TASK`. Switch on the device in Settings > About > Diagnostics > Pair recipe; the Pairs
+Never `MULTIPLE_TASK`, never `CLEAR_TASK`. Switch on the device in Settings > About > Developer options > Pair recipe; the Pairs
 stack reads it at each launch. Each launch adds one line to the App pair experiment log (recipe, the two packages' flags,
 ok or the exception, scenario "Pairs stack: <recipe>"). Only the device can confirm which recipe is right.
 

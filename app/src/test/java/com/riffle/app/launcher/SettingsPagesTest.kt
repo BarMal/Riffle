@@ -78,6 +78,53 @@ class SettingsPagesTest {
     }
 
     @Test
+    fun theDiagnosticsPagesSitBelowDeveloperOptionsAndAfterUpdateStaysDirectlyUnderAbout() {
+        assertEquals(SettingsPage.VERSION, SettingsPage.DEVELOPER_OPTIONS.parent)
+        listOf(SettingsPage.APP_PUBLISH, SettingsPage.APP_PAIR, SettingsPage.PAIR_RECIPE, SettingsPage.DRAG_TUNING)
+            .forEach { assertEquals("$it", SettingsPage.DEVELOPER_OPTIONS, it.parent) }
+        assertEquals(SettingsPage.VERSION, SettingsPage.AFTER_UPDATE.parent)
+        assertEquals(
+            setOf(
+                SettingsPage.DEVELOPER_OPTIONS,
+                SettingsPage.APP_PUBLISH,
+                SettingsPage.APP_PAIR,
+                SettingsPage.PAIR_RECIPE,
+                SettingsPage.DRAG_TUNING,
+            ),
+            SettingsPage.entries.filter { it.isDeveloperPage }.toSet(),
+        )
+    }
+
+    @Test
+    fun theDeveloperPagesAreNotInSearchUntilTheSwitchIsOn() {
+        val developerPages = SettingsPage.entries.filter { it.isDeveloperPage }.toSet()
+        listOf(DeveloperVisibility.HIDDEN, DeveloperVisibility.REVEALED).forEach { visibility ->
+            val index = settingsSearchIndex(text, visibility)
+            assertTrue("$visibility", index.none { it.page in developerPages })
+            // After-update starts is reachable without the switch, so a user can find it to report a bug.
+            assertTrue(index.any { it.page == SettingsPage.AFTER_UPDATE && it.key == null })
+            listOf("drag tuning", "pair recipe", "app pair experiment", "what apps publish").forEach { query ->
+                assertTrue("'$query' at $visibility", index.matching(query).isEmpty())
+            }
+            val launcher = settingsLauncherSearchEntries(text, visibility)
+            assertTrue(launcher.none { entry -> entry.id.settingsTarget()?.page in developerPages })
+        }
+        val enabled = settingsSearchIndex(text, DeveloperVisibility.ENABLED)
+        developerPages.forEach { page -> assertTrue("$page", enabled.any { it.page == page && it.key == null }) }
+        assertTrue(enabled.matching("drag tuning").any { it.page == SettingsPage.DRAG_TUNING })
+    }
+
+    @Test
+    fun theDeveloperSwitchIsSearchableOnlyOnceRevealed() {
+        val find = { visibility: DeveloperVisibility ->
+            settingsSearchIndex(text, visibility).any { it.key == SettingKey.ABOUT_DEVELOPER_OPTIONS }
+        }
+        assertFalse(find(DeveloperVisibility.HIDDEN))
+        assertTrue(find(DeveloperVisibility.REVEALED))
+        assertTrue(find(DeveloperVisibility.ENABLED))
+    }
+
+    @Test
     fun theSubPagesLiveWhereTheDocumentPutsThem() {
         assertEquals(SettingsPage.DOCK, SettingsPage.FLOATING_DOCK.parent)
         assertEquals(SettingsPage.LIBRARY, SettingsPage.HIDDEN_APPS.parent)
@@ -146,7 +193,9 @@ class SettingsPagesTest {
             assertFalse("$it is gone", it in names)
         }
         assertTrue(names.none { it.startsWith("SOURCE_") })
-        assertTrue(names.none { it.contains("DEVELOPER") })
+        // The old Developer section is gone; "Developer options" (About) is a different, gated page.
+        assertFalse("DEVELOPER" in names)
+        assertTrue(names.filter { it.contains("DEVELOPER") } == listOf("DEVELOPER_OPTIONS"))
     }
 
     @Test
@@ -188,7 +237,8 @@ class SettingsPagesTest {
 
     @Test
     fun theSearchIndexHoldsEveryPageAndEverySettingOnce() {
-        val index = settingsSearchIndex(text)
+        // With the Developer options switch on, nothing is left out.
+        val index = settingsSearchIndex(text, DeveloperVisibility.ENABLED)
 
         assertEquals(index.size, index.map { it.id }.toSet().size)
         SettingsPage.entries.filter { it != SettingsPage.MAIN }.forEach { page ->
@@ -202,7 +252,7 @@ class SettingsPagesTest {
 
     @Test
     fun everyIndexedEntryIsFoundByItsOwnLabel() {
-        val index = settingsSearchIndex(text)
+        val index = settingsSearchIndex(text, DeveloperVisibility.ENABLED)
 
         index.forEach { entry ->
             assertTrue(
@@ -281,7 +331,7 @@ class SettingsPagesTest {
 
     @Test
     fun launcherSearchOffersEverySettingAndPageAndEachOpensItsTarget() {
-        val entries = settingsLauncherSearchEntries(text)
+        val entries = settingsLauncherSearchEntries(text, DeveloperVisibility.ENABLED)
 
         // Every page below the main page, every setting, and "Riffle settings" (the main page itself).
         assertEquals(SettingsPage.entries.size - 1 + SettingKey.entries.size + 1, entries.size)

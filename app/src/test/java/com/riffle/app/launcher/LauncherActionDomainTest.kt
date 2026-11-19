@@ -406,6 +406,8 @@ class LauncherActionDomainTest {
                 settings("DismissEmptyHomeHint", LauncherShellAction.DismissEmptyHomeHint),
                 settings("SetDragTuning", LauncherShellAction.SetDragTuning(HomeDragTuning())),
                 settings("SetPairRecipe", LauncherShellAction.SetPairRecipe(PairRecipeKind.TWO_STARTS)),
+                settings("RevealDeveloperOptions", LauncherShellAction.RevealDeveloperOptions),
+                settings("SetDeveloperOptions", LauncherShellAction.SetDeveloperOptions(enabled = true)),
                 settings(
                     "SelectPageScroll",
                     LauncherShellAction.SelectPageScroll(LayoutPosture.FOLDED, PageScrollDirection.VERTICAL),

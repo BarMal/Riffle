@@ -61,6 +61,20 @@ import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 import org.json.JSONArray
 import org.json.JSONObject
 
+private fun encodeDiagnostics(diagnostics: DiagnosticsSettings): JSONObject =
+    JSONObject()
+        .put("pairRecipe", diagnostics.pairRecipe.storedId)
+        .put("developerOptionsRevealed", diagnostics.developerOptionsRevealed)
+        .put("developerOptions", diagnostics.developerOptions)
+
+/** Blobs written before Developer options only hold the pair recipe: the switch then reads as off and unrevealed. */
+private fun JSONObject?.toDiagnostics(): DiagnosticsSettings =
+    DiagnosticsSettings(
+        pairRecipe = PairRecipeKind.decode(this?.optString("pairRecipe")),
+        developerOptionsRevealed = this?.optBoolean("developerOptionsRevealed", false) ?: false,
+        developerOptions = this?.optBoolean("developerOptions", false) ?: false,
+    )
+
 fun encodeLauncherSettings(settings: LauncherSettings): String =
     JSONObject()
         .put("version", LAUNCHER_SETTINGS_JSON_VERSION)
@@ -71,7 +85,7 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
         .put("haptics", encodeHaptics(settings.haptics))
         .put("hints", encodeHints(settings.hints))
         .put("home", encodeHomeBehaviour(settings.home))
-        .put("diagnostics", JSONObject().put("pairRecipe", settings.diagnostics.pairRecipe.storedId))
+        .put("diagnostics", encodeDiagnostics(settings.diagnostics))
         .put("layout", encodeLayoutSettings(settings.layout))
         .put("liquidGlass", encodeLiquidGlass(settings.liquidGlass))
         .put("motion", encodeMotionSettings(settings.motion))
@@ -120,10 +134,7 @@ private fun decodeLauncherSections(
         haptics = json.guarded("haptics", defaults.haptics, JSONObject::toHaptics),
         hints = json.guarded("hints", defaults.hints, JSONObject::toHints),
         home = json.guarded("home", defaults.home, JSONObject::toHomeBehaviour),
-        diagnostics =
-            DiagnosticsSettings(
-                pairRecipe = PairRecipeKind.decode(json.optJSONObject("diagnostics")?.optString("pairRecipe")),
-            ),
+        diagnostics = json.optJSONObject("diagnostics").toDiagnostics(),
         layout = json.guarded("layout", defaults.layout, JSONObject::toLayoutSettings),
         liquidGlass = json.guarded("liquidGlass", defaults.liquidGlass, JSONObject::toLiquidGlass),
         motion = json.guarded("motion", defaults.motion, JSONObject::toMotionSettings),

@@ -30,7 +30,7 @@ data class LauncherSettings(
     val diagnostics: DiagnosticsSettings = DiagnosticsSettings(),
 )
 
-/** How a pair is started (Settings > About > Diagnostics > Pair recipe). [storedId] is a stored contract. */
+/** How a pair is started (Settings > About > Developer options > Pair recipe). [storedId] is a stored contract. */
 enum class PairRecipeKind(
     val storedId: String,
 ) {
@@ -51,9 +51,16 @@ enum class PairRecipeKind(
     }
 }
 
-/** Diagnostics the owner can switch on the device without a new build. */
+/**
+ * Diagnostics the owner can switch on the device without a new build. [developerOptionsRevealed] is set once the
+ * Version row in About was tapped seven times: only then does the "Developer options" switch show. [developerOptions]
+ * is that switch; it only decides whether the Developer options page (and its search results) is offered. The stored
+ * values behind the page ([pairRecipe], the drag tuning) keep working while it is hidden.
+ */
 data class DiagnosticsSettings(
     val pairRecipe: PairRecipeKind = PairRecipeKind.DEFAULT,
+    val developerOptionsRevealed: Boolean = false,
+    val developerOptions: Boolean = false,
 )
 
 /**
@@ -76,7 +83,7 @@ data class HomeBehaviourSettings(
     val compactArrange: Boolean = true,
     /** The empty-Home hint was dismissed, or Home has held an item (or was started empty): it is never shown again. */
     val emptyHomeHintDismissed: Boolean = false,
-    /** The numbers of a Home drag (Settings > About > Diagnostics > Drag tuning). Held to their ranges. */
+    /** The numbers of a Home drag (Settings > About > Developer options > Drag tuning). Held to their ranges. */
     val dragTuning: HomeDragTuning = HomeDragTuning(),
 )
 

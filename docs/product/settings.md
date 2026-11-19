@@ -235,7 +235,7 @@ Two buttons and one switch (`SettingsHomeFillSection`; the rules are `HomeArrang
   a widget count) before the next starts. It decides what Arrange does and what the first-run seed does.
 - Also stored there: `emptyHomeHintDismissed`, for the empty-Home hint (see `places-views-plan.md`, "First run").
 
-## About > Diagnostics > After-update starts
+## About > After-update starts
 
 What the first start after each update looked like, for the last ten updates, with a Copy button: time, old and new
 version code, the intent the activity was started with (action, categories, flags, component), whether it was the task
@@ -244,7 +244,7 @@ start to the first frame, and the time of each new intent that carried `CATEGORY
 device-local (`riffle_after_update`, outside the launcher settings, the backup document and Auto Backup). See
 `places-views-plan.md`, "After-update starts".
 
-## About > Diagnostics > Drag tuning
+## About > Developer options > Drag tuning
 
 Sliders for the numbers a Home drag reads at runtime, with Reset and the current values as text to copy: push ring radius
 (0.5 to 1.2 cell, default 0.75), dead-zone radius (0.15 to 0.45, default 0.30), folder hold (100 to 600 ms, default 250),

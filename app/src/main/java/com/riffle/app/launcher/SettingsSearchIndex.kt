@@ -8,6 +8,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.riffle.app.R
 import com.riffle.core.domain.launcher.search.LauncherSearchSettingsEntry
 import com.riffle.core.domain.launcher.search.LauncherSearchSettingsEntryId
+import java.util.concurrent.ConcurrentHashMap
 
 /** Reads string resources for code that has no composition (the search index). Tests give it a fake. */
 internal fun interface SettingsText {
@@ -32,18 +33,23 @@ internal object SettingsTextHolder {
     @Volatile var current: SettingsText? = null
         private set
 
-    @Volatile private var cachedEntries: List<LauncherSearchSettingsEntry>? = null
+    private val cachedEntries =
+        ConcurrentHashMap<DeveloperVisibility, List<LauncherSearchSettingsEntry>>()
 
     fun install(resources: Resources) = install(ResourcesSettingsText(resources))
 
     fun install(text: SettingsText?) {
         current = text
-        cachedEntries = null
+        cachedEntries.clear()
     }
 
     /** The launcher search's settings entries, built once per installed text source. */
-    fun launcherSearchEntries(): List<LauncherSearchSettingsEntry> =
-        cachedEntries ?: current?.let(::settingsLauncherSearchEntries).orEmpty().also { cachedEntries = it }
+    fun launcherSearchEntries(
+        developer: DeveloperVisibility = DeveloperVisibility.HIDDEN,
+    ): List<LauncherSearchSettingsEntry> =
+        cachedEntries.getOrPut(developer) {
+            current?.let { settingsLauncherSearchEntries(it, developer) }.orEmpty()
+        }
 }
 
 @Composable
@@ -75,10 +81,16 @@ internal fun settingsPagePath(
     page: SettingsPage,
 ): String = page.ancestry().asReversed().joinToString(separator = " > ") { text.text(it.titleRes) }
 
-/** Every page below the main page and every setting, so everything in Settings can be found. */
-internal fun settingsSearchIndex(text: SettingsText): List<SettingsSearchEntry> {
+/**
+ * Every page below the main page and every setting, so everything in Settings can be found. The developer pages are
+ * left out until [developer] says the Developer options switch is on, and the switch itself until it is revealed.
+ */
+internal fun settingsSearchIndex(
+    text: SettingsText,
+    developer: DeveloperVisibility = DeveloperVisibility.HIDDEN,
+): List<SettingsSearchEntry> {
     val pages =
-        SettingsPage.entries.filter { it != SettingsPage.MAIN }.map { page ->
+        SettingsPage.entries.filter { it != SettingsPage.MAIN && it.isOffered(developer) }.map { page ->
             SettingsSearchEntry(
                 page = page,
                 key = null,
@@ -88,7 +100,7 @@ internal fun settingsSearchIndex(text: SettingsText): List<SettingsSearchEntry> 
             )
         }
     val settings =
-        SettingKey.entries.map { key ->
+        SettingKey.entries.filter { it.isOffered(developer) }.map { key ->
             SettingsSearchEntry(
                 page = key.page,
                 key = key,
@@ -112,9 +124,12 @@ internal fun List<SettingsSearchEntry>.matching(query: String): List<SettingsSea
 }
 
 /** The launcher's own search offers the same entries: page and setting, each opening Settings scrolled to it. */
-internal fun settingsLauncherSearchEntries(text: SettingsText): List<LauncherSearchSettingsEntry> =
+internal fun settingsLauncherSearchEntries(
+    text: SettingsText,
+    developer: DeveloperVisibility = DeveloperVisibility.HIDDEN,
+): List<LauncherSearchSettingsEntry> =
     listOf(settingsHomeSearchEntry(text)) +
-        settingsSearchIndex(text).map { entry ->
+        settingsSearchIndex(text, developer).map { entry ->
             LauncherSearchSettingsEntry(
                 id = LauncherSearchSettingsEntryId(entry.id),
                 title = entry.label,

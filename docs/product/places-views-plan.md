@@ -357,7 +357,7 @@ An investigation aid for "the swipe-up-to-home gesture stops reaching the launch
 mode is toggled" (no confirmed cause). The manifest declares on the Home activity `android:clearTaskOnLaunch`,
 `android:stateNotNeeded` and `android:resumeWhilePausing`, as AOSP's Launcher3 does; the LAUNCHER intent filter is
 unchanged. The first process start after the version code or the last-update time changes records one entry
-(`AfterUpdateLog`, kept to the last ten, newest first; see Settings > About > Diagnostics > After-update starts). The work
+(`AfterUpdateLog`, kept to the last ten, newest first; see Settings > About > After-update starts). The work
 runs on its own thread, adds no receiver, background start or permission, and a failure there never reaches the launcher.
 Without a stored earlier version (this build's first start) an update is recorded with the old version unknown; a fresh
 install records nothing. The five-minute window for Home intents is wall-clock time since the start.
@@ -365,7 +365,7 @@ install records nothing. The five-minute window for Home intents is wall-clock t
 ## Home drag
 
 The rules are in `gestures.md`, "Dragging on Home"; the rule is `HomeDragPush` (`:core:domain`) and its numbers
-`HomeDragTuning`, set in Settings > About > Diagnostics > Drag tuning.
+`HomeDragTuning`, set in Settings > About > Developer options > Drag tuning.
 
 | Number | Default | Range |
 | --- | --- | --- |

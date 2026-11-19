@@ -127,6 +127,8 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         LauncherShellAction.DismissEmptyHomeHint,
         is LauncherShellAction.SetDragTuning,
         is LauncherShellAction.SetPairRecipe,
+        LauncherShellAction.RevealDeveloperOptions,
+        is LauncherShellAction.SetDeveloperOptions,
         is LauncherShellAction.SelectPageScroll,
         is LauncherShellAction.SelectPageIndicator,
         is LauncherShellAction.SetQuickScroll,
