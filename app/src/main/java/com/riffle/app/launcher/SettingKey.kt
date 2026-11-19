@@ -119,6 +119,11 @@ enum class SettingKey(
         R.string.setting_feature_dock_live_apps,
         R.string.setting_feature_dock_live_apps_keywords,
     ),
+    FEATURE_DOCK_STREAM_HANDLE(
+        SettingsPage.DOCK,
+        R.string.setting_feature_dock_stream_handle,
+        R.string.setting_feature_dock_stream_handle_keywords,
+    ),
     DOCK_LIVE_APPS(SettingsPage.DOCK, R.string.setting_dock_live_apps, R.string.setting_dock_live_apps_keywords),
     FLOATING_ENABLED(
         SettingsPage.FLOATING_DOCK,
@@ -187,6 +192,11 @@ enum class SettingKey(
         SettingsPage.STREAM,
         R.string.setting_feature_stream,
         R.string.setting_feature_stream_keywords,
+    ),
+    FEATURE_STREAM_VIEW_BUTTON(
+        SettingsPage.STREAM,
+        R.string.setting_feature_stream_view_button,
+        R.string.setting_feature_stream_view_button_keywords,
     ),
     STREAM_SECTION_NOW(
         SettingsPage.STREAM,

@@ -50,6 +50,8 @@ class LauncherSearchProvider {
             .sortedWith(
                 compareBy<LauncherSearchHit> { hit -> hit.rank }
                     .thenBy { hit -> hit.result.type.sortOrder }
+                    // A featured setting (the way into Settings itself) leads the settings that match as well as it.
+                    .thenBy { hit -> if ((hit.result as? LauncherSearchResult.Setting)?.entry?.featured == true) 0 else 1 }
                     .thenBy { hit -> hit.result.title.lowercase() }
                     .thenBy { hit -> hit.sourceIndex },
             )
@@ -118,6 +120,8 @@ data class LauncherSearchSettingsEntry(
     val subtitle: String,
     val section: String,
     val searchAliases: List<String> = emptyList(),
+    /** Leads the settings that match as well as it does (the entry for Settings itself). */
+    val featured: Boolean = false,
 )
 
 @JvmInline

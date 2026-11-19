@@ -294,6 +294,18 @@ class PagedLibraryTest {
     }
 
     @Test
+    fun settingsIsACustomActionOfThePagesToo() {
+        show()
+
+        val custom =
+            composeRule.onNodeWithTag(LIBRARY_PAGED_TEST_TAG).fetchSemanticsNode()
+                .config[SemanticsActions.CustomActions]
+        composeRule.runOnUiThread { custom.single { it.label == "Riffle settings" }.action() }
+
+        assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenSettings), actions)
+    }
+
+    @Test
     fun pullingTowardTheDocksEdgeOnThePagesClosesTheLibrary() {
         show()
 

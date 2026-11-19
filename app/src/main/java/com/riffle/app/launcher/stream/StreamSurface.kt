@@ -341,6 +341,13 @@ internal fun StreamSurface(
                             quickByPage = quickByPage,
                         )
                     }
+                    // The page's options as a visible control, for whoever has not found the long-press.
+                    if (LocalStreamViewButton.current && pageMenuItems.isNotEmpty() && !cardOpen) {
+                        StreamViewButton(
+                            onClick = { centre -> pageMenu.show(centre) },
+                            modifier = Modifier.align(Alignment.TopEnd),
+                        )
+                    }
                 }
                 // The open card, over the pages and over the whole area, so no page or column clips it.
                 OpenCardLayerHost(openCards, pageBounds)

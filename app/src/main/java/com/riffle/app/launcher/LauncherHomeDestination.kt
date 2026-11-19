@@ -43,6 +43,7 @@ import com.riffle.app.launcher.library.LibraryPagedView
 import com.riffle.app.launcher.library.LibrarySheet
 import com.riffle.app.launcher.library.libraryState
 import com.riffle.app.launcher.search.DockSearchSurface
+import com.riffle.app.launcher.stream.LocalStreamViewButton
 import com.riffle.app.launcher.stream.StreamDestination
 import com.riffle.app.launcher.stream.StreamDockLink
 import com.riffle.app.launcher.stream.StreamHost
@@ -69,6 +70,7 @@ import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.EffectiveFeatures
 import com.riffle.core.domain.launcher.settings.HomeMode
+import com.riffle.core.domain.launcher.settings.LauncherFeature
 import com.riffle.core.domain.launcher.settings.LayoutPosture
 import com.riffle.core.domain.launcher.settings.PostureLayoutSettings
 import com.riffle.core.domain.launcher.settings.effectiveFeatures
@@ -345,6 +347,7 @@ private fun HomeDestinationContent(
         LocalLauncherHaptics provides tickHaptics,
         LocalDockMotionTuning provides dockTuning,
         LocalHomeEntrance provides entrance,
+        LocalStreamViewButton provides features.streamViewButton,
     ) {
         ProvideLiquidGlassBackdrop { backdropCapture ->
             Box(
@@ -484,6 +487,37 @@ private fun HomeDestinationContent(
                         onAction = onAction,
                     )
                 }
+                // The Stream handle: a small visible way in, on while Home is in front (Settings > Dock turns it off).
+                val handleClearance =
+                    if (plan.dockEdge == DockPosition.BOTTOM) {
+                        val layout = state.postureLayout()
+                        HomeHandleLayout.reservedDp(
+                            DockPosition.BOTTOM,
+                            layout.pageScroll.handleAxis,
+                            state.homeLayout.pages.size,
+                            layout.showsDots && HomeHandle.showsDots(state.homeLayout.pages.size),
+                        ).dp
+                    } else {
+                        0.dp
+                    }
+                DockStreamHandleLayer(
+                    enabled = features.dockStreamHandle && stream != null && !shownStream && !showLibrary,
+                    busy = {
+                        motion.running || choice.choosing || choice.scrubbing || dockPull.running ||
+                            dockHost.isHomeDragInProgress.value || dockHost.isWidgetDragInProgress.value
+                    },
+                    dockBounds = { dockHost.bounds.value },
+                    pull = plan.dockEdge.pullDirection,
+                    libraryAvailable = features.library,
+                    onOpenStream = {
+                        openStream(stream, StreamSwitch(motion), null, shownStream, state.reducedMotion())
+                    },
+                    onOpenLibrary = { onAction(LauncherShellAction.OpenAppDrawer) },
+                    onHide = {
+                        onAction(LauncherShellAction.SetFeatureEnabled(LauncherFeature.DOCK_STREAM_HANDLE, false))
+                    },
+                    clearance = handleClearance,
+                )
                 // The one-time Dock hints: at most one at a time, each retired once its gesture is performed.
                 DockHintLayer(
                     hints = hints,
@@ -510,18 +544,7 @@ private fun HomeDestinationContent(
                     dockBounds = dockHost.bounds.value,
                     pull = plan.dockEdge.pullDirection,
                     // The Home handle stands just above a bottom Dock; the hint sits above the handle.
-                    clearance =
-                        if (plan.dockEdge == DockPosition.BOTTOM) {
-                            val layout = state.postureLayout()
-                            HomeHandleLayout.reservedDp(
-                                DockPosition.BOTTOM,
-                                layout.pageScroll.handleAxis,
-                                state.homeLayout.pages.size,
-                                layout.showsDots && HomeHandle.showsDots(state.homeLayout.pages.size),
-                            ).dp
-                        } else {
-                            0.dp
-                        },
+                    clearance = handleClearance,
                 )
                 DockHintEvents(
                     hints = hints,

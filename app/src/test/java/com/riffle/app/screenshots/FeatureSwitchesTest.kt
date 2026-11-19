@@ -4,14 +4,24 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertWidthIsAtLeast
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
+import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.DOCK_HINT_TEST_TAG
+import com.riffle.app.launcher.DOCK_STREAM_HANDLE_TEST_TAG
 import com.riffle.app.launcher.HintsHost
 import com.riffle.app.launcher.HOME_DOCK_PULL_TEST_TAG
 import com.riffle.app.launcher.HomeDestination
@@ -25,6 +35,7 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.settings.FeatureSettings
 import com.riffle.core.domain.launcher.settings.HomeGesture
+import com.riffle.core.domain.launcher.settings.LauncherFeature
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -181,6 +192,75 @@ class FeatureSwitchesTest {
         composeRule.waitForIdle()
 
         assertTrue("an unbound swipe sends nothing: $actions", LauncherShellAction.OpenStream !in actions)
+    }
+
+    // The Stream handle: a visible way in
+
+    @Test
+    fun theStreamHandleStandsBesideTheDockAndATapOpensTheStream() {
+        show()
+
+        composeRule.onNodeWithTag(DOCK_STREAM_HANDLE_TEST_TAG).assertIsDisplayed()
+            .assertHeightIsAtLeast(48.dp).assertWidthIsAtLeast(48.dp)
+        composeRule.onNodeWithTag(DOCK_STREAM_HANDLE_TEST_TAG).performClick()
+        composeRule.waitForIdle()
+
+        assertTrue("a tap on the handle opens the Stream: $actions", LauncherShellAction.OpenStream in actions)
+    }
+
+    @Test
+    fun theStreamHandleOffersTheLibraryAndHidingItOnALongPress() {
+        show()
+
+        composeRule.onNodeWithTag(DOCK_STREAM_HANDLE_TEST_TAG).performTouchInput { longClick() }
+        composeRule.onNodeWithText("Open Library").assertIsDisplayed()
+        composeRule.onNodeWithText("Hide this handle").performClick()
+
+        assertEquals(
+            listOf<LauncherShellAction>(
+                LauncherShellAction.SetFeatureEnabled(LauncherFeature.DOCK_STREAM_HANDLE, enabled = false),
+            ),
+            actions,
+        )
+    }
+
+    @Test
+    fun theStreamHandleIsReachableWithoutTouchAsAButtonWithCustomActions() {
+        show()
+
+        val node = composeRule.onNodeWithTag(DOCK_STREAM_HANDLE_TEST_TAG).fetchSemanticsNode()
+        assertEquals("Open the Stream", node.config[SemanticsProperties.ContentDescription].single())
+        assertEquals(Role.Button, node.config[SemanticsProperties.Role])
+        val custom = node.config[SemanticsActions.CustomActions].map { it.label }
+        assertEquals(listOf("Open Library", "Hide this handle"), custom)
+    }
+
+    @Test
+    fun theStreamHandleGoesWithItsOwnSwitchTheStreamSwitchAndSimpleMode() {
+        show(FeatureSettings(dockStreamHandle = false))
+        composeRule.onNodeWithTag(DOCK_STREAM_HANDLE_TEST_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun theStreamHandleIsNotDrawnWithoutAStream() {
+        show(FeatureSettings(stream = false))
+        composeRule.onNodeWithTag(DOCK_STREAM_HANDLE_TEST_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun theStreamHandleIsNotDrawnInSimpleMode() {
+        show(FeatureSettings(simpleMode = true))
+        composeRule.onNodeWithTag(DOCK_STREAM_HANDLE_TEST_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun theStreamHandleLeavesOutTheLibraryOptionWhileTheLibraryIsOff() {
+        show(FeatureSettings(library = false))
+
+        val custom =
+            composeRule.onNodeWithTag(DOCK_STREAM_HANDLE_TEST_TAG).fetchSemanticsNode()
+                .config[SemanticsActions.CustomActions].map { it.label }
+        assertEquals(listOf("Hide this handle"), custom)
     }
 
     // The Library

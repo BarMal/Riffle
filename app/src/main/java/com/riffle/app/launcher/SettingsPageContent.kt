@@ -228,6 +228,7 @@ private fun SettingsDockPageContent(
     }
     SettingsSection(title = stringResource(R.string.settings_section_dynamic_side)) {
         SettingsFeatureSwitchRow(LauncherFeature.DOCK_LIVE_APPS, state.settings.features, onAction)
+        SettingsFeatureSwitchRow(LauncherFeature.DOCK_STREAM_HANDLE, state.settings.features, onAction)
         DockDynamicSideSetting(
             dock = state.homeLayout.dock,
             notificationAccessStatus = state.notificationAccessStatus,

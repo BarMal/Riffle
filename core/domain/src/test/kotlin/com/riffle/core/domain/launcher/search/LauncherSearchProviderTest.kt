@@ -133,6 +133,33 @@ class LauncherSearchProviderTest {
             visibility = visibility,
         )
 
+    @Test
+    fun aFeaturedSettingLeadsTheOnesThatMatchAsWellAsItDoes() {
+        val settings =
+            listOf(
+                settingsEntry(id = "dock", title = "Dock settings"),
+                settingsEntry(id = "alerts", title = "Alert settings"),
+                settingsEntry(id = "main", title = "Riffle settings").copy(featured = true),
+            )
+
+        val results = provider.search(query = "settings", apps = emptyList(), settingsEntries = settings)
+
+        assertEquals(listOf("Riffle settings", "Alert settings", "Dock settings"), results.map { it.title })
+    }
+
+    @Test
+    fun aFeaturedSettingDoesNotJumpAheadOfABetterMatch() {
+        val settings =
+            listOf(
+                settingsEntry(id = "main", title = "Riffle settings", aliases = listOf("dock")).copy(featured = true),
+                settingsEntry(id = "dock", title = "Dock"),
+            )
+
+        val results = provider.search(query = "dock", apps = emptyList(), settingsEntries = settings)
+
+        assertEquals(listOf("Dock", "Riffle settings"), results.map { it.title })
+    }
+
     private fun settingsEntry(
         id: String,
         title: String,

@@ -283,7 +283,8 @@ class SettingsPagesTest {
     fun launcherSearchOffersEverySettingAndPageAndEachOpensItsTarget() {
         val entries = settingsLauncherSearchEntries(text)
 
-        assertEquals(SettingsPage.entries.size - 1 + SettingKey.entries.size, entries.size)
+        // Every page below the main page, every setting, and "Riffle settings" (the main page itself).
+        assertEquals(SettingsPage.entries.size - 1 + SettingKey.entries.size + 1, entries.size)
         entries.forEach { entry ->
             val target = requireNotNull(entry.id.settingsTarget()) { "${entry.id.value} resolves" }
             assertEquals(entry.id.value.substringBefore('#'), target.page.name.lowercase())
@@ -296,6 +297,19 @@ class SettingsPagesTest {
                 it.id.value == "floating_dock"
             }.id.settingsTarget(),
         )
+    }
+
+    @Test
+    fun searchingForSettingsOffersRiffleSettingsFirstAndItOpensTheMainPage() {
+        val provider = LauncherSearchProvider()
+        val entries = settingsLauncherSearchEntries(text)
+
+        listOf("settings", "riffle", "preferences").forEach { query ->
+            val first = provider.search(query = query, apps = emptyList(), settingsEntries = entries).first()
+            assertEquals(query, "Riffle settings", first.title)
+        }
+        val home = entries.first { it.featured }
+        assertEquals(SettingsTarget(SettingsPage.MAIN), home.id.settingsTarget())
     }
 
     @Test

@@ -264,6 +264,8 @@ private fun encodeFeatures(settings: FeatureSettings): JSONObject =
         .put("dockLiveApps", settings.dockLiveApps)
         .put("library", settings.library)
         .put("simpleMode", settings.simpleMode)
+        .put("dockStreamHandle", settings.dockStreamHandle)
+        .put("streamViewButton", settings.streamViewButton)
 
 // Absent (settings saved before the switches) or not a boolean: the default, today's behaviour.
 private fun JSONObject.toFeatures(defaults: FeatureSettings): FeatureSettings =
@@ -272,6 +274,8 @@ private fun JSONObject.toFeatures(defaults: FeatureSettings): FeatureSettings =
         dockLiveApps = (opt("dockLiveApps") as? Boolean) ?: defaults.dockLiveApps,
         library = (opt("library") as? Boolean) ?: defaults.library,
         simpleMode = (opt("simpleMode") as? Boolean) ?: defaults.simpleMode,
+        dockStreamHandle = (opt("dockStreamHandle") as? Boolean) ?: defaults.dockStreamHandle,
+        streamViewButton = (opt("streamViewButton") as? Boolean) ?: defaults.streamViewButton,
     )
 
 private fun encodeDragTuning(tuning: HomeDragTuning): JSONObject =

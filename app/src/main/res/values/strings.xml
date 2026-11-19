@@ -249,6 +249,9 @@
     <string name="dock_live_app_open_action">Open %1$s</string>
     <string name="dock_press_hint">Press the Dock down to see what\'s live</string>
     <string name="dock_press_hint_dismiss">Got it</string>
+    <string name="dock_stream_handle_open">Open the Stream</string>
+    <string name="dock_stream_handle_options">Show Stream handle options</string>
+    <string name="dock_stream_handle_hide">Hide this handle</string>
     <string name="dock_menu_hint">Touch and hold an app on the Dock for its menu</string>
     <string name="dock_pull_hint">Pull the Dock up for the Library</string>
     <string name="dock_scrub_hint">Hold the Dock, then slide along it to change stack</string>
@@ -626,6 +629,10 @@
     <string name="setting_dock_background_keywords">dock background opacity</string>
     <string name="setting_dock_grid_spacing">Spacing to the grid</string>
     <string name="setting_dock_grid_spacing_keywords">dock gap spacing grid controls</string>
+    <string name="setting_feature_dock_stream_handle">Show Stream handle</string>
+    <string name="setting_feature_dock_stream_handle_keywords">dock stream handle chevron grab open tap button visible</string>
+    <string name="setting_feature_stream_view_button">Show view button</string>
+    <string name="setting_feature_stream_view_button_keywords">stream show as view button list stack options visible</string>
     <string name="setting_feature_dock_live_apps">Show live apps</string>
     <string name="setting_feature_dock_live_apps_keywords">dock live apps now playing now tile media dynamic side switch on off</string>
     <string name="setting_dock_live_apps">Number of live apps</string>
@@ -849,6 +856,8 @@
     <string name="settings_add_new_apps_subtitle">A newly installed app is placed after the last item on Home. Off keeps it in the Library only.</string>
     <string name="settings_simple_mode_subtitle">Home shows every app, A to Z, and cannot be rearranged; the Stream, live apps and the Library sheet are off. Your arranged Home comes back when you turn it off.</string>
     <string name="settings_feature_stream_subtitle">The actions centre: press the Dock down to see what is live. Off removes the press, the live pages and their shortcuts.</string>
+    <string name="settings_feature_stream_handle_subtitle">A small handle beside the Dock on Home. Tap it to open the Stream; touch and hold it for the Library.</string>
+    <string name="settings_feature_stream_view_button_subtitle">A small button on the Stream that opens the same menu as touching and holding a Dock tile: Show as, Move, Hide.</string>
     <string name="settings_feature_live_apps_subtitle">Apps with something new, and a Now tile while something plays, on the Dock. Off leaves the Dock with your pinned apps.</string>
     <string name="settings_feature_library_subtitle">Every app on pages, reached by pulling away from the Dock. Off removes the pull, the Dock action and the gesture. Search stays.</string>
     <string name="settings_feature_off_in_simple_mode">Off in Simple mode</string>
@@ -1003,6 +1012,11 @@
     <string name="settings_layout_apps_behind_both_subtitle">Behind and around: Home stays and fades out under the cards.</string>
     <string name="settings_stream_apps_behind_cards_note">The same setting as in Layout: one value for each way you hold the device.</string>
     <string name="settings_layout_quick_scroll_off_subtitle">The page dots are off, so there is nothing to drag.</string>
+
+    <!-- The way into Settings itself: the Library header, the Library menu and the launcher search -->
+    <string name="settings_open_title">Riffle settings</string>
+    <string name="settings_open_subtitle">Open settings</string>
+    <string name="settings_open_keywords">preferences options configure setup gear riffle</string>
 
     <!-- App long-press menu: the app's own shortcuts lead it -->
     <string name="menu_more_shortcuts">More</string>

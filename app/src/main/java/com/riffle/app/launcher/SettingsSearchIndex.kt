@@ -5,6 +5,7 @@ import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.search.LauncherSearchSettingsEntry
 import com.riffle.core.domain.launcher.search.LauncherSearchSettingsEntryId
 
@@ -112,7 +113,7 @@ internal fun List<SettingsSearchEntry>.matching(query: String): List<SettingsSea
 
 /** The launcher's own search offers the same entries: page and setting, each opening Settings scrolled to it. */
 internal fun settingsLauncherSearchEntries(text: SettingsText): List<LauncherSearchSettingsEntry> =
-    settingsSearchIndex(text).map { entry ->
+    listOf(settingsHomeSearchEntry(text)) + settingsSearchIndex(text).map { entry ->
         LauncherSearchSettingsEntry(
             id = LauncherSearchSettingsEntryId(entry.id),
             title = entry.label,
@@ -121,6 +122,20 @@ internal fun settingsLauncherSearchEntries(text: SettingsText): List<LauncherSea
             searchAliases = entry.keywords.split(' ').filter(String::isNotBlank),
         )
     }
+
+/**
+ * "Riffle settings": the way into Settings itself from the launcher's search and the Library, for someone who has not
+ * found the gesture or the Home menu. It opens the main page and leads the settings that match as well as it does.
+ */
+internal fun settingsHomeSearchEntry(text: SettingsText): LauncherSearchSettingsEntry =
+    LauncherSearchSettingsEntry(
+        id = LauncherSearchSettingsEntryId(SettingsPage.MAIN.name.lowercase()),
+        title = text.text(R.string.settings_open_title),
+        subtitle = text.text(R.string.settings_open_subtitle),
+        section = text.text(SettingsPage.MAIN.titleRes),
+        searchAliases = text.text(R.string.settings_open_keywords).split(' ').filter(String::isNotBlank),
+        featured = true,
+    )
 
 /** Where a launcher search result opens Settings: a page, and the setting to scroll to when it is one. */
 internal data class SettingsTarget(
