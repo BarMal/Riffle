@@ -78,7 +78,7 @@ class StreamPagesTest {
                         StreamGroup("f2", "Two", listOf(article("2", feed = "f2"))),
                     ),
                 ),
-            StreamSection.PAIRS to ready("layouts", task("l")),
+            StreamSection.PAIRS to ready("pairs", task("l")),
         )
 
     @Test
@@ -94,7 +94,7 @@ class StreamPagesTest {
                 "today",
                 "feeds/f1",
                 "feeds/f2",
-                "layouts",
+                "pairs",
             ),
             keys,
         )
@@ -271,16 +271,16 @@ class StreamPagesTest {
     }
 
     @Test
-    fun theLayoutsPageIsOnePageAndLastByDefault() {
+    fun thePairsPageIsOnePageAndLastByDefault() {
         val pages = StreamPagePlanner.plan(StreamLayout.DEFAULT, everything)
 
-        assertEquals("layouts", pages.last().key)
+        assertEquals("pairs", pages.last().key)
         assertEquals(1, pages.count { it.section == StreamSection.PAIRS })
         assertEquals(StreamSection.layoutSections.last(), StreamSection.PAIRS)
     }
 
     @Test
-    fun theLayoutsPageIsHiddenWhereASplitIsNotPossibleAndComesBackWhenItIs() {
+    fun thePairsPageIsHiddenWhereASplitIsNotPossibleAndComesBackWhenItIs() {
         val folded = StreamPagePlanner.plan(StreamLayout.DEFAULT, everything, splitAvailable = false)
 
         assertTrue(folded.none { it.section == StreamSection.PAIRS })

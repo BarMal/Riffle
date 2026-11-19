@@ -71,7 +71,7 @@ fun StreamPage.ref(): StreamPageRef = StreamPageRef(key = key, section = section
  * - **Notifications**: one page per app that has notifications, newest app first (the order the section delivers).
  * - **Recents**: one page. **Today** (the next event, the alarm, "To do today", later events and tomorrow): one page.
  * - **Feeds**: one page per feed with unread items, the feed with the newest article first.
- * - **Layouts**: one page (the layouts, then the "New layout" card); none where a split is not possible.
+ * - **Pairs**: one page (the pairs, then the "New pair" card); none where a split is not possible.
  * - A section with nothing to show (empty, loading, no access, not connected, unavailable, off) is one page holding
  *   that state, so the Stream is never an empty pager and every state keeps its action.
  *
@@ -81,8 +81,8 @@ fun StreamPage.ref(): StreamPageRef = StreamPageRef(key = key, section = section
  */
 object StreamPagePlanner {
     /**
-     * [splitAvailable] says whether two apps can be opened side by side now (`PairAvailability` and the "Show layouts"
-     * setting): without it the Layouts section contributes no page, and so no Dock tile. The stored layouts are kept.
+     * [splitAvailable] says whether two apps can be opened side by side now (`PairAvailability` and the "Show pairs"
+     * setting): without it the Pairs section contributes no page, and so no Dock tile. The stored pairs are kept.
      */
     fun plan(
         layout: StreamLayout,

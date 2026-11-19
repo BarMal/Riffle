@@ -266,6 +266,8 @@ class StreamBehaviorTest {
                 StreamPageKeys.TODAY,
                 StreamPageKeys.FEED_A,
                 StreamPageKeys.FEED_B,
+                // The Pairs page is the last page by default (assertion changed on purpose: the new section).
+                "pairs",
             ),
             dock.pages.map { it.key },
         )
@@ -372,7 +374,7 @@ class StreamBehaviorTest {
         composeRule.onNodeWithText("Invoice 2026-114").assertIsDisplayed()
         // The new app is the Dock's first live app, so its page leads the pager too.
         assertEquals("notifications/maps:personal", dock.pages.first().key)
-        assertEquals(8, dock.pages.size)
+        assertEquals(9, dock.pages.size)
     }
 
     @Test

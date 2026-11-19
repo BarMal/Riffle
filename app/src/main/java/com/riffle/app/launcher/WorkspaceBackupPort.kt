@@ -27,7 +27,7 @@ interface WorkspaceBackupPort {
     /** How the Stream is arranged (P4); null when nothing was ever stored, so the section is omitted. */
     fun currentStreamLayouts(): StreamLayouts? = null
 
-    /** The Layouts stack, or null where there is none. */
+    /** The Pairs stack, or null where there is none. */
     fun currentPairs(): List<AppPair>? = null
 
     /** The calendar feed list (links included, never events); null when none is stored, so the section is omitted. */

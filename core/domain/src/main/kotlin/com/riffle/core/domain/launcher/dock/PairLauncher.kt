@@ -15,7 +15,7 @@ data class PairLaunch(
 )
 
 /**
- * Opens two apps side by side (a layout of the Layouts stack, ADR 0003, Amendment 7). The platform implementation owns
+ * Opens two apps side by side (a pair of the Pairs stack, ADR 0003, Amendment 7). The platform implementation owns
  * the recipe (flags, delay) and the scheduling; the Stream only asks.
  */
 interface PairLauncher {

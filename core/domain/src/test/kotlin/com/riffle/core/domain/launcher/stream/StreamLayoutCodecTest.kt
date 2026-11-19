@@ -213,7 +213,7 @@ class StreamLayoutCodecTest {
                 StreamSection.RECENTS,
                 StreamSection.TODAY,
                 StreamSection.FEEDS,
-                // A layout stored before the Layouts stack gets it appended, on.
+                // A Stream layout stored before the Pairs stack gets it appended, on.
                 StreamSection.PAIRS,
             ),
             layout.sections.map { it.section },
