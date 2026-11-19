@@ -40,10 +40,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
@@ -332,6 +334,7 @@ private fun FolderTitle(
 
 @Composable
 fun HomeFolderEditControls(onAction: (LauncherShellAction) -> Unit) {
+    val defaultLabel = stringResource(R.string.home_folder_default_name)
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
@@ -341,7 +344,7 @@ fun HomeFolderEditControls(onAction: (LauncherShellAction) -> Unit) {
             onClick = {
                 onAction(
                     LauncherShellAction.CreateEmptyHomeFolder(
-                        label = DEFAULT_FOLDER_LABEL,
+                        label = defaultLabel,
                     ),
                 )
             },
@@ -511,7 +514,6 @@ private fun FolderAddAppRow(
 }
 
 private const val FOLDER_SURFACE_PADDING_DP = 20
-private const val DEFAULT_FOLDER_LABEL = "Folder"
 
 internal fun folderShortcutContextMenuItems(
     folder: FolderItem,

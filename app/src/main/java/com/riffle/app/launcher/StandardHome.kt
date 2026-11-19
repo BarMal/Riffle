@@ -305,7 +305,11 @@ internal fun StandardHome(
             },
             onBackgroundClick = dockHostState::dismissShelf,
             onAction = { action ->
-                if (action is LauncherShellAction.MoveHomeShortcutToCell) foldersBeforeDrop.value = folderIds
+                if (action is LauncherShellAction.MoveHomeShortcutToCell ||
+                    (action is LauncherShellAction.DropHomeItem && action.dropOnItemId != null)
+                ) {
+                    foldersBeforeDrop.value = folderIds
+                }
                 onAction(action)
             },
         )
@@ -1318,8 +1322,8 @@ internal fun homeDropTargetAt(
 /**
  * This drag with its [HomeDragPlan] for the page it is over: the pointer in cells of that page's grid (whose bounds in
  * the root are [gridBounds]), through [HomeDragPush]. Unplanned while the pointer, the bounds or the page are unknown,
- * or over the Dock. Dropping on top is only offered on the item's own page: another page takes the item by the ring
- * alone (the existing placement rules reject a collision).
+ * or over the Dock. Dropping on top works on any page: on another page the item first joins it (the first free cell)
+ * and the folder is made there.
  */
 
 internal fun HomeDragSession.planned(
@@ -1333,7 +1337,7 @@ internal fun HomeDragSession.planned(
     }
     val x = (pointerInRoot.x - gridBounds.left) / (gridBounds.width / page.grid.columns)
     val y = (pointerInRoot.y - gridBounds.top) / (gridBounds.height / page.grid.rows)
-    val numbers = tuning.coerced().let { if (targetPageId == originPageId) it else it.copy(deadZoneRadius = 0f) }
+    val numbers = tuning.coerced()
     val reserved = if (targetPageId == originPageId) setOf(originCell) else emptySet()
     val plan = HomeDragPush.plan(page, item, x, y, numbers, plan?.pushed?.keys.orEmpty(), reserved)
     return copy(plan = plan, projectedCell = plan.landing ?: originCell)

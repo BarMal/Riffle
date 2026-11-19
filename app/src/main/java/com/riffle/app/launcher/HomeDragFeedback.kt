@@ -38,10 +38,12 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.gestures.HoldMenuRule
 import com.riffle.core.domain.launcher.home.AppShortcutItem
@@ -266,6 +268,7 @@ internal fun Modifier.homeItemDrag(
 
             fun toRoot(local: Offset): Offset = coordinates.value?.takeIf { it.isAttached }?.localToRoot(local) ?: local
             val slop = LocalViewConfiguration.current.touchSlop
+            val folderLabel = stringResource(R.string.home_folder_default_name)
             this
                 .onGloballyPositioned { coordinates.value = it }
                 .pointerInput(item.id) {
@@ -315,7 +318,7 @@ internal fun Modifier.homeItemDrag(
                             val session = latestActions.currentDragSession()
                             latestActions.onDragSessionChanged(null)
                             if (moved) {
-                                homeDropAction(latestItem, latestState, session, dragX, dragY)
+                                homeDropAction(latestItem, latestState, session, dragX, dragY, folderLabel)
                                     ?.let(latestActions.onAction)
                             }
                         },
@@ -336,6 +339,7 @@ internal fun homeDropAction(
     session: HomeDragSession?,
     dragX: Float,
     dragY: Float,
+    folderLabel: String? = null,
 ): LauncherShellAction? {
     val plan = session?.plan
     return when {
@@ -345,7 +349,18 @@ internal fun homeDropAction(
         session == null || plan == null ->
             homeItemDragDropAction(item, dragState, dragX, dragY, session?.targetPageId ?: dragState.pageId)
         plan.landing == null -> null
-        plan.dropOn != null -> LauncherShellAction.MoveHomeShortcutToCell(item.id, plan.landing!!)
+        plan.dropOn != null && session.targetPageId == dragState.pageId ->
+            LauncherShellAction.MoveHomeShortcutToCell(item.id, plan.landing!!, folderLabel)
+        // On top of an item of another page: the item joins that page and the folder is made there.
+        plan.dropOn != null ->
+            LauncherShellAction.DropHomeItem(
+                itemId = item.id,
+                sourcePageId = dragState.pageId,
+                targetPageId = session.targetPageId,
+                cell = plan.landing!!,
+                dropOnItemId = plan.dropOn,
+                folderLabel = folderLabel,
+            )
         plan.landing == dragState.cell && plan.pushed.isEmpty() && session.targetPageId == dragState.pageId -> null
         else ->
             LauncherShellAction.DropHomeItem(

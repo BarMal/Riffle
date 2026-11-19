@@ -222,6 +222,8 @@
     <string name="stream_dock_open_action">Show live pages</string>
     <string name="stream_dock_close_action">Back to Home</string>
     <string name="dock_open_library_action">Open Library</string>
+    <!-- The name a folder starts with when nothing better suggests one (a drop, or the Create folder button). -->
+    <string name="home_folder_default_name">Folder</string>
     <string name="dock_search_action">Search</string>
     <string name="home_handle_search">Search</string>
     <string name="home_handle_previous_page">Previous page</string>

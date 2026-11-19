@@ -118,6 +118,30 @@ class HomeShortcutEngine(
                 },
             )
 
+    /**
+     * Moves a placed Home item to the first free cell (row by row) of another editable page. Used by a drop on top of
+     * an item of that page (a folder made across pages): the item joins the page first, and the same-page rule that
+     * makes the folder then runs there. Rejected when the page has no free cell for it.
+     */
+    fun moveItemToFirstFreeCell(
+        layout: HomeLayout,
+        itemId: LauncherItemId,
+        sourcePageId: LauncherPageId,
+        targetPageId: LauncherPageId,
+    ): HomeShortcutResult {
+        val grid =
+            layout.pages.firstOrNull { it.id == targetPageId }?.grid
+                ?: return HomeShortcutResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
+        var last: HomeShortcutResult = HomeShortcutResult.Rejected(PlacementRejectionReason.NO_AVAILABLE_CELL)
+        for (row in 0 until grid.rows) {
+            for (column in 0 until grid.columns) {
+                last = moveItemToPage(layout, itemId, sourcePageId, targetPageId, GridCell(column, row))
+                if (last is HomeShortcutResult.Updated) return last
+            }
+        }
+        return last
+    }
+
     /** Moves any placed Home item between editable pages without relying on transient UI state. */
     @Suppress("ReturnCount")
     fun moveItemToPage(

@@ -129,8 +129,7 @@ class HomeDragBehaviorTest {
         assertTrue(failures.joinToString("\n"), failures.isEmpty())
     }
 
-    @Test
-    fun anItemHeldAtTheEdgeTurnsThePageAndDropsOnTheNextOne() {
+    private fun withSecondPage() {
         val layout = shell.homeLayout
         val second =
             com.riffle.core.domain.launcher.home.LauncherPage(
@@ -153,6 +152,45 @@ class HomeDragBehaviorTest {
         shell = shell.copy(homeLayout = twoPages, homeLayoutSet = shell.homeLayoutSet.withActiveLayout(twoPages))
         show()
         assertTrue("needs two pages: ${shell.homeLayout.pages.size}", shell.homeLayout.pages.size >= 2)
+    }
+
+    @Test
+    fun aHeldDropOnAnItemOfThePageTurnedToMakesTheFolderThereWithTheDeadZone() {
+        withSecondPage()
+        val name = labels().first()
+        val rootRight = composeRule.onRoot().fetchSemanticsNode().boundsInRoot.right
+        val start = composeRule.onNodeWithText(name).fetchSemanticsNode().boundsInRoot.center
+        composeRule.onRoot().performTouchInput {
+            down(start)
+            advanceEventTime(700)
+            moveBy(Offset(10f, 0f))
+            moveTo(Offset(rootRight - 6f, start.y))
+            moveBy(Offset(1f, 0f))
+        }
+        composeRule.mainClock.advanceTimeBy(1_500)
+        composeRule.waitForIdle()
+        val screen = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+        // The first cell (column 0, row 0) of the page now on screen: the centre of its icon cell is the dead zone.
+        val target =
+            composeRule.onAllNodesWithTag(HOME_GRID_CELL_TEST_TAG).fetchSemanticsNodes()
+                .map { it.boundsInRoot }
+                .first { it.center.x in screen.left..screen.right && it.center.y in screen.top..screen.bottom }
+                .center
+        composeRule.onRoot().performTouchInput {
+            moveTo(target)
+            moveBy(Offset(1f, 0f))
+        }
+        composeRule.mainClock.advanceTimeBy(600)
+        composeRule.onRoot().performTouchInput { up() }
+        composeRule.waitForIdle()
+
+        val drop = actions.filterIsInstance<LauncherShellAction.DropHomeItem>().singleOrNull()
+        assertTrue(actions.toString(), drop != null && drop.dropOnItemId?.value == "second-app")
+    }
+
+    @Test
+    fun anItemHeldAtTheEdgeTurnsThePageAndDropsOnTheNextOne() {
+        withSecondPage()
         val first = shell.homeLayout.pages.first()
         val name = labels().first()
 

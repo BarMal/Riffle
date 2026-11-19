@@ -15,6 +15,7 @@ internal fun FolderEngine.createFolderFromDropOnSelectedPage(
     sourceItemId: LauncherItemId,
     targetCell: GridCell,
     installedApps: List<InstalledApp> = emptyList(),
+    fallbackLabel: String? = null,
 ): FolderEditResult? =
     layout.selectedPage
         .folderDropShortcutPair(sourceItemId = sourceItemId, targetCell = targetCell)
@@ -26,7 +27,7 @@ internal fun FolderEngine.createFolderFromDropOnSelectedPage(
                     FolderNaming.suggested(
                         installedApps.firstOrNull { it.identity == pair.target.appIdentity },
                         installedApps.firstOrNull { it.identity == pair.source.appIdentity },
-                        DROP_FOLDER_LABEL,
+                        fallbackLabel ?: FolderNaming.DEFAULT_LABEL,
                     ),
                 itemIds = listOf(pair.target.id, pair.source.id),
             )
@@ -53,5 +54,3 @@ private fun LauncherPage.appShortcut(itemId: LauncherItemId): AppShortcutItem? =
 
 private fun LauncherPage.appShortcutAt(cell: GridCell): AppShortcutItem? =
     items.firstOrNull { item -> item.placement?.cell == cell } as? AppShortcutItem
-
-private const val DROP_FOLDER_LABEL = "Folder"
