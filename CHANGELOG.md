@@ -9,6 +9,16 @@ has been run on a physical device except what the owner reported; see
 [`places-views-device-checklist.md`](docs/development/places-views-device-checklist.md), and export a backup before
 installing. Entries are in the order they were built; where a later one changes an earlier one, it says so.
 
+### Added
+
+- Widget stacks ([ADR 0003](docs/architecture/adr/0003-places-and-views.md), Amendment 14): up to ten widgets of one size
+  share one Home slot and are swiped through. Drop a widget on another of the same size (the folder hold, then "will
+  make a stack") or use "Add widget to stack" in its menu; swipe across the pager's axis (or the dots strip, always) to
+  change widget; "Edit stack" reorders, removes and moves a widget out to Home. Moving, resizing and removing act on the
+  whole stack, and removing one asks first. Glance widgets stack too. Stacks are stored with the layout, the pool and
+  the backup, and older data reads unchanged. No auto-rotation yet. Not run on a device: see `gestures.md`, "Widget
+  stacks".
+
 ### Changed
 
 - Release hygiene ([ADR 0003](docs/architecture/adr/0003-places-and-views.md), Amendment 13): the diagnostics pages (What

@@ -67,6 +67,10 @@ off ("Turn on") and unavailable. A redacted item shows "Hidden content"; media k
 - Edit mode covers the widget with the usual gesture layer (drag, resize handles, remove). Outside it a long press
   still drags or opens the usual menu, and the release of that long press never also presses the control under it.
 
+- A glance widget stacks like any other widget (`gestures.md`, "Widget stacks"): in a stack a swipe anywhere on it
+  switches the stack's widget (it never scrolls), the picker's "Add widget to stack" lists it when the stack's span fits
+  its kind's limits, and the stack's own menu and drag replace the widget's.
+
 ## Accessibility
 
 Each widget is one labelled group ("Now playing: Midnight City by M83") with a single list of custom actions for its

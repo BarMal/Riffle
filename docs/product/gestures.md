@@ -428,7 +428,10 @@ means no default binding, so nothing happens unless the user binds the gesture.
 | Card stack | 2-finger | – | Stack (first finger's drag wins; see limitations) |
 | Card stack | 3-finger | – | **Home claims** (unbound by default) |
 | Grid / workspace | 1-finger horizontal | Page pager (owns) | – |
-| Grid / workspace | 1-finger vertical | Home (up: unbound, down: Search, which opens the Library with its field focused) | – |
+| Widget stack, dots strip | 1-finger along the stack's axis (across the pager's) | **Stack switch** (owns): one widget on; a fling moves one at most | the Next widget and Previous widget actions |
+| Widget stack, body, Riffle's own widget shown | 1-finger along the stack's axis | Stack switch (owns) | same |
+| Widget stack, body, platform widget shown | 1-finger | The widget's (or Home's, where the widget takes nothing): the stack does not claim it | same |
+| Grid / workspace | 1-finger vertical | Home (up: unbound, down: Search, which opens the Library with its field focused); a swipe that starts on a stack and moves along its axis is the stack's | – |
 | Grid / workspace | long-press + drag | Item drag (owns) | – |
 | Search results (card stack) | tap | A strip with quick actions or a notification comes to the front; a strip with only a name opens; the front card opens | Enter and the IME's search action open the front card |
 | Search results (card stack) | 1-finger vertical | Stack (owns): moves through the results as the Stream's stack does | Next card and Previous card as accessibility actions |
@@ -528,6 +531,10 @@ outline of its span); the lifted icon follows the finger, slightly enlarged, abo
   the folder hold (250 ms) it shows "will make a folder" (the target icon scales down inside a folder outline). Dropping
   there makes a folder of the two (target first, at its cell), named after their shared category or "Folder", opened with the
   name ready to type; a folder's dead zone is its whole icon (the app is added). Empty space: the item is placed there.
+  **A widget dragged over a widget or a stack of the same span has a dead zone too** (its span inset by the dead-zone
+  radius on every side, so a drag only passing over it still pushes it): after the same folder hold it shows "will make a
+  stack" (the target eases a little and wears an outline of its span) and dropping there stacks them (see "Widget stacks").
+  A widget of another span is pushed as today and never stacks.
 - **Edges.** Held within 24 dp of the trailing screen edge for the edge hold (500 ms) turns to the next page, and keeps
   turning every 700 ms while held; the leading edge goes back (top and bottom when the pages scroll up and down; mirrored in
   right-to-left). Every page stays composed during a drag so the gesture survives. **A new page past the last**: held at the
@@ -549,3 +556,46 @@ outline of its span); the lifted icon follows the finger, slightly enlarged, abo
 - **Frame stability.** Composition never reads the finger's place: the lifted icon and the edge hold read it in the layout
   phase, and a cell recomposes only when its own item, landing marker or folder state changes.
 - **Cancel.** A drop with no valid landing (a blocker that cannot move) does nothing: the item stays where it was.
+
+## Widget stacks
+
+Several widgets of one span share one Home slot and the person swipes through them (ADR 0003, Amendment 14). A stack is
+Home only: the Dock and its panel hold single widgets, and a drop there is not offered a stack.
+
+- **Make one.** Drop a widget on another widget (or a stack) of the **same span** (columns by rows): the folder rule
+  above (dead zone, 250 ms hold, the outline), then the dragged widget joins and is shown. Without dragging: a widget's
+  menu has **Add widget to stack**, which opens the widget picker listing only the widgets that can take that span (judged
+  by the rule the add itself uses); a tap adds the pick, a lone widget becoming a stack. A stack of ten is full: the menu
+  entry is disabled and a drop is not offered. A widget already in the stack is never added twice.
+- **Browse.** The stack swipes **across the pager's axis**, so it never fights the pager: up and down while Home's pages
+  scroll sideways, and sideways while they scroll up and down (the setting is Settings > Layout > App pages scroll; mirrored
+  in right-to-left). One widget per swipe; the widgets slide on the Page spring (`RiffleMotion.smooth`) and settle on
+  the nearest one, or the next one past a fling; under reduced motion they jump. Small page dots on the trailing edge
+  (bottom edge when the pages scroll up and down) show the position and fade to a lower level a moment after the stack is
+  used (they do not vanish). The last widget shown is remembered per stack and stored with it.
+- **Arbitration: who gets a swipe that starts on the stack.** The simplest rule that is correct: the swipe belongs to the
+  stack when it starts on the **dots strip** (a 48 dp wide target along the edge, always), or **anywhere on the stack
+  while the shown widget is one of Riffle's own** (they never scroll). While the shown widget is a **platform widget**
+  the body is not the stack's: such a widget may scroll along the same axis, and nothing in a provider says whether it
+  does, so it keeps its swipes and the stack switches only from the strip. The strip takes touches only in that case, so
+  over a Riffle widget its dots are drawn and a tap goes through to the widget. A drag that starts on the stack and moves
+  along its axis is not Home's down-swipe (Search); a long press on the strip or the body is still the stack's lift and
+  menu. There is a non-gesture route for everything (below).
+- **Whole-stack operations.** Moving (the long-press drag), resizing and removing act on the whole stack. A resize
+  applies to every widget in it and is allowed only to sizes every member supports (the largest minimum to the smallest
+  maximum of the members' resize information; resizing one direction needs all of them to support it). Removing a stack
+  asks first ("Remove this stack?", saying how many widgets go) when it holds more than one widget; every platform widget
+  in it has its host id deleted, as removing a widget does. There is no Undo on removing a widget, so none here.
+- **Edit stack** (the menu): a sheet listing the widgets in order with their names and their apps' icons. Each has
+  Move up, Move down, **Move out to Home** (the widget becomes a Home item of its own in the nearest free cells of the
+  page that take the stack's span; with no room the button is disabled and the sheet says "No room on this page to move
+  it out.") and Remove (deleted, as removing a widget is). A stack reduced to one widget is a plain widget again, and
+  the sheet closes.
+- **Accessibility.** The stack is one node: "Widget 2 of 4, <name>" as its state description, with the custom actions
+  Next widget, Previous widget and Edit stack. The dots strip is a node of its own (activating it is Next widget). Every
+  control is at least 48 dp.
+- **Cost.** Only the shown widget and the two beside it are composed, so only they hold a host view; the rest hold none
+  (their host ids stay bound). Where the stack is between two widgets and how visible its dots are are read in the layout
+  and draw phases: a swipe in flight recomposes nothing (`WidgetStackTest`).
+- **Not built.** No auto-rotation, no smart suggestions: the model has no field for either, and no timer exists.
+

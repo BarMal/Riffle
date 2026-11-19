@@ -129,6 +129,9 @@ are not, except the product's own nouns, which are always capitalised as the pro
 | Hide an app from the Library and Home | Hide app (undo from Hidden apps: Unhide) | a bare "Hide" |
 | Hide a Stream item or section | Hide (the menu says what it hides) | |
 | Open a page or sub-page | Open | |
+| Put a widget in a widget stack | Add widget to stack | "Add to stack", "Stack with" |
+| Change the widgets of a stack | Edit stack | "Edit widgets" |
+| Take a widget out of a stack onto Home | Move out to Home | "Unstack", "Move out" |
 
 Settings labels follow the same rule ("Show the Dock", "Dock position", "Floating dock", "Hidden apps"). A test
 (`SettingsPagesTest`) holds the page and setting names; the menus' wording is held by `ShortcutContextMenuTest`,
