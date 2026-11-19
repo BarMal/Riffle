@@ -315,6 +315,9 @@ internal fun HomeDockHost(
             CompositionLocalProvider(
                 LocalDockChoice provides choice,
                 LocalDockHomeDropAt provides remember(hostState) { { hostState.homeDropAt } },
+                LocalDockExternalDrag provides remember(hostState) { { hostState.externalDrag } },
+                LocalDockExternalOverDock provides
+                    remember(hostState) { { hostState.isExternalDragOverDock.value } },
                 LocalDockPinnedSlotBoundsSink provides
                     remember(hostState) {
                         { id: LauncherItemId, rect: Rect? ->
