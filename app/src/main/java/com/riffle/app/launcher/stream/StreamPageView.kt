@@ -447,7 +447,10 @@ private fun StreamContentBody(
     // Only a notification can be hidden by its app group; the rest carry no group for the exclusions flow.
     val hideGroupKey = page.groupKey.takeIf { section == StreamSection.NOTIFICATIONS }
     when {
-        section == StreamSection.TODAY && page.view == StreamView.LIST -> TodayListBody(body, env, callbacks)
+        section == StreamSection.TODAY && page.view == StreamView.LIST -> {
+            ReachesViewButton(page.key)
+            TodayListBody(body, env, callbacks)
+        }
         section == StreamSection.TODAY ->
             StreamStack(
                 entries = todayEntries(body, env),
@@ -456,7 +459,9 @@ private fun StreamContentBody(
                 groupKey = null,
                 stackKey = page.key,
             )
-        page.view == StreamView.LIST ->
+        page.view == StreamView.LIST -> {
+            // A list starts at the top, where the view button would stand.
+            ReachesViewButton(page.key)
             PageScroll {
                 body.groups.forEach { group ->
                     GroupHeading(section, group, env)
@@ -464,6 +469,7 @@ private fun StreamContentBody(
                 }
                 body.gaps.forEach { gap -> StreamShortcutsGap(gap) }
             }
+        }
         else ->
             StreamStack(
                 entries = pageEntries(page, body),

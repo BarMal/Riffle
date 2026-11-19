@@ -282,6 +282,15 @@ private fun StreamStackContent(
     val openState = cards.state
     val presences = remember(stackKey) { mutableMapOf<String, OpenCardPresence>() }
     val stackState = remember(stackKey) { StreamStackState() }
+    // Whether the stack, with its strips, stops short of the Stream's top-end corner, where the view button stands.
+    val buttonRoom = LocalStreamViewButtonRoom.current
+    val strips = minOf(peeks, entries.size - 1).coerceAtLeast(0)
+    val reachDp = geometry.cardHeightDp + strips * sizes.pitchDp + pageInsets.stackBottom.value
+    val cornerClear = reachDp + StreamMinTarget.value <= areaHeight.value
+    if (buttonRoom != null) {
+        SideEffect { buttonRoom.report(stackKey, cornerClear) }
+        DisposableEffect(buttonRoom, stackKey) { onDispose { buttonRoom.report(stackKey, clear = true) } }
+    }
     val ids = remember(entries) { entries.map { it.id }.toSet() }
     // A card that goes away closes; a card open on another page is that page's.
     LaunchedEffect(stackKey, ids) { cards.dispatch(OpenCardEvent.CardsChanged(stackKey, ids)) }
