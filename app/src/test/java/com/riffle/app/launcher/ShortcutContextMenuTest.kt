@@ -10,6 +10,7 @@ import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ShortcutContextMenuTest {
@@ -127,14 +128,8 @@ class ShortcutContextMenuTest {
 
         assertEquals(
             ShortcutContextMenuItem(
-                label = "App shortcuts (1)",
-                submenuItems =
-                    listOf(
-                        ShortcutContextMenuItem(
-                            label = "Compose message",
-                            action = LauncherShellAction.LaunchAppShortcut(platformShortcut),
-                        ),
-                    ),
+                label = "Compose message",
+                action = LauncherShellAction.LaunchAppShortcut(platformShortcut),
             ),
             items.first(),
         )
@@ -160,19 +155,67 @@ class ShortcutContextMenuTest {
 
         assertEquals(
             ShortcutContextMenuItem(
-                label = "App shortcuts (1)",
-                submenuItems =
-                    listOf(
-                        ShortcutContextMenuItem(
-                            label = "Compose",
-                            action = LauncherShellAction.LaunchAppShortcut(platformShortcut),
-                            enabled = false,
-                        ),
-                    ),
+                label = "Compose",
+                action = LauncherShellAction.LaunchAppShortcut(platformShortcut),
+                enabled = false,
             ),
             items.first(),
         )
     }
+
+    @Test
+    fun upToFourShortcutsStandInTheMenuWithNoMoreRow() {
+        val shortcut = shortcut()
+        val items =
+            shortcutContextMenuItems(
+                shortcut = shortcut,
+                surface = ShortcutContextSurface.HOME,
+                appShortcuts = platformShortcuts(shortcut, 4),
+            )
+
+        assertEquals(
+            listOf("Shortcut 0", "Shortcut 1", "Shortcut 2", "Shortcut 3", "App info"),
+            items.take(5).map { it.label },
+        )
+        assertTrue(items.none { it.submenuItems.isNotEmpty() })
+    }
+
+    @Test
+    fun moreThanFourShortcutsPutTheRestBehindAMoreRowAndKeepEveryOne() {
+        val shortcut = shortcut()
+        val items =
+            shortcutContextMenuItems(
+                shortcut = shortcut,
+                surface = ShortcutContextSurface.HOME,
+                appShortcuts = platformShortcuts(shortcut, 6),
+            )
+
+        assertEquals(
+            listOf("Shortcut 0", "Shortcut 1", "Shortcut 2", "Shortcut 3", "More"),
+            items.take(5).map { it.label },
+        )
+        assertEquals(listOf("Shortcut 4", "Shortcut 5"), items[4].submenuItems.map { it.label })
+        assertEquals("App info", items[5].label)
+    }
+
+    @Test
+    fun anAppWithNoShortcutsStartsWithItsOwnActions() {
+        val items = shortcutContextMenuItems(shortcut(), ShortcutContextSurface.HOME)
+
+        assertEquals("App info", items.first().label)
+    }
+
+    private fun platformShortcuts(
+        shortcut: AppShortcutItem,
+        count: Int,
+    ): List<AppShortcut> =
+        (0 until count).map { index ->
+            AppShortcut(
+                id = AppShortcutId("shortcut-$index"),
+                appIdentity = shortcut.appIdentity,
+                shortLabel = "Shortcut $index",
+            )
+        }
 
     private fun shortcut(): AppShortcutItem =
         AppShortcutItem(

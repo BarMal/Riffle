@@ -29,7 +29,7 @@ class AppListContextMenuTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun appContextMenuKeepsPlatformShortcutsInTheirOwnMenu() {
+    fun appContextMenuShowsPlatformShortcutsInTheMenuItself() {
         composeRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -51,9 +51,10 @@ class AppListContextMenuTest {
         }
 
         composeRule.onNodeWithText("...").performClick()
-        composeRule.onNodeWithText("App shortcuts (2)").performClick()
+        // The shortcuts stand in the menu itself; the row after them holds what each can be added to.
         composeRule.onNodeWithText("Compose message").assertExists()
         composeRule.onNodeWithText("Scan document").assertExists()
+        composeRule.onNodeWithText("More shortcut actions").assertExists()
 
         composeRule.onNodeWithText("Compose message").performClick()
         composeRule.onNodeWithText("Back").assertDoesNotExist()

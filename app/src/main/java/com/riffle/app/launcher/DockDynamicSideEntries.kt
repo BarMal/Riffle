@@ -236,7 +236,8 @@ private fun DockDynamicEntry.withAppActions(
     copy(
         openLabel = name?.let { resources.getString(R.string.dock_live_app_open_action, it) },
         showInStreamLabel = name?.let { resources.getString(R.string.dock_live_app_show_in_stream_action, it) },
-        appMenu = app?.let { liveAppMenuItems(it, appShortcuts) }.orEmpty(),
+        appMenu =
+            app?.let { liveAppMenuItems(it, appShortcuts, resources.getString(R.string.menu_more_shortcuts)) }.orEmpty(),
         openInStreamMenuLabel = resources.getString(R.string.dock_live_app_open_in_stream_menu),
     )
 
@@ -247,6 +248,7 @@ private fun DockDynamicEntry.withAppActions(
 internal fun liveAppMenuItems(
     app: InstalledApp,
     appShortcuts: AppShortcutsByApp,
+    moreLabel: String = "More",
 ): List<ShortcutContextMenuItem> {
     val shortcuts =
         appShortcuts[app.identity].orEmpty().map { shortcut ->
@@ -256,13 +258,11 @@ internal fun liveAppMenuItems(
                 enabled = shortcut.enabled,
             )
         }
-    return listOfNotNull(
-        shortcuts.takeIf { it.isNotEmpty() }?.let {
-            ShortcutContextMenuItem(label = "App shortcuts (${it.size})", submenuItems = it)
-        },
-        ShortcutContextMenuItem(label = "App info", action = LauncherShellAction.OpenAppInfo(app.identity)),
-        ShortcutContextMenuItem(label = "Hide app", action = LauncherShellAction.HideApp(app.identity)),
-    )
+    return appShortcutMenuItems(shortcuts, moreLabel) +
+        listOf(
+            ShortcutContextMenuItem(label = "App info", action = LauncherShellAction.OpenAppInfo(app.identity)),
+            ShortcutContextMenuItem(label = "Hide app", action = LauncherShellAction.HideApp(app.identity)),
+        )
 }
 
 /** A tap on an app entry opens the app, in its own profile; one the launcher cannot resolve opens its page instead. */

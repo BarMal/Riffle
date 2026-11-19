@@ -997,4 +997,8 @@
     <string name="settings_layout_apps_behind_both_subtitle">Behind and around: Home stays and fades out under the cards.</string>
     <string name="settings_stream_apps_behind_cards_note">The same setting as in Layout: one value for each way you hold the device.</string>
     <string name="settings_layout_quick_scroll_off_subtitle">The page dots are off, so there is nothing to drag.</string>
+
+    <!-- App long-press menu: the app's own shortcuts lead it -->
+    <string name="menu_more_shortcuts">More</string>
+    <string name="menu_more_shortcut_actions">More shortcut actions</string>
 </resources>

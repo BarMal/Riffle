@@ -78,15 +78,26 @@ internal fun shortcutContextMenuItems(
                 action = surface.removeAction(shortcut),
             )
 
-    val appShortcutMenu =
-        platformShortcutItems.takeIf(List<ShortcutContextMenuItem>::isNotEmpty)?.let { shortcutItems ->
-            ShortcutContextMenuItem(
-                label = "App shortcuts (${shortcutItems.size})",
-                submenuItems = shortcutItems,
-            )
-        }
+    return appShortcutMenuItems(platformShortcutItems) + managementItems
+}
 
-    return listOfNotNull(appShortcutMenu) + managementItems
+/** How many of an app's shortcuts stand directly in its long-press menu; any more are behind a "More" row. */
+internal const val INLINE_APP_SHORTCUT_LIMIT = 4
+
+/**
+ * The app's own shortcuts as the top of its long-press menu: up to [INLINE_APP_SHORTCUT_LIMIT] of them as rows of
+ * their own, and a "More" row holding the rest only when there are more than that.
+ */
+internal fun appShortcutMenuItems(
+    shortcuts: List<ShortcutContextMenuItem>,
+    moreLabel: String = "More",
+): List<ShortcutContextMenuItem> {
+    val rest = shortcuts.drop(INLINE_APP_SHORTCUT_LIMIT)
+    val more =
+        rest.takeIf(List<ShortcutContextMenuItem>::isNotEmpty)?.let {
+            ShortcutContextMenuItem(label = moreLabel, submenuItems = it)
+        }
+    return shortcuts.take(INLINE_APP_SHORTCUT_LIMIT) + listOfNotNull(more)
 }
 
 @Composable
