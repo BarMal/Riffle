@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.home.FolderEditResult
 import com.riffle.core.domain.launcher.home.FolderEngine
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
+import com.riffle.core.domain.launcher.home.HomeSpill
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
 import com.riffle.core.domain.launcher.home.WidgetItem
 import com.riffle.core.domain.launcher.home.WidgetStackEngine
@@ -44,6 +45,15 @@ internal fun applyShortcutOrFolderDropEdit(
         is LauncherShellAction.DropHomeItem ->
             if (action.dropOnItemId != null) {
                 dropOnAnotherPage(action, layout, shortcutEngine, folderEngine, installedApps)
+            } else if (action.spill) {
+                HomeSpill.dropMoved(
+                    layout = layout,
+                    itemId = action.itemId,
+                    sourcePageId = action.sourcePageId,
+                    targetPageId = action.targetPageId,
+                    cell = action.cell,
+                    pushed = action.pushed,
+                ).toShortcutOrFolderDropEditResult()
             } else {
                 shortcutEngine
                     .dropWithPush(

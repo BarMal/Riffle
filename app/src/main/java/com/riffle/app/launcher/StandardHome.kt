@@ -1494,7 +1494,7 @@ internal fun HomeDragSession.planned(
     val numbers = tuning.coerced()
     val reserved = if (targetPageId == originPageId) setOf(originCell) else emptySet()
     val plan = HomeDragPush.plan(page, item, x, y, numbers, plan?.pushed?.keys.orEmpty(), reserved)
-    return copy(plan = plan, projectedCell = plan.landing ?: originCell)
+    return copy(plan = plan, projectedCell = plan.landing ?: plan.spillLanding ?: originCell)
 }
 
 private fun homeGridPresentationFor(

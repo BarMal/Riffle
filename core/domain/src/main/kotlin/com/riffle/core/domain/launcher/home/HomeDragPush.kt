@@ -19,6 +19,8 @@ data class HomeDragTuning(
     val edgeHoldMillis: Int = DEFAULT_EDGE_HOLD_MILLIS,
     /** How often the page keeps turning while the hold continues. */
     val pageRepeatMillis: Int = DEFAULT_PAGE_REPEAT_MILLIS,
+    /** How far (dp) a held Library app moves before it stops being a menu and becomes a Home drag. */
+    val libraryDragSlopDp: Int = DEFAULT_LIBRARY_DRAG_SLOP_DP,
 ) {
     fun coerced(): HomeDragTuning =
         HomeDragTuning(
@@ -27,12 +29,13 @@ data class HomeDragTuning(
             folderHoldMillis = folderHoldMillis.coerceIn(FOLDER_HOLD_RANGE),
             edgeHoldMillis = edgeHoldMillis.coerceIn(EDGE_HOLD_RANGE),
             pageRepeatMillis = pageRepeatMillis.coerceIn(PAGE_REPEAT_RANGE),
+            libraryDragSlopDp = libraryDragSlopDp.coerceIn(LIBRARY_DRAG_SLOP_RANGE),
         )
 
     /** The values as text the owner can copy. */
     fun asText(): String =
         "ring=$ringRadius dead=$deadZoneRadius folderHold=${folderHoldMillis}ms " +
-            "edgeHold=${edgeHoldMillis}ms pageRepeat=${pageRepeatMillis}ms"
+            "edgeHold=${edgeHoldMillis}ms pageRepeat=${pageRepeatMillis}ms librarySlop=${libraryDragSlopDp}dp"
 
     companion object {
         const val DEFAULT_RING_RADIUS = 0.75f
@@ -40,11 +43,13 @@ data class HomeDragTuning(
         const val DEFAULT_FOLDER_HOLD_MILLIS = 250
         const val DEFAULT_EDGE_HOLD_MILLIS = 500
         const val DEFAULT_PAGE_REPEAT_MILLIS = 700
+        const val DEFAULT_LIBRARY_DRAG_SLOP_DP = 12
         val RING_RANGE = 0.5f..1.2f
         val DEAD_ZONE_RANGE = 0.15f..0.45f
         val FOLDER_HOLD_RANGE = 100..600
         val EDGE_HOLD_RANGE = 200..1000
         val PAGE_REPEAT_RANGE = 300..1500
+        val LIBRARY_DRAG_SLOP_RANGE = 6..40
 
         /** The distance from a screen edge that counts as holding at the edge, in dp. */
         const val EDGE_ZONE_DP = 24
@@ -64,6 +69,11 @@ data class HomeDragPlan(
     val landing: GridCell?,
     val pushed: Map<LauncherItemId, GridCell> = emptyMap(),
     val dropOn: LauncherItemId? = null,
+    /**
+     * Set when [landing] is null only because the items on the landing cell cannot be pushed (the page is full): the
+     * cell the drop would take, where [HomeSpill] makes room by sending the displaced item to the next page.
+     */
+    val spillLanding: GridCell? = null,
 )
 
 /**
@@ -81,7 +91,8 @@ data class HomeDragPlan(
  * 3. A pushed item takes the nearest free cell in the direction away from the pointer (stepping along the dominant
  *    axis, then the other, then any free cell by distance, in reading order). Whole spans only; never off the page.
  *    The page is not extended: a full page refuses the push (the item stays and blocks), and if the blocker stands on
- *    the landing cell the plan has no landing (the existing placement rules reject a collision the same way).
+ *    the landing cell the plan has no landing but names the cell ([HomeDragPlan.spillLanding]): the drop then spills
+ *    (see [HomeSpill]), the displaced item going to the next page.
  */
 @Suppress("ReturnCount", "CyclomaticComplexMethod", "ComplexCondition") // One small geometric rule.
 object HomeDragPush {
@@ -123,7 +134,7 @@ object HomeDragPush {
             val cell = freeCellAway(item, grid, occupied, x, y)
             if (cell == null) {
                 // Blocked: it stays and blocks; if it stands on the landing there is nowhere valid to drop.
-                if (item.cells().any { it in landingCells }) return HomeDragPlan(landing = null)
+                if (item.cells().any { it in landingCells }) return HomeDragPlan(landing = null, spillLanding = landing)
                 occupied += item.cells()
             } else {
                 moved[item.id] = cell

@@ -383,6 +383,7 @@
     <string name="drag_tuning_folder_hold">Folder hold</string>
     <string name="drag_tuning_edge_hold">Edge hold</string>
     <string name="drag_tuning_page_repeat">Page repeat</string>
+    <string name="drag_tuning_library_slop">Library drag distance</string>
     <string name="drag_tuning_reset">Reset</string>
     <string name="drag_tuning_values_title">Current values</string>
     <string name="settings_page_app_pair">App pair experiment</string>

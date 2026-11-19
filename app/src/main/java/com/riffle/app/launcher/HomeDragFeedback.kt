@@ -421,6 +421,15 @@ internal fun homeDropAction(
             LauncherShellAction.MoveHomeItemToDock(item.id, targetIndex = session.dockIndex, pageId = dragState.pageId)
         session == null || plan == null ->
             homeItemDragDropAction(item, dragState, dragX, dragY, session?.targetPageId ?: dragState.pageId)
+        // The page is full and nothing can be pushed: the displaced item (or the dropped one) goes to the next page.
+        plan.landing == null && plan.spillLanding != null ->
+            LauncherShellAction.DropHomeItem(
+                itemId = item.id,
+                sourcePageId = dragState.pageId,
+                targetPageId = session.targetPageId,
+                cell = plan.spillLanding!!,
+                spill = true,
+            )
         plan.landing == null -> null
         plan.dropOn != null && session.targetPageId == dragState.pageId ->
             LauncherShellAction.MoveHomeShortcutToCell(item.id, plan.landing!!, folderLabel)

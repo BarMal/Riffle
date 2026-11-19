@@ -343,6 +343,8 @@ sealed interface LauncherShellAction {
         val dropOnItemId: LauncherItemId? = null,
         /** The localized name a folder made by this drop starts with when no shared category names it. */
         val folderLabel: String? = null,
+        /** The page is full and the push cannot make room: the displaced item goes to the next page (HomeSpill). */
+        val spill: Boolean = false,
     ) : LauncherShellAction
 
     data class MoveHomeItemToPage(

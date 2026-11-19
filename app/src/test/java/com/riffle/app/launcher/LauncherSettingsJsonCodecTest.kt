@@ -1607,6 +1607,20 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
+    fun theLibraryDragDistanceReadsOldDragTuningDataAsItsDefaultAndIsHeldToItsRange() {
+        val home = { json: String -> decodeLauncherSettings(json).home.dragTuning }
+        // Data stored before the Library drag existed has no such key.
+        val old = home("""{"home": {"dragTuning": {"ring": 0.9, "deadZone": 0.2, "folderHold": 300}}}""")
+        assertEquals(HomeDragTuning.DEFAULT_LIBRARY_DRAG_SLOP_DP, old.libraryDragSlopDp)
+        assertEquals(0.9f, old.ringRadius)
+        assertEquals(40, home("""{"home": {"dragTuning": {"librarySlop": 900}}}""").libraryDragSlopDp)
+        assertEquals(6, home("""{"home": {"dragTuning": {"librarySlop": 0}}}""").libraryDragSlopDp)
+        val custom = HomeDragTuning(libraryDragSlopDp = 20)
+        val settings = LauncherSettings(home = HomeBehaviourSettings(dragTuning = custom))
+        assertEquals(custom, decodeLauncherSettings(encodeLauncherSettings(settings)).home.dragTuning)
+    }
+
+    @Test
     fun thePairRecipeDefaultsToOneCallRoundTripsAndUnknownIdsFallBack() {
         val recipe = { json: String -> decodeLauncherSettings(json).diagnostics.pairRecipe }
         assertEquals(PairRecipeKind.ONE_CALL, recipe("""{"version": 11}"""))
