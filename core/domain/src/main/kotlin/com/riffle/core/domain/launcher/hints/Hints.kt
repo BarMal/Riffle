@@ -1,8 +1,8 @@
 package com.riffle.core.domain.launcher.hints
 
 /**
- * The one-time hints that teach a Dock gesture (ADR 0003, Amendment 12), in the order they are offered when more than
- * one is due. [storedId] is a stored contract: never rename one, only add new ids.
+ * The hints that teach a Dock gesture (ADR 0003, Amendments 12 and 21), each shown at most once, in the order they are
+ * offered when more than one is due. [storedId] is a stored contract: never rename one, only add new ids.
  */
 enum class Hint(
     val storedId: String,
@@ -30,7 +30,7 @@ enum class Hint(
 
 /**
  * What the person has done and seen, as far as the hints care (stored with the onboarding state: device local, never in
- * a backup). A hint is retired for good once it is dismissed or its gesture is performed.
+ * a backup). A hint is retired for good as soon as it has been on screen (or its gesture is performed first).
  */
 data class HintProgress(
     val retired: Set<Hint> = emptySet(),
@@ -38,7 +38,7 @@ data class HintProgress(
     val homeVisits: Int = 0,
     /** The Library was opened by a route other than the Dock's pull (a tap on search, a gesture, the Home menu). */
     val libraryOpenedElsewhere: Boolean = false,
-    /** The Home visit on which a hint was last retired: the next Home hint waits for a later one. */
+    /** The Home visit on which a hint was last retired: the next hint waits [Hints.MIN_VISITS_BETWEEN_HINTS] more. */
     val lastRetiredVisit: Int? = null,
 )
 
@@ -47,8 +47,8 @@ sealed interface HintEvent {
     /** Home came to the front (a launch, the Home button, coming back from an app or a sheet). */
     data object HomeVisited : HintEvent
 
-    /** "Got it" on [hint]. */
-    data class Dismissed(val hint: Hint) : HintEvent
+    /** [hint] came on screen: it is retired from now on, whether or not it is acted on. */
+    data class Shown(val hint: Hint) : HintEvent
 
     /** The Stream opened, by any route: the press (or its equivalents) is found. */
     data object StreamOpened : HintEvent
@@ -88,13 +88,20 @@ private val HintContext.keepsQuiet: Boolean
     get() = simpleMode || setUpShowing || (dragging || dockBusy)
 
 /**
- * The hint rules, pure. At most one hint is due at a time ([due]); each retires for good once it is dismissed or the
- * gesture it teaches is performed ([reduce]); none shows in Simple mode, over the set-up, or while something is being
- * dragged or the Dock moves.
+ * The hint rules, pure. At most one hint is due at a time ([due]); each retires for good once it has been on screen or
+ * the gesture it teaches is performed ([reduce]); a hint waits [MIN_VISITS_BETWEEN_HINTS] Home visits after the last
+ * one was shown, so a new person meets one at most every few visits; none shows in Simple mode, over the set-up, or
+ * while something is being dragged or the Dock moves.
  */
 object Hints {
     /** The Library's pull is hinted after this many Home visits in which the Library was never opened. */
     const val PULL_AFTER_HOME_VISITS = 4
+
+    /**
+     * The pacing rule: a hint is shown only once this many Home visits have passed since the last one was shown (the
+     * visit that showed it counts as zero), so the next hint is never on the same visit or the next.
+     */
+    const val MIN_VISITS_BETWEEN_HINTS = 3
 
     /** The count stops here, so a long-lived install never overflows it. */
     private const val MAX_HOME_VISITS = 100_000
@@ -105,38 +112,43 @@ object Hints {
         context: HintContext,
     ): Hint? {
         if (context.keepsQuiet) return null
-        return Hint.entries.firstOrNull { hint -> hint !in progress.retired && eligible(hint, progress, context) }
+        return Hint.entries.firstOrNull { hint ->
+            hint !in progress.retired && applies(hint, context) && isPaced(progress) && isReasoned(hint, progress)
+        }
     }
 
-    private fun eligible(
+    /**
+     * Whether [hint], already on screen, still has a point: nothing speaks over the set-up or a drag, and the
+     * situation it describes still holds (the Stream opened, the Library opened or the Dock moved all end it).
+     */
+    fun stillApplies(
         hint: Hint,
-        progress: HintProgress,
+        context: HintContext,
+    ): Boolean = !context.keepsQuiet && applies(hint, context)
+
+    private fun applies(
+        hint: Hint,
         context: HintContext,
     ): Boolean =
-        !context.libraryShown && isPaced(hint, progress) &&
+        !context.libraryShown &&
             when (hint) {
                 Hint.DOCK_PRESS -> context.streamAvailable && !context.streamShown
                 Hint.DOCK_MENU -> !context.streamShown && context.dockHasItems
-                Hint.DOCK_PULL -> pullIsDue(progress, context)
+                Hint.DOCK_PULL -> context.libraryAvailable && !context.streamShown
                 Hint.DOCK_SCRUB -> context.streamShown && context.stackCount >= 2
             }
 
-    /** The next Home hint waits for a later visit than the one a hint was last put away on. */
-    private fun isPaced(
-        hint: Hint,
-        progress: HintProgress,
-    ): Boolean {
+    /** The next hint waits for [MIN_VISITS_BETWEEN_HINTS] Home visits after the one that was last shown. */
+    private fun isPaced(progress: HintProgress): Boolean {
         val last = progress.lastRetiredVisit
-        return !hint.onHome || last == null || progress.homeVisits > last
+        return last == null || progress.homeVisits >= last + MIN_VISITS_BETWEEN_HINTS
     }
 
-    private fun pullIsDue(
+    private fun isReasoned(
+        hint: Hint,
         progress: HintProgress,
-        context: HintContext,
-    ): Boolean {
-        val reasonToTeachIt = progress.libraryOpenedElsewhere || progress.homeVisits >= PULL_AFTER_HOME_VISITS
-        return context.libraryAvailable && !context.streamShown && reasonToTeachIt
-    }
+    ): Boolean =
+        hint != Hint.DOCK_PULL || progress.libraryOpenedElsewhere || progress.homeVisits >= PULL_AFTER_HOME_VISITS
 
     fun reduce(
         progress: HintProgress,
@@ -145,7 +157,7 @@ object Hints {
         when (event) {
             HintEvent.HomeVisited ->
                 progress.copy(homeVisits = (progress.homeVisits + 1).coerceAtMost(MAX_HOME_VISITS))
-            is HintEvent.Dismissed -> retire(progress, event.hint)
+            is HintEvent.Shown -> retire(progress, event.hint)
             HintEvent.StreamOpened -> retire(progress, Hint.DOCK_PRESS)
             is HintEvent.LibraryOpened ->
                 if (event.byDockPull) {

@@ -280,8 +280,14 @@ private fun encodeFeatures(settings: FeatureSettings): JSONObject =
         .put("dockLiveApps", settings.dockLiveApps)
         .put("library", settings.library)
         .put("simpleMode", settings.simpleMode)
-        .put("dockStreamHandle", settings.dockStreamHandle)
-        .put("streamViewButton", settings.streamViewButton)
+        .put(DOCK_STREAM_HANDLE_KEY, settings.dockStreamHandle)
+        .put(STREAM_VIEW_BUTTON_KEY, settings.streamViewButton)
+
+// The handle and the "Show as" button began as on-by-default switches stored as `dockStreamHandle` and
+// `streamViewButton`, which cannot tell a default from a choice. They are opt-in now, under new keys: the old ones are
+// ignored, so every existing install starts with both off (ADR 0003, Amendment 21).
+private const val DOCK_STREAM_HANDLE_KEY = "dockStreamHandleOptIn"
+private const val STREAM_VIEW_BUTTON_KEY = "streamViewButtonOptIn"
 
 // Absent (settings saved before the switches) or not a boolean: the default, today's behaviour.
 private fun JSONObject.toFeatures(defaults: FeatureSettings): FeatureSettings =
@@ -290,8 +296,8 @@ private fun JSONObject.toFeatures(defaults: FeatureSettings): FeatureSettings =
         dockLiveApps = (opt("dockLiveApps") as? Boolean) ?: defaults.dockLiveApps,
         library = (opt("library") as? Boolean) ?: defaults.library,
         simpleMode = (opt("simpleMode") as? Boolean) ?: defaults.simpleMode,
-        dockStreamHandle = (opt("dockStreamHandle") as? Boolean) ?: defaults.dockStreamHandle,
-        streamViewButton = (opt("streamViewButton") as? Boolean) ?: defaults.streamViewButton,
+        dockStreamHandle = (opt(DOCK_STREAM_HANDLE_KEY) as? Boolean) ?: defaults.dockStreamHandle,
+        streamViewButton = (opt(STREAM_VIEW_BUTTON_KEY) as? Boolean) ?: defaults.streamViewButton,
     )
 
 private fun encodeDragTuning(tuning: HomeDragTuning): JSONObject =

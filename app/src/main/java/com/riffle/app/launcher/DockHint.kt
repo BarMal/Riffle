@@ -1,26 +1,32 @@
 package com.riffle.app.launcher
 
+import android.content.Context
+import android.view.accessibility.AccessibilityManager
 import androidx.annotation.StringRes
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -40,11 +46,15 @@ import com.riffle.core.domain.launcher.hints.Hint
 import com.riffle.core.domain.launcher.hints.HintContext
 import com.riffle.core.domain.launcher.hints.HintEvent
 import com.riffle.core.domain.launcher.hints.Hints
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlin.math.roundToInt
 
 internal const val DOCK_HINT_TEST_TAG = "dock-hint"
-internal const val DOCK_HINT_DISMISS_TEST_TAG = "dock-hint-dismiss"
+
+/** How long a hint stands before it leaves by itself (never with a screen reader on). */
+internal const val HINT_ON_SCREEN_MILLIS = 6_000L
 
 /** The words of a hint: one short sentence that says the gesture. */
 @StringRes
@@ -83,10 +93,10 @@ internal fun dockPressHintOffset(
 }
 
 /**
- * A hint (ADR 0003, Amendment 12): one Thick glass pill beside the Dock that says what one Dock gesture does, with a
- * button that dismisses it for good. It is drawn over the content but takes no touch outside itself, and it is
- * announced when it appears. It does not move, so reduced motion changes nothing about it. Which hint is due, and
- * when, is `Hints`' rule.
+ * A hint (ADR 0003, Amendments 12 and 21): one small Thick glass pill beside the Dock that says in a line what one Dock
+ * gesture does. A tap on it dismisses it; it is drawn over the content but takes no touch outside itself, and it is
+ * announced politely when it appears. It does not move, so reduced motion changes nothing about it. Which hint is due,
+ * and when it leaves, is `Hints`' rule and [DockHintLayer]'s.
  */
 @Composable
 internal fun DockHint(
@@ -132,34 +142,26 @@ private fun DockHintPill(
     onDismiss: () -> Unit,
 ) {
     GlassSurface(
-        modifier = Modifier.testTag(DOCK_HINT_TEST_TAG).semantics { liveRegion = LiveRegionMode.Polite },
+        modifier =
+            Modifier
+                .testTag(DOCK_HINT_TEST_TAG)
+                .semantics { liveRegion = LiveRegionMode.Polite }
+                .clickable(onClickLabel = stringResource(R.string.dock_hint_dismiss_action), onClick = onDismiss),
         weight = GlassWeight.Thick,
         shape = RiffleShapes.large,
         tint = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
-        Row(
-            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                modifier = Modifier.widthIn(max = TEXT_MAX_WIDTH_DP.dp),
-                text = text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            TextButton(
-                modifier = Modifier.testTag(DOCK_HINT_DISMISS_TEST_TAG),
-                onClick = onDismiss,
-            ) {
-                Text(text = stringResource(R.string.dock_press_hint_dismiss))
-            }
-        }
+        Text(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).widthIn(max = TEXT_MAX_WIDTH_DP.dp),
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     }
 }
 
 private const val MAX_HINT_WIDTH_DP = 380
-private const val TEXT_MAX_WIDTH_DP = 260
+private const val TEXT_MAX_WIDTH_DP = 320
 private const val HINT_GAP_DP = 12
 private const val HINT_MARGIN_DP = 16
 
@@ -175,8 +177,52 @@ internal class HintLiveInputs(
 )
 
 /**
+ * The hint on screen now and the touches that put it away, shared by the hint layer (which sets and ends it) and Home
+ * (which draws the Stream handle while the press hint stands, so the teaching aid leaves with the hint).
+ */
+@Stable
+internal class HintStage {
+    var hint: Hint? by mutableStateOf(null)
+
+    /** How many touches have gone down anywhere under [observe] so far. */
+    var downs: Int by mutableIntStateOf(0)
+        private set
+
+    /** Watches the touches of whatever this modifier is put on, ahead of its children, and consumes nothing. */
+    fun observe(): Modifier =
+        Modifier.pointerInput(this) {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    if (event.changes.any { change -> change.pressed && !change.previousPressed }) downs++
+                }
+            }
+        }
+}
+
+/** Whether a screen reader (touch exploration) is on: no timer then, since it needs more time than sighted use. */
+@Composable
+private fun screenReaderOn(): Boolean {
+    val context = LocalContext.current
+    return remember(context) {
+        val manager = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
+        manager?.isTouchExplorationEnabled == true
+    }
+}
+
+/** Where the Dock stands, which way it is pulled, and the room to leave above a bottom Dock for the Home handle. */
+internal class HintPlacement(
+    val dockBounds: Rect?,
+    val pull: DockPullDirection,
+    val clearance: Dp,
+)
+
+/**
  * The hint layer: the due hint ([Hints.due], from what the person has seen and done and what is on screen now) drawn
- * beside the Dock, or nothing. [legacyPressSeen] is the setting an earlier build kept for the press hint; it retires
+ * beside the Dock, or nothing. A hint is retired the moment it is on screen ([HintEvent.Shown]), so it is shown at
+ * most once. It leaves after [HINT_ON_SCREEN_MILLIS] (a timer of this composition, cancelled when the hint leaves; none
+ * with a screen reader on), on the next touch anywhere ([HintStage.downs]), on a tap on it, or when what it teaches is
+ * done or no longer applies. [legacyPressSeen] is the setting an earlier build kept for the press hint; it retires
  * that hint (nothing writes it any more, "Show hints again" clears it).
  */
 @Composable
@@ -185,42 +231,76 @@ internal fun DockHintLayer(
     legacyPressSeen: Boolean,
     facts: HintContext,
     live: HintLiveInputs,
-    dockBounds: Rect?,
-    pull: DockPullDirection,
-    clearance: Dp,
+    stage: HintStage,
+    placement: HintPlacement,
 ) {
     if (hints == null) return
     val stored by hints.progress.collectAsState()
     val surface by hints.surface.collectAsState()
     val progress =
         stored?.let { value -> if (legacyPressSeen) value.copy(retired = value.retired + Hint.DOCK_PRESS) else value }
+
+    fun contextNow() =
+        facts.copy(
+            setUpShowing = facts.setUpShowing || surface != OnboardingSurface.None,
+            dragging = live.dragging(),
+            dockBusy = live.dockBusy(),
+            stackCount = live.stackCount(),
+        )
     val due by
         remember(progress, facts, surface) {
-            derivedStateOf {
-                progress?.let { value ->
-                    Hints.due(
-                        progress = value,
-                        context =
-                            facts.copy(
-                                setUpShowing = facts.setUpShowing || surface != OnboardingSurface.None,
-                                dragging = live.dragging(),
-                                dockBusy = live.dockBusy(),
-                                stackCount = live.stackCount(),
-                            ),
-                    )
-                }
-            }
+            derivedStateOf { progress?.let { value -> Hints.due(progress = value, context = contextNow()) } }
         }
-    due?.let { hint ->
+    val showing = stage.hint
+    val applies by
+        remember(showing, facts, surface) {
+            derivedStateOf { showing == null || Hints.stillApplies(showing, contextNow()) }
+        }
+    val hasRoom = placement.dockBounds != null
+    // Nothing stands now and one is due: it comes on screen, and is retired as of now.
+    LaunchedEffect(due, hasRoom, showing) {
+        val next = due
+        if (showing == null && next != null && hasRoom) {
+            stage.hint = next
+            hints.send(HintEvent.Shown(next))
+        }
+    }
+    if (showing != null) {
+        HintLifetime(stage = stage, showing = showing, applies = applies)
         DockHint(
-            hint = hint,
-            dockBounds = dockBounds,
-            pull = pull,
-            onDismiss = { hints.send(HintEvent.Dismissed(hint)) },
+            hint = showing,
+            dockBounds = placement.dockBounds,
+            pull = placement.pull,
+            onDismiss = { stage.hint = null },
             // The Home handle stands above a bottom Dock on Home; over the Stream there is nothing to clear.
-            clearance = if (hint.onHome) clearance else 0.dp,
+            clearance = if (showing.onHome) placement.clearance else 0.dp,
         )
     }
+}
+
+/**
+ * How long [showing] stands: [HINT_ON_SCREEN_MILLIS] (none with a screen reader on), until the next touch anywhere, or
+ * until it no longer [applies]. These are effects of this composition, so they end when the hint does.
+ */
+@Composable
+private fun HintLifetime(
+    stage: HintStage,
+    showing: Hint,
+    applies: Boolean,
+) {
+    val screenReader = screenReaderOn()
+    LaunchedEffect(showing, screenReader) {
+        if (!screenReader) {
+            delay(HINT_ON_SCREEN_MILLIS)
+            stage.hint = null
+        }
+    }
+    LaunchedEffect(showing) {
+        val before = stage.downs
+        snapshotFlow { stage.downs }.first { count -> count != before }
+        stage.hint = null
+    }
+    LaunchedEffect(showing, applies) { if (!applies) stage.hint = null }
 }
 
 /**

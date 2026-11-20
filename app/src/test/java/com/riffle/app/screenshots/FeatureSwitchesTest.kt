@@ -22,6 +22,7 @@ import androidx.compose.ui.test.swipe
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.DOCK_HINT_TEST_TAG
 import com.riffle.app.launcher.DOCK_STREAM_HANDLE_TEST_TAG
+import com.riffle.app.launcher.HINT_ON_SCREEN_MILLIS
 import com.riffle.app.launcher.HOME_DOCK_PULL_TEST_TAG
 import com.riffle.app.launcher.HintsHost
 import com.riffle.app.launcher.HomeDestination
@@ -30,6 +31,8 @@ import com.riffle.app.launcher.dockDynamicSectionTileTestTag
 import com.riffle.app.launcher.library.LIBRARY_PAGED_TEST_TAG
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.hints.Hint
+import com.riffle.core.domain.launcher.hints.HintProgress
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
@@ -76,10 +79,14 @@ class FeatureSwitchesTest {
         executor.shutdownNow()
     }
 
+    private val handleOn = FeatureSettings(dockStreamHandle = true)
+    private val retiredHints = HintProgress(retired = Hint.entries.toSet())
+
     private fun show(
         features: FeatureSettings = FeatureSettings(),
         withNotifications: Boolean = false,
         edit: (LauncherShellState) -> LauncherShellState = { it },
+        hintsHost: HintsHost = HintsHost.inMemory(),
     ) {
         shell = edit(ScreenshotFixtures.homeState().withManyApps().withFeatures(features))
         val host =
@@ -100,7 +107,7 @@ class FeatureSwitchesTest {
                     appIconLoader = SolidColorAppIconLoader(),
                     stream = host,
                     // The first-run hint is asked for, as the shell does: it is the switches that keep it away.
-                    hints = HintsHost.inMemory(),
+                    hints = hintsHost,
                     onAction = { action ->
                         actions += action
                         shell = shell.answering(action)
@@ -200,7 +207,7 @@ class FeatureSwitchesTest {
 
     @Test
     fun theStreamHandleStandsBesideTheDockAndATapOpensTheStream() {
-        show()
+        show(handleOn)
 
         composeRule.onNodeWithTag(DOCK_STREAM_HANDLE_TEST_TAG).assertIsDisplayed()
             .assertHeightIsAtLeast(48.dp).assertWidthIsAtLeast(48.dp)
@@ -212,7 +219,7 @@ class FeatureSwitchesTest {
 
     @Test
     fun theStreamHandleOffersTheLibraryAndHidingItOnALongPress() {
-        show()
+        show(handleOn)
 
         composeRule.onNodeWithTag(DOCK_STREAM_HANDLE_TEST_TAG).performTouchInput { longClick() }
         composeRule.onNodeWithText("Open Library").assertIsDisplayed()
@@ -228,7 +235,7 @@ class FeatureSwitchesTest {
 
     @Test
     fun theStreamHandleIsReachableWithoutTouchAsAButtonWithCustomActions() {
-        show()
+        show(handleOn)
 
         val node = composeRule.onNodeWithTag(DOCK_STREAM_HANDLE_TEST_TAG).fetchSemanticsNode()
         assertEquals("Open the Stream", node.config[SemanticsProperties.ContentDescription].single())
@@ -238,26 +245,50 @@ class FeatureSwitchesTest {
     }
 
     @Test
-    fun theStreamHandleGoesWithItsOwnSwitchTheStreamSwitchAndSimpleMode() {
-        show(FeatureSettings(dockStreamHandle = false))
+    fun theStreamHandleIsOffByDefaultAndStaysOffWhenNoHintStands() {
+        show(hintsHost = HintsHost.inMemory(retiredHints))
+        composeRule.onNodeWithTag(DOCK_STREAM_HANDLE_TEST_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun theStreamHandleIsDrawnOnceWithThePressHintAndLeavesWithIt() {
+        composeRule.mainClock.autoAdvance = false
+        val host = HintsHost.inMemory()
+        show(hintsHost = host)
+        composeRule.mainClock.advanceTimeBy(500)
+
+        composeRule.onNodeWithTag(DOCK_HINT_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(DOCK_STREAM_HANDLE_TEST_TAG).assertIsDisplayed()
+
+        composeRule.mainClock.advanceTimeBy(HINT_ON_SCREEN_MILLIS)
+        composeRule.onNodeWithTag(DOCK_HINT_TEST_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(DOCK_STREAM_HANDLE_TEST_TAG).assertDoesNotExist()
+        // The hint was retired as it came up, so neither returns.
+        composeRule.mainClock.advanceTimeBy(10 * HINT_ON_SCREEN_MILLIS)
+        composeRule.onNodeWithTag(DOCK_STREAM_HANDLE_TEST_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun theStreamHandleGoesWithTheStreamSwitchAndSimpleMode() {
+        show(handleOn.copy(stream = false), hintsHost = HintsHost.inMemory(retiredHints))
         composeRule.onNodeWithTag(DOCK_STREAM_HANDLE_TEST_TAG).assertDoesNotExist()
     }
 
     @Test
     fun theStreamHandleIsNotDrawnWithoutAStream() {
-        show(FeatureSettings(stream = false))
+        show(handleOn.copy(stream = false))
         composeRule.onNodeWithTag(DOCK_STREAM_HANDLE_TEST_TAG).assertDoesNotExist()
     }
 
     @Test
     fun theStreamHandleIsNotDrawnInSimpleMode() {
-        show(FeatureSettings(simpleMode = true))
+        show(handleOn.copy(simpleMode = true))
         composeRule.onNodeWithTag(DOCK_STREAM_HANDLE_TEST_TAG).assertDoesNotExist()
     }
 
     @Test
     fun theStreamHandleLeavesOutTheLibraryOptionWhileTheLibraryIsOff() {
-        show(FeatureSettings(library = false))
+        show(handleOn.copy(library = false))
 
         val custom =
             composeRule.onNodeWithTag(DOCK_STREAM_HANDLE_TEST_TAG).fetchSemanticsNode()

@@ -100,10 +100,10 @@ internal class StreamHandleActions(
 )
 
 /**
- * The Stream handle (ADR 0003, Amendment 12): a small chevron on Thin glass at the far end of the Dock, on the side
- * the Dock is pulled toward. A tap opens the Stream (what pressing the Dock does), and a touch and hold offers the
- * Library and hiding the handle. It is a visible, tappable route for someone who has not found the Dock's gestures,
- * and Settings > Dock > Show Stream handle turns it off. It does not move.
+ * The Stream handle (ADR 0003, Amendments 12 and 21): a small chevron on Thin glass at the far end of the Dock, on the
+ * side the Dock is pulled toward. A tap opens the Stream (what pressing the Dock does), and a touch and hold offers the
+ * Library and hiding the handle. It is off unless Settings > Dock > Show Stream handle turns it on; otherwise it is
+ * drawn once, as a teaching aid, while the press hint stands. It does not move.
  */
 @Composable
 internal fun DockStreamHandle(
@@ -247,19 +247,20 @@ private fun HandleMenu(
 }
 
 /**
- * The handle where Home shows it: it stands while Home is the front (no Stream, Library or search over it) and nothing
- * moves or is dragged ([busy], read here so Home does not recompose when a drag or a press starts and ends).
+ * The handle where Home shows it ([enabled]: opted in, or the press hint stands): it stands while Home is the front
+ * (no Stream, Library or search over it) and nothing moves or is dragged ([busy], read here so Home does not
+ * recompose when a drag or a press starts and ends).
  */
 @Composable
 internal fun DockStreamHandleLayer(
-    enabled: Boolean,
+    enabled: () -> Boolean,
     busy: () -> Boolean,
     dockBounds: () -> Rect?,
     pull: DockPullDirection,
     libraryAvailable: Boolean,
     actions: StreamHandleActions,
 ) {
-    if (!enabled || busy()) return
+    if (!enabled() || busy()) return
     DockStreamHandle(
         dockBounds = dockBounds,
         pull = pull,

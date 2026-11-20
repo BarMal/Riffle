@@ -136,7 +136,7 @@ class OnboardingTest {
     @Test
     fun hintEventsAndShowHintsAgainChangeOnlyTheHints() {
         val state = Onboarding.completed(OnboardingState(OnboardingOrigin.FRESH_INSTALL))
-        val retired = Onboarding.hintEvent(state, HintEvent.Dismissed(Hint.DOCK_MENU))
+        val retired = Onboarding.hintEvent(state, HintEvent.Shown(Hint.DOCK_MENU))
         assertEquals(setOf(Hint.DOCK_MENU), retired.hints.retired)
         assertEquals(state.progress, retired.progress)
         assertEquals(state, Onboarding.hintEvent(state, HintEvent.StackScrubbed).copy(hints = state.hints))

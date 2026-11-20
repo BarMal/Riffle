@@ -9,6 +9,16 @@ has been run on a physical device except what the owner reported; see
 [`places-views-device-checklist.md`](docs/development/places-views-device-checklist.md), and export a backup before
 installing. Entries are in the order they were built; where a later one changes an earlier one, it says so.
 
+### Changed
+
+- Quieter hints ([ADR 0003](docs/architecture/adr/0003-places-and-views.md), Amendment 21): the Dock's gesture hints are
+  shown **once and then never**, have **no "Got it" button**, and leave after about 6 seconds or on your next touch
+  (with a screen reader on they wait for your next interaction instead), and a hint waits 3 Home visits after the last.
+  Tips already seen stay retired; **Settings > Home > Show hints again** brings them back, once each. The **Stream
+  handle** and the Stream's **view button** are now **off by default for everyone** (Settings > Dock > Show Stream handle,
+  Settings > Stream > Show view button turn them on); the handle appears once, with the press hint. Both switches start
+  off on existing installs, whatever they were. Not run on a device: the 6-second timing and the screen-reader behaviour.
+
 ### Added
 
 - Wider search ([ADR 0003](docs/architecture/adr/0003-places-and-views.md), Amendment 20): search now also **answers sums

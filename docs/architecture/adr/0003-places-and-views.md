@@ -1025,6 +1025,32 @@ Place, no View and no kind of Stream content; the rest of Amendments 1 to 19 sta
 - **Not decided here.** Work-profile contacts, directory contacts, currency conversion and searching document contents are
   not built. The Files app's handling of the query, the permission dialogs and the real providers need a device.
 
+
+## Amendment 21 (owner, 2026-11-20): hints show once and leave by themselves; the handle and the view button are opt-in
+
+Amendment 12's hints, Stream handle and Stream view button read as permanent prompts. This amends 12; the rest stands.
+
+- **A hint is shown at most once, ever.** It is retired (`HintEvent.Shown`) the moment it is on screen, whether or not the
+  person acts. It has no button. It leaves after about 6 seconds (a timer of the composition, cancelled when the hint
+  leaves: never a background timer), on the next touch anywhere (observed without consuming it), on a tap on it, or when
+  its gesture is performed or the situation changes (the Stream opens, the Library opens, the Dock moves). With a screen
+  reader on there is no timer; it stays until the next interaction and is announced once, politely. It does not animate,
+  so reduced motion changes nothing.
+- **Pacing.** A hint waits 3 Home visits after the last one was shown (`Hints.MIN_VISITS_BETWEEN_HINTS`), so there is
+  never one on two visits in a row and a new person meets at most one in their first few visits. A hint for a gesture
+  already performed is never shown. Hints already retired stay retired; Settings > Home > Show hints again re-arms them,
+  each again shown once.
+- **The Stream handle is opt-in** (Settings > Dock > Show Stream handle, off for everyone). Off, it is drawn once, as part
+  of the press hint: it appears while that hint stands and leaves with it.
+- **The Stream view button is opt-in** (Settings > Stream > Show view button, off for everyone). The Library header's
+  view button stays, and the long-presses and spoken actions for "Show as" are unchanged.
+- **Stored switches.** The two switches were stored as booleans that could not tell a default from a choice, so they are
+  stored under new keys (`dockStreamHandleOptIn`, `streamViewButtonOptIn`) and the old ones are ignored: every existing
+  install starts with both off.
+
+Not changed: the permission "Allow" cards, the empty-Home card, the set-up card and the tour. Details: `gestures.md`,
+`settings.md`.
+
 ## Superseded documents
 
 These describe the workspace model or its UI and are superseded by this ADR. They stay in the repository as

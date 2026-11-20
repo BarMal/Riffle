@@ -28,7 +28,8 @@ enum class HomeMode(
 /**
  * The feature switches (ADR 0003, Amendment 1): the Stream, the Dock's live apps and the Library each on or off, and
  * Simple mode, the locked-down Home: every app A to Z on the paged Library, not arrangeable, with the Stream, the live
- * apps and the Library pull off. Each switch defaults to today's behaviour (on); Simple mode defaults off.
+ * apps and the Library pull off. The first three default to today's behaviour (on); Simple mode, the Stream handle and
+ * the "Show as" button default off (ADR 0003, Amendment 21: nothing permanent is drawn unasked).
  *
  * Simple mode is not a copy of other values: while it is on it overrides the switches ([effective], which reads the
  * Home mode as [HomeMode.AppLibrary]), and the stored switches and the Home mode come back untouched when it is turned
@@ -39,10 +40,13 @@ data class FeatureSettings(
     val dockLiveApps: Boolean = true,
     val library: Boolean = true,
     val simpleMode: Boolean = false,
-    /** The small handle on the Dock that opens the Stream with a tap (ADR 0003, Amendment 12). Needs the Stream. */
-    val dockStreamHandle: Boolean = true,
-    /** The small "Show as" button on the Stream's page (a visible way to the menu a long-press of a tile opens). */
-    val streamViewButton: Boolean = true,
+    /**
+     * Opt-in: the small handle that stays on the Dock to open the Stream with a tap (ADR 0003, Amendments 12 and 21).
+     * Needs the Stream. Off, it still appears once, with the press hint.
+     */
+    val dockStreamHandle: Boolean = false,
+    /** Opt-in: the small "Show as" button on the Stream's page (the menu a long-press of a tile opens anyway). */
+    val streamViewButton: Boolean = false,
 ) {
     /** What is actually on, given the stored Home mode. */
     fun effective(homeMode: HomeMode): EffectiveFeatures =
@@ -101,10 +105,10 @@ data class EffectiveFeatures(
     val library: Boolean = true,
     val homeMode: HomeMode = HomeMode.PlacedItems,
     val simpleMode: Boolean = false,
-    /** The Stream handle draws on the Dock. */
-    val dockStreamHandle: Boolean = true,
+    /** The Stream handle stays on the Dock. */
+    val dockStreamHandle: Boolean = false,
     /** The "Show as" button draws on the Stream's page. */
-    val streamViewButton: Boolean = true,
+    val streamViewButton: Boolean = false,
 )
 
 /** The switches in effect for these settings (Simple mode applied). */

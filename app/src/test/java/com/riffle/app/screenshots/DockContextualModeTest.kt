@@ -8,6 +8,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
@@ -20,6 +23,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.DOCK_CONTEXTUAL_ROW_TEST_TAG
@@ -219,13 +223,20 @@ class DockContextualModeTest {
         executor.shutdownNow()
     }
 
-    private fun showStream() {
+    private fun showStream(viewButton: Boolean = false) {
         // The real Stream wiring, so every section leaves Loading and a tile can land on its page.
         host = realWiringStreamHost(executor = executor)
+        val shell = ScreenshotFixtures.homeState()
         composeRule.setContent {
             ScreenshotBackdrop {
                 HomeDestination(
-                    state = ScreenshotFixtures.homeState(),
+                    state =
+                        shell.copy(
+                            launcherSettings =
+                                shell.launcherSettings.copy(
+                                    features = shell.launcherSettings.features.copy(streamViewButton = viewButton),
+                                ),
+                        ),
                     appIconLoader = SolidColorAppIconLoader(),
                     stream = host,
                     streamShown = true,
@@ -291,8 +302,8 @@ class DockContextualModeTest {
     }
 
     @Test
-    fun theViewButtonOpensTheSamePageOptionsAsALongPressWithA48DpTarget() {
-        showStream()
+    fun theViewButtonOnceSwitchedOnOpensTheSamePageOptionsAsALongPressWithA48DpTarget() {
+        showStream(viewButton = true)
 
         composeRule.onNodeWithTag(STREAM_VIEW_BUTTON_TEST_TAG)
             .assertIsDisplayed()
@@ -309,32 +320,27 @@ class DockContextualModeTest {
     }
 
     @Test
-    fun theViewButtonIsNotDrawnWhenItsSwitchIsOff() {
-        host = realWiringStreamHost(executor = executor)
-        composeRule.setContent {
-            ScreenshotBackdrop {
-                HomeDestination(
-                    state =
-                        ScreenshotFixtures.homeState().let { shell ->
-                            shell.copy(
-                                launcherSettings =
-                                    shell.launcherSettings.copy(
-                                        features = shell.launcherSettings.features.copy(streamViewButton = false),
-                                    ),
-                            )
-                        },
-                    appIconLoader = SolidColorAppIconLoader(),
-                    stream = host,
-                    streamShown = true,
-                    onAction = {},
-                )
-            }
-        }
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-            composeRule.onAllNodesWithTag(dockDynamicSectionTileTestTag("Recents")).fetchSemanticsNodes().isNotEmpty()
-        }
+    fun theViewButtonIsOffByDefaultAndTheLongPressStillOffersShowAs() {
+        showStream()
 
         composeRule.onNodeWithTag(STREAM_VIEW_BUTTON_TEST_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag("Recents")).performScrollTo()
+        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag("Recents")).performTouchInput { longClick() }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Show as List").assertIsDisplayed()
+    }
+
+    @Test
+    fun showAsStaysReachableWithoutTouchWhenTheViewButtonIsOffThroughTheTilesLongClickAction() {
+        showStream()
+        val tile = composeRule.onNodeWithTag(dockDynamicSectionTileTestTag("Recents"))
+        tile.performScrollTo()
+
+        tile.assert(SemanticsMatcher.keyIsDefined(SemanticsActions.OnLongClick))
+        tile.performSemanticsAction(SemanticsActions.OnLongClick) { assertTrue(it()) }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Show as List").assertIsDisplayed()
     }
 
     @Test

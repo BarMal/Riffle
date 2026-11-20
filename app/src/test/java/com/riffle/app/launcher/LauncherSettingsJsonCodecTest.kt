@@ -1593,17 +1593,31 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun theVisibleCueSwitchesRoundTripAndAreOnInBlobsWrittenBeforeThem() {
-        val features = FeatureSettings(dockStreamHandle = false, streamViewButton = false)
-        val settings = LauncherSettings(features = features)
-        assertEquals(features, decodeLauncherSettings(encodeLauncherSettings(settings)).features)
-        // Written before the cues existed (the same blob as the switches' own): both are on.
-        val old = decodeLauncherSettings("""{"features": {"stream": true, "library": false, "simpleMode": false}}""")
-        assertEquals(true, old.features.dockStreamHandle)
-        assertEquals(true, old.features.streamViewButton)
-        val handle = { value: String -> decodeLauncherSettings("""{"features": {"dockStreamHandle": $value}}""") }
-        assertEquals(false, handle("false").features.dockStreamHandle)
-        assertEquals(true, handle("\"no\"").features.dockStreamHandle)
+    fun theVisibleCueSwitchesAreOptInAndRoundTrip() {
+        val on = FeatureSettings(dockStreamHandle = true, streamViewButton = true)
+        assertEquals(on, decodeLauncherSettings(encodeLauncherSettings(LauncherSettings(features = on))).features)
+        val off = FeatureSettings()
+        assertEquals(off, decodeLauncherSettings(encodeLauncherSettings(LauncherSettings(features = off))).features)
+        assertEquals(false, off.dockStreamHandle || off.streamViewButton)
+        val handle = { value: String -> decodeLauncherSettings("""{"features": {"dockStreamHandleOptIn": $value}}""") }
+        assertEquals(true, handle("true").features.dockStreamHandle)
+        assertEquals(false, handle("\"yes\"").features.dockStreamHandle)
+    }
+
+    @Test
+    fun anOldStoredHandleOrViewButtonOfEitherValueDecodesToOffBecauseADefaultCannotBeToldFromAChoice() {
+        // Written when both were on by default: a stored true may be the default, so both read as off.
+        val oldOn = """{"features": {"stream": true, "dockStreamHandle": true, "streamViewButton": true}}"""
+        assertEquals(false, decodeLauncherSettings(oldOn).features.dockStreamHandle)
+        assertEquals(false, decodeLauncherSettings(oldOn).features.streamViewButton)
+        val oldOff = """{"features": {"dockStreamHandle": false, "streamViewButton": false}}"""
+        assertEquals(FeatureSettings(), decodeLauncherSettings(oldOff).features)
+        // Written before the cues existed.
+        val older = decodeLauncherSettings("""{"features": {"stream": true, "library": false, "simpleMode": false}}""")
+        assertEquals(false, older.features.dockStreamHandle)
+        assertEquals(false, older.features.streamViewButton)
+        // Other switches in the same blob are untouched.
+        assertEquals(false, decodeLauncherSettings(oldOn.replace("true, \"dock", "false, \"dock")).features.stream)
     }
 
     @Test

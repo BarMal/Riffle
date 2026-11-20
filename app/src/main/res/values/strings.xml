@@ -328,7 +328,7 @@
     <string name="dock_live_app_unnamed_label">App with %1$d new</string>
     <string name="dock_live_app_open_action">Open %1$s</string>
     <string name="dock_press_hint">Press the Dock down to see what\'s live</string>
-    <string name="dock_press_hint_dismiss">Got it</string>
+    <string name="dock_hint_dismiss_action">Dismiss hint</string>
     <string name="dock_stream_handle_open">Open the Stream</string>
     <string name="dock_stream_handle_options">Show Stream handle options</string>
     <string name="dock_stream_handle_hide">Hide this handle</string>
@@ -680,7 +680,7 @@
     <string name="setting_home_set_up_again_keywords">set up walkthrough onboarding tour first-time</string>
     <string name="setting_home_show_hints_again">Show hints again</string>
     <string name="setting_home_show_hints_again_keywords">hints tips tutorial gestures dock help reset teach</string>
-    <string name="settings_show_hints_again_subtitle">Brings back the short tips about the Dock\'s gestures.</string>
+    <string name="settings_show_hints_again_subtitle">Shows the short tips about the Dock\'s gestures once more, one at a time.</string>
     <string name="setting_dock_show">Show the Dock</string>
     <string name="setting_dock_show_keywords">dock visible hide</string>
     <string name="setting_layout_folded_dock_edge">Dock position, folded</string>
@@ -978,8 +978,8 @@
     <string name="settings_add_new_apps_subtitle">A newly installed app is placed after the last item on Home. Off keeps it in the Library only.</string>
     <string name="settings_simple_mode_subtitle">Home shows every app, A to Z, and cannot be rearranged; the Stream, live apps and the Library sheet are off. Your arranged Home comes back when you turn it off.</string>
     <string name="settings_feature_stream_subtitle">The actions centre: press the Dock down to see what is live. Off removes the press, the live pages and their shortcuts.</string>
-    <string name="settings_feature_stream_handle_subtitle">A small handle beside the Dock on Home. Tap it to open the Stream; touch and hold it for the Library.</string>
-    <string name="settings_feature_stream_view_button_subtitle">A small button on the Stream that opens the same menu as touching and holding a Dock tile: Show as, Move, Hide.</string>
+    <string name="settings_feature_stream_handle_subtitle">Keeps a small handle beside the Dock on Home. Tap it to open the Stream; touch and hold it for the Library. Off, it shows once with a tip.</string>
+    <string name="settings_feature_stream_view_button_subtitle">Keeps a small button on the Stream that opens the same menu as touching and holding a Dock tile: Show as, Move, Hide.</string>
     <string name="settings_feature_live_apps_subtitle">Apps with something new, and a Now tile while something plays, on the Dock. Off leaves the Dock with your pinned apps.</string>
     <string name="settings_feature_library_subtitle">Every app on pages, reached by pulling away from the Dock. Off removes the pull, the Dock action and the gesture. Search stays.</string>
     <string name="settings_feature_off_in_simple_mode">Off in Simple mode</string>
