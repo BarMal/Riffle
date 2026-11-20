@@ -13,6 +13,11 @@ Riffle tracks signed release APK size to catch dependency and asset growth early
   release build does not enable R8 minification or resource shrinking
   (`isMinifyEnabled = false`), so this is organic growth from feature work.
 
+- Alpha builds are R8-minified from the build after `a7e4a4b6` (see
+  [`R8 Minification`](r8-minification.md)): that commit was 33,781,407 bytes unminified, over the
+  cap, and 6,650,318 bytes minified. The stable workflow still builds unminified and would exceed
+  the cap at that size; minify it, or raise its cap, before the next stable release.
+
 The 32 MiB cap (raised from 25 MiB after the 25.67 MiB alpha build failed the old cap, blocking
 alpha publishing) leaves room for normal launcher work while keeping large dependencies, bundled
 assets, and build configuration changes visible before they become expensive to unwind.

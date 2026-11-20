@@ -166,7 +166,9 @@ jobs:
           RIFFLE_SIGNING_KEY_PASSWORD: ${{ secrets.RIFFLE_SIGNING_KEY_PASSWORD }}
           RIFFLE_VERSION_CODE: ${{ github.run_number }}
           RIFFLE_VERSION_NAME: 0.1.0-alpha.${{ github.run_number }}
-        run: ./gradlew assembleRelease
+        # The alpha ships R8-minified (docs/release/r8-minification.md). The mapping file is published
+        # with the release so crash traces from installed builds can be read.
+        run: ./gradlew assembleRelease -Priffle.minify=true
 
       - name: Upload release artifacts
         if: steps.existing_release.outputs.already_published != 'true'
@@ -184,6 +186,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/release"
           cp app/build/outputs/apk/release/*.apk "$RUNNER_TEMP/release/riffle-alpha.apk"
+          gzip -9 -c app/build/outputs/mapping/release/mapping.txt > "$RUNNER_TEMP/release/riffle-alpha-mapping.txt.gz"
           pwsh .github/scripts/assert-artifact-size.ps1 \
             -ArtifactPath "$RUNNER_TEMP/release/riffle-alpha.apk" \
             -MaxBytes 33554432 \
@@ -199,6 +202,7 @@ jobs:
 
           gh release create "$RELEASE_TAG" \
             "$RUNNER_TEMP/release/riffle-alpha.apk" \
+            "$RUNNER_TEMP/release/riffle-alpha-mapping.txt.gz" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$CANDIDATE_SHA" \
             --title "Riffle Alpha ${CANDIDATE_SHA:0:12}" \
