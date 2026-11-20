@@ -37,6 +37,7 @@ import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import com.riffle.app.R
@@ -78,6 +79,7 @@ private val ChipIconSize = 24.dp
 internal fun QuickActionsRow(
     quick: PageQuickActions,
     modifier: Modifier = Modifier,
+    edgePadding: Dp = RiffleSpacing.s,
 ) {
     val title = stringResource(R.string.stream_quick_actions_for, quick.appLabel)
     val viewport = remember { DockRunViewport(runsHorizontally = true) }
@@ -102,7 +104,7 @@ internal fun QuickActionsRow(
         ) {
             // The chips fit whole when they can (labels give up their ends before a chip is cut by the edge), and the
             // row scrolls, a chip at the cut fading out, only when even that would leave them too small.
-            val rowPadding = RiffleSpacing.s
+            val rowPadding = edgePadding
             val available = with(LocalDensity.current) { (maxWidth - rowPadding * 2).roundToPx() }
             Row(
                 modifier =
