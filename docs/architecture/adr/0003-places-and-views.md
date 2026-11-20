@@ -993,6 +993,38 @@ item in an app's long-press menu (Change icon).
 
 Detail and tests: `settings.md` (Appearance > Icons), `design-language.md` (Icons).
 
+## Amendment 20 (owner, 2026-11-19): wider search
+
+Search found apps, app shortcuts, Riffle's own settings and a web hand-off. This adds optional sources to it. It adds no
+Place, no View and no kind of Stream content; the rest of Amendments 1 to 19 stands.
+
+- **One small contract.** `SearchSource` (`:core:domain`): an id, a suspend query that returns scored, typed results, a
+  result cap, a minimum query length and a debounce. The results are typed per source (`WiderSearchResult`: calculator
+  answer, unit conversion, system setting, contact, file, Files-app row), each with its own row and actions, and are not a
+  universal item. `WiderSearchMerger` keeps the calculator's answer first, then the apps, then the groups in a
+  user-orderable order with a per-group cap and a hidden count for "Show more"; `WiderSearchEngine` runs the enabled
+  sources concurrently, each after its debounce, and is cancelled with the query, so a stale answer is never emitted.
+- **Apps are never delayed.** The existing app, shortcut and Riffle settings results stay synchronous; the wider sources
+  only add. Riffle's own settings rank among the apps and so stand above system settings.
+- **Sources.** Calculator and units (pure, decimal, no permission, no currencies, no network); system settings (the
+  `Settings.ACTION_*` screens that resolve on the device, resolved once); contacts (`READ_CONTACTS`, personal profile only,
+  off by default); files (`MediaStore` and `MediaStore.Downloads`, only what the matching optional media permission
+  shows, plus the "Open Files with this search" row, off by default). Documents are not reachable without broad storage
+  access, which the launcher does not hold.
+- **Permissions.** All optional, none a required feature, none requested at launch or by the switch: the only request is
+  the tap on the inline "Allow" row search shows while the source is on and its permission is missing (the Stream's
+  permission-prompt wording pattern, `PermissionGain.CONTACTS` and `FILES`).
+- **Privacy.** The query, the names, numbers, photos and file names it finds are held for the length of one query and are
+  never persisted, logged, put in a backup or sent anywhere; the stored settings are switches, an order and a count only
+  (`WiderSearchPrivacyTest`). No network of any kind is involved.
+- **One implementation.** `rememberWiderSearch` and the panels in `A/search/wider/` are used by the Dock's search (as a
+  stack, icons or a list) and the Library's search; Enter copies the calculator's answer, else opens the top app, else the
+  top wider row.
+- **Settings.** Library > Search gets a switch per source, Move up and Move down for the groups and Results per group; a
+  settings blob stored before reads the defaults.
+- **Not decided here.** Work-profile contacts, directory contacts, currency conversion and searching document contents are
+  not built. The Files app's handling of the query, the permission dialogs and the real providers need a device.
+
 ## Superseded documents
 
 These describe the workspace model or its UI and are superseded by this ADR. They stay in the repository as

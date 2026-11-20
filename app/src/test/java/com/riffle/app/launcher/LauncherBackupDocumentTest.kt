@@ -16,6 +16,7 @@ import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
+import com.riffle.core.domain.launcher.search.wider.SearchSourceId
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
@@ -26,6 +27,7 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.MotionSettings
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.RssSettings
+import com.riffle.core.domain.launcher.settings.SearchSettings
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
 import com.riffle.core.domain.launcher.stream.StreamLayout
@@ -92,6 +94,27 @@ class LauncherBackupDocumentTest {
             JSONObject(encoded).getJSONObject("settings").getJSONObject("icons").getJSONArray("overrides")
         assertEquals("camera_alt", overrides.getJSONObject(0).getString("drawable"))
         assertEquals(false, encoded.contains("base64", ignoreCase = true))
+    }
+
+    @Test
+    fun searchSourceSettingsTravelInTheBackupAndAnOlderBackupRestoresTheDefaults() {
+        val search =
+            SearchSettings(
+                contacts = true,
+                files = true,
+                calculator = false,
+                groupOrder = listOf(SearchSourceId.CONTACTS, SearchSourceId.FILES, SearchSourceId.SYSTEM_SETTINGS),
+                resultsPerGroup = 3,
+            )
+        val document = backupDocument().copy(launcherSettings = LauncherSettings(search = search))
+
+        val decoded = decodeLauncherBackupDocument(encodeLauncherBackupDocument(document))
+        assertEquals(search, decoded.launcherSettings.search)
+
+        val older =
+            JSONObject(encodeLauncherBackupDocument(backupDocument()))
+                .apply { getJSONObject("settings").remove("search") }
+        assertEquals(SearchSettings(), decodeLauncherBackupDocument(older.toString()).launcherSettings.search)
     }
 
     @Test

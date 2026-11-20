@@ -40,6 +40,7 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | **Library** | Features | Library (a switch; **on by default** again, since the Library holds every app, and off in Simple mode; a stored choice is kept) |
 | | View | Show as (Categories, A-Z, Grid, Pages), grid columns (used by Grid, disabled otherwise) |
 | | Search | Search results as a card stack (the default), icons or a list. The stack is the Dock's search; the Library's own search field draws the stack's choice as icons |
+| | Search sources | A switch per source (see "Library > Search" below): Riffle settings (on), Calculator (on), System settings (on), Contacts (off), Files (off), Web search (on); the order of the groups (Move up, Move down per group) and Results per group (3, 5 or 8; 5). Apps and app shortcuts are always searched and have no switch |
 | | Apps | Hidden apps (opens the sub-page), refresh installed apps |
 | Hidden apps (under Library) | | The one list of hidden apps |
 | **Stream** | Features | Stream (a switch; off in Simple mode); Show view button (a switch, on by default): the small button on the Stream that opens the page options a Dock tile's long-press opens (Show as, Move, Hide). Stored in `FeatureSettings.streamViewButton` |
@@ -82,6 +83,64 @@ Where "Show as" lives twice it is one stored value. The Stream page writes `Stre
 `CachedStreamLayoutRepository` the Stream's header menus use (`A/stream/StreamLayoutStore.kt`); Library > Show as
 dispatches `SelectLibraryView`, the action the Library's long-press dispatches. The Stream page and Library page are
 per device class, so both show the device tabs.
+
+## Library > Search
+
+Search finds apps, app shortcuts and Riffle's own settings, as it always did, and now optional **wider sources** behind one
+small contract (`SearchSource` in `D/search/wider/`: an id, a suspend query that returns scored, typed results, a cap, a
+minimum query length and a debounce). Each source is independently switchable in Settings > Library > Search (`SearchSettings`:
+`launcherSettings`, `calculator`, `systemSettings`, `contacts`, `files`, `webHandoff`, `groupOrder`, `resultsPerGroup`; one
+`SettingKey` each, all searchable, all in a backup, and a settings blob stored before them reads the defaults in the table
+above). The same code draws them in the Dock's search (card stack, icons or list), the Library's search and the search
+stack: `rememberWiderSearch` and `WiderSearchPanel` in `A/search/wider/`.
+
+- **Apps stay instant.** App, shortcut and Riffle settings results are computed synchronously as before; the wider sources
+  only add. Each runs in its own coroutine after its own debounce (calculator and system settings: none; contacts 150 ms,
+  files 200 ms) and is cancelled when the query changes, so an old query's answer is never drawn for a newer one
+  (`WiderSearchEngine`, tested with a virtual clock). A source that throws gives no rows and does not stop the others.
+- **Order.** The calculator's answer first, then the apps (with Riffle's own settings ranked among them, so a Riffle setting
+  always stands above a system one), then the groups in the person's order (System settings, Contacts, Files by default),
+  each cut at Results per group with "Show N more" while it is cut. Group headers show only when more than one thing has
+  results. Growing up from the Dock's field, the groups stand above the apps and the answer under them, nearest the field.
+- **Calculator** (no permission). `+ - × * / ÷ ^ %`, parentheses, implicit multiplication by parentheses ("2(3+4)"), decimals
+  in the locale's separator (the other of `.` and `,` is a grouping mark only in groups of three). Decimal arithmetic
+  (0.1 + 0.2 is 0.3), whole numbers exact, others to ten places, never above 10^30. `%` after `+` or `-` is a share of the
+  left side ("200 + 10%" is 220). Division by zero, overflow, a plain number, a phone number, a date, a version, an
+  incomplete expression or any letter show nothing. Units: "12 km in miles", "70 f to c", "3.5 lb in kg" (length, mass,
+  temperature, volume (US), speed, data sizes (1000 and 1024), time); fixed factors, no currencies, no network. Tap copies
+  the answer ("Copied", system message on Android 13 and later); the long-press and the trailing "Copy sum" or "Copy both"
+  button copy it with what was asked ("12 × 3 = 36"). Enter copies the answer.
+- **System settings** (no permission). About twenty-five `Settings.ACTION_*` screens (Wi-Fi, Bluetooth, Display, Sound,
+  Battery, Storage, Apps, Notifications, Location, Security, Accessibility, Date and time, Language, Developer options,
+  About phone, Default apps, Data usage, NFC, Hotspot, Airplane mode and more) with labels and keywords in resources; only
+  those that resolve on the device are offered, resolved once off the main thread and kept (`SystemSettingsCatalog`; each
+  action is in the manifest's `<queries>`).
+- **Contacts** (`READ_CONTACTS`, optional, off by default). The permission is requested only from the inline "Allow" row
+  search draws while the source is on and the permission is missing ("Search contacts: allow access to find people by
+  name."), never at launch and never from the switch. A contact matches when the name starts with the query or every query
+  word starts a word of the name, ignoring case and accents; the row shows a bounded photo thumbnail when there is one
+  (the Stream's `ItemImage` and `ExpressionImageLoader`, decoded to the size drawn, in memory only). Tap opens the contact;
+  Call and Message appear only for a contact with a number and open the dialler (`ACTION_DIAL`) and the messaging app
+  (`ACTION_SENDTO`, `smsto:`), so no call or SMS permission is involved and nothing is placed or sent. The provider is read
+  off the main thread with a row limit of 40 plus one bounded query for the numbers. **Personal profile only in this batch**:
+  work-profile and directory contacts are not read. Nothing from contacts (the query, a name, a number, a photo) is stored,
+  logged or in a backup; `WiderSearchPrivacyTest` holds it.
+- **Files** (optional, off by default). Photos, videos and audio by name through `MediaStore`, and downloads through
+  `MediaStore.Downloads`, newest first, opened with `ACTION_VIEW` and the content URI with a read grant. What the launcher
+  can see **without** a permission is nothing: since Android 10 `MediaStore` shows an app only the files it made itself.
+  What it can see with permission is what that permission covers: `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO` and
+  `READ_MEDIA_AUDIO` on Android 13 and later (asked together from one "Allow": "Search files: allow access to find photos,
+  videos and audio by name."), `READ_EXTERNAL_STORAGE` (declared up to Android 12L) before. Documents (PDF, text, office
+  files) are not reachable without broad storage access, which the launcher does not hold and will not ask for; the always
+  last row **Open Files with this search** (the system Files app at Downloads, with the query passed along) is the way in.
+  Whether that app starts a search from the query depends on the app, and is only confirmable on a device.
+- **Manifest.** `READ_CONTACTS`, `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, `READ_MEDIA_AUDIO` and `READ_EXTERNAL_STORAGE`
+  (`maxSdkVersion` 32) are declared as ordinary runtime permissions and no `uses-feature` is added, so none is a required
+  feature and none is requested before the person taps "Allow". Each can be taken back in system settings; search reads
+  its access again when the launcher is back in front.
+- **Accessibility.** Rows are at least 56 dp and the buttons beside them 48 dp; the secondary actions (Copy sum, Call,
+  Message, Show more) are buttons, not long-presses; a row says its group and place ("System settings, 2 of 5"), a group
+  header is a heading, and the Allow row is a button with its sentence.
 
 ## Appearance > Icons
 

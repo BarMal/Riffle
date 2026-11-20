@@ -193,6 +193,46 @@ enum class SettingKey(
         R.string.setting_library_search_results,
         R.string.setting_library_search_results_keywords,
     ),
+    LIBRARY_SEARCH_LAUNCHER_SETTINGS(
+        SettingsPage.LIBRARY,
+        R.string.setting_library_search_launcher_settings,
+        R.string.setting_library_search_launcher_settings_keywords,
+    ),
+    LIBRARY_SEARCH_CALCULATOR(
+        SettingsPage.LIBRARY,
+        R.string.setting_library_search_calculator,
+        R.string.setting_library_search_calculator_keywords,
+    ),
+    LIBRARY_SEARCH_SYSTEM_SETTINGS(
+        SettingsPage.LIBRARY,
+        R.string.setting_library_search_system_settings,
+        R.string.setting_library_search_system_settings_keywords,
+    ),
+    LIBRARY_SEARCH_CONTACTS(
+        SettingsPage.LIBRARY,
+        R.string.setting_library_search_contacts,
+        R.string.setting_library_search_contacts_keywords,
+    ),
+    LIBRARY_SEARCH_FILES(
+        SettingsPage.LIBRARY,
+        R.string.setting_library_search_files,
+        R.string.setting_library_search_files_keywords,
+    ),
+    LIBRARY_SEARCH_WEB(
+        SettingsPage.LIBRARY,
+        R.string.setting_library_search_web,
+        R.string.setting_library_search_web_keywords,
+    ),
+    LIBRARY_SEARCH_ORDER(
+        SettingsPage.LIBRARY,
+        R.string.setting_library_search_order,
+        R.string.setting_library_search_order_keywords,
+    ),
+    LIBRARY_SEARCH_PER_GROUP(
+        SettingsPage.LIBRARY,
+        R.string.setting_library_search_per_group,
+        R.string.setting_library_search_per_group_keywords,
+    ),
     LIBRARY_REFRESH_APPS(
         SettingsPage.LIBRARY,
         R.string.setting_library_refresh_apps,

@@ -16,6 +16,8 @@ internal fun PermissionGain.messageRes(): Int =
         PermissionGain.MEDIA -> R.string.stream_permission_media
         PermissionGain.RECENT_APPS -> R.string.stream_permission_recents
         PermissionGain.CALENDAR -> R.string.stream_permission_calendar
+        PermissionGain.CONTACTS -> R.string.search_permission_contacts
+        PermissionGain.FILES -> R.string.search_permission_files
         PermissionGain.GENERIC -> R.string.stream_permission_message
     }
 

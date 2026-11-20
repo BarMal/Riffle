@@ -14,6 +14,7 @@ import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
+import com.riffle.core.domain.launcher.search.wider.SearchSourceId
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
@@ -36,6 +37,7 @@ import com.riffle.core.domain.launcher.settings.PostureLayoutSettings
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
+import com.riffle.core.domain.launcher.settings.SearchSettings
 import com.riffle.core.domain.launcher.settings.StreamSettings
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.workspace.ReturnBehavior
@@ -72,6 +74,22 @@ class LauncherSettingsStateReducerTest {
             )
 
         assertEquals(SearchResultPresentation.LIST, updatedState.launcherSettings.search.resultPresentation)
+        assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun persistsTheSearchSourceSettings() {
+        val repository = FakeLauncherSettingsRepository()
+        val changed =
+            SearchSettings().withSource(SearchSourceId.CONTACTS, true).movedGroup(SearchSourceId.FILES, -1)
+
+        val updatedState =
+            reducer(launcherSettingsRepository = repository).reduce(
+                state = LauncherShellState(),
+                action = LauncherShellAction.SetSearchSettings(changed),
+            )
+
+        assertEquals(changed, updatedState.launcherSettings.search)
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
 

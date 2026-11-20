@@ -50,8 +50,11 @@ Read from `core/domain/.../launcher/workspace/Source.kt`, `Item.kt`, `SourceIds.
   by an opaque token the source can resolve") and `None`. `ItemAction.Custom(id, label)` is open-ended.
 - `ItemExtKey` must match `namespace.name` (lowercase); `ItemExtValue` is `Text | Number | Flag` only.
 - The manifest declares `INTERNET`, `ACCESS_NETWORK_STATE`, `READ_CALENDAR` (requested only from Settings),
-  `PACKAGE_USAGE_STATS`, `SYSTEM_ALERT_WINDOW`, `ACCESS_HIDDEN_PROFILES`, and a `<queries>` entry for
-  `MAIN`/`LAUNCHER` intents only (`app/src/main/AndroidManifest.xml`). It does not declare
+  `PACKAGE_USAGE_STATS`, `SYSTEM_ALERT_WINDOW`, `ACCESS_HIDDEN_PROFILES`, the optional search permissions
+  `READ_CONTACTS`, `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, `READ_MEDIA_AUDIO` and `READ_EXTERNAL_STORAGE` (up to Android
+  12L), requested only from the inline "Allow" row in search and never required (see settings.md, "Library > Search";
+  what they read is never stored, logged or backed up), and a `<queries>` entry for `MAIN`/`LAUNCHER` intents and the
+  system settings screens search offers (`app/src/main/AndroidManifest.xml`). It does not declare
   `QUERY_ALL_PACKAGES`.
 - RSS is already planned/implemented as a settings-configured, https-only, user-triggered-refresh feature
   (`docs/product/rss-feed-behavior.md`): useful precedent for URL sources (https only, no credentials in

@@ -68,6 +68,7 @@ import com.riffle.core.domain.launcher.settings.PairRecipeKind
 import com.riffle.core.domain.launcher.settings.PairsMode
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
+import com.riffle.core.domain.launcher.settings.SearchSettings
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
@@ -424,6 +425,10 @@ class LauncherActionDomainTest {
                 settings(
                     "SelectSearchResultPresentation",
                     LauncherShellAction.SelectSearchResultPresentation(SearchResultPresentation.LIST),
+                ),
+                settings(
+                    "SetSearchSettings",
+                    LauncherShellAction.SetSearchSettings(SearchSettings(contacts = true)),
                 ),
                 settings(
                     "SelectReturnBehavior",
