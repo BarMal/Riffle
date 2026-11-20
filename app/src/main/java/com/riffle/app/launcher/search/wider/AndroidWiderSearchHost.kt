@@ -156,10 +156,15 @@ internal class WiderSearchAccess(
             host.onAccessMayHaveChanged()
         }
 
-    val host: AndroidWiderSearchHost =
+    /**
+     * Built on first use, not with the activity: this class is constructed in the activity's field initialisers, when
+     * the activity has no base context yet and reading its content resolver would crash the launch.
+     */
+    val host: AndroidWiderSearchHost by lazy {
         AndroidWiderSearchHost(
             context = activity,
             requestContacts = { contacts.launch(Manifest.permission.READ_CONTACTS) },
             requestMedia = { media.launch(AndroidWiderSearchHost.mediaPermissions()) },
         )
+    }
 }

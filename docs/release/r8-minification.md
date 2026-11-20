@@ -1,7 +1,10 @@
 # R8 Minification And Resource Shrinking
 
-Status: investigation and stage 1 (opt-in, non-publishing build). The shipped alpha and stable
-builds are unchanged: `release` still has `isMinifyEnabled = false`. Tracks #1268, relates to the
+Status: the alpha release ships minified (`alpha-release.yml` passes `-Priffle.minify=true` and
+publishes `riffle-alpha-mapping.txt.gz` with each release). The property still defaults to `false`,
+so the stable build is unminified until the owner's device pass below is done on a minified alpha.
+The unminified build reached 32.22 MiB and failed the 32 MiB gate; the same commit minified is
+6.34 MiB (measured locally with a throwaway key). Tracks #1268, relates to the
 [`APK Size Budget`](apk-size-budget.md) (#53).
 
 ## Why

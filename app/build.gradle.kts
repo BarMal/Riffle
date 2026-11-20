@@ -3,9 +3,9 @@ plugins {
     id("riffle.android.screenshots")
 }
 
-// Opt-in R8 minification and resource shrinking for the release build type, used only by the
-// Minified Release Check workflow (docs/release/r8-minification.md). Defaults to false, so the
-// shipped alpha/stable builds are unchanged unless a build passes -Priffle.minify=true.
+// Opt-in R8 minification and resource shrinking for the release build type
+// (docs/release/r8-minification.md). The alpha release and the Minified Release Check workflow pass
+// -Priffle.minify=true; it defaults to false, so the stable build is unminified.
 val minifyRelease =
     providers.gradleProperty("riffle.minify")
         .map(String::toBoolean)
