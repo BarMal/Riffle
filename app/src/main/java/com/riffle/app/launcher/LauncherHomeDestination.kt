@@ -56,6 +56,7 @@ import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.dock.DockMotionTuning
 import com.riffle.core.domain.launcher.dock.DockRing
 import com.riffle.core.domain.launcher.dockpull.pullDirection
+import com.riffle.core.domain.launcher.hints.Hint
 import com.riffle.core.domain.launcher.hints.HintContext
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeEditMode
@@ -353,11 +354,15 @@ private fun HomeDestinationContent(
         LocalHomeEntrance provides entrance,
         LocalStreamViewButton provides features.streamViewButton,
     ) {
+        // The hint on screen and the touches that end it (ADR 0003, Amendment 21): the press hint draws the Stream
+        // handle while it stands, and any touch anywhere under the root puts a hint away.
+        val hintStage = remember { HintStage() }
         ProvideLiquidGlassBackdrop { backdropCapture ->
             Box(
                 modifier =
                     Modifier
                         .fillMaxSize()
+                        .then(hintStage.observe())
                         .then(pull.rootModifier)
                         .onSizeChanged { size -> rootSize = size }
                         .then(backdropCapture),
@@ -491,7 +496,7 @@ private fun HomeDestinationContent(
                         onAction = onAction,
                     )
                 }
-                // The Stream handle: a small visible way in, on while Home is in front (Settings > Dock turns it off).
+                // The Stream handle: off unless Settings > Dock turns it on; drawn once while the press hint stands.
                 val handleClearance =
                     if (plan.dockEdge == DockPosition.BOTTOM) {
                         val layout = state.postureLayout()
@@ -505,7 +510,10 @@ private fun HomeDestinationContent(
                         0.dp
                     }
                 DockStreamHandleLayer(
-                    enabled = features.dockStreamHandle && stream != null && !shownStream && !showLibrary,
+                    enabled = {
+                        (features.dockStreamHandle || hintStage.hint == Hint.DOCK_PRESS) && stream != null &&
+                            !shownStream && !showLibrary
+                    },
                     busy = {
                         motion.running || choice.choosing || choice.scrubbing || dockPull.running ||
                             dockHost.isHomeDragInProgress.value || dockHost.isWidgetDragInProgress.value
@@ -526,10 +534,11 @@ private fun HomeDestinationContent(
                             },
                         ),
                 )
-                // The one-time Dock hints: at most one at a time, each retired once its gesture is performed.
+                // The Dock hints: at most one at a time, each shown once and gone by itself (ADR 0003, Amendment 21).
                 DockHintLayer(
                     hints = hints,
                     legacyPressSeen = state.launcherSettings.hints.dockPressSeen,
+                    stage = hintStage,
                     facts =
                         HintContext(
                             simpleMode = features.simpleMode,
@@ -547,10 +556,8 @@ private fun HomeDestinationContent(
                             },
                             stackCount = { stream?.dock?.pages?.size ?: 0 },
                         ),
-                    dockBounds = dockHost.bounds.value,
-                    pull = plan.dockEdge.pullDirection,
                     // The Home handle stands just above a bottom Dock; the hint sits above the handle.
-                    clearance = handleClearance,
+                    placement = HintPlacement(dockHost.bounds.value, plan.dockEdge.pullDirection, handleClearance),
                 )
                 DockHintEvents(
                     hints = hints,

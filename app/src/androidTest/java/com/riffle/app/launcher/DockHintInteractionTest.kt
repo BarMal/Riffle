@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
@@ -17,7 +18,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** A Dock hint on a device: it is there, its button is a click target, and pressing it removes it. */
+/** A Dock hint on a device: it is there with no button, is a click target itself, and a tap on it removes it. */
 @RunWith(AndroidJUnit4::class)
 class DockHintInteractionTest {
     @get:Rule
@@ -26,7 +27,7 @@ class DockHintInteractionTest {
     private var seen by mutableStateOf(false)
 
     @Test
-    fun theHintShowsAndItsButtonDismissesIt() {
+    fun theHintShowsWithNoButtonAndATapOnItDismissesIt() {
         composeRule.setContent {
             MaterialTheme {
                 if (!seen) {
@@ -41,7 +42,8 @@ class DockHintInteractionTest {
         }
 
         composeRule.onNodeWithTag(DOCK_HINT_TEST_TAG).assertIsDisplayed()
-        composeRule.onNodeWithTag(DOCK_HINT_DISMISS_TEST_TAG).assertHasClickAction().performClick()
+        composeRule.onNodeWithText("Got it").assertDoesNotExist()
+        composeRule.onNodeWithTag(DOCK_HINT_TEST_TAG).assertHasClickAction().performClick()
 
         composeRule.onNodeWithTag(DOCK_HINT_TEST_TAG).assertDoesNotExist()
     }

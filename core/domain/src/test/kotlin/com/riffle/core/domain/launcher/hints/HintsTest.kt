@@ -30,29 +30,71 @@ class HintsTest {
 
     @Test
     fun atMostOneHintIsDueAtATimeAndTheyComeInOrder() {
-        val retiredPress = progress(Hint.DOCK_PRESS, visits = 2, lastRetiredVisit = 1)
+        val gap = Hints.MIN_VISITS_BETWEEN_HINTS
+        val retiredPress = progress(Hint.DOCK_PRESS, visits = 1 + gap, lastRetiredVisit = 1)
         assertEquals(Hint.DOCK_MENU, Hints.due(retiredPress, home))
-        val retiredMenu = progress(Hint.DOCK_PRESS, Hint.DOCK_MENU, visits = 3, lastRetiredVisit = 2)
+        val retiredMenu = progress(Hint.DOCK_PRESS, Hint.DOCK_MENU, visits = 1 + 2 * gap, lastRetiredVisit = 1 + gap)
         // The pull waits for its own reason: the Library opened some other way, or enough Home visits.
-        assertNull(Hints.due(retiredMenu, home))
+        assertEquals(Hint.DOCK_PULL, Hints.due(retiredMenu, home))
+        assertNull(Hints.due(retiredMenu.copy(homeVisits = Hints.PULL_AFTER_HOME_VISITS - 1), home))
     }
 
     @Test
-    fun aHintPutAwayLeavesTheNextHomeHintForALaterVisit() {
-        val sameVisit = progress(Hint.DOCK_PRESS, visits = 1, lastRetiredVisit = 1)
-        assertNull(Hints.due(sameVisit, home))
-        assertEquals(Hint.DOCK_MENU, Hints.due(sameVisit.copy(homeVisits = 2), home))
+    fun aHintShownLeavesTheNextOneForSeveralLaterVisitsNeverTheSameOrTheNext() {
+        val gap = Hints.MIN_VISITS_BETWEEN_HINTS
+        val shown = progress(Hint.DOCK_PRESS, visits = 1, lastRetiredVisit = 1)
+        for (visits in 1 until 1 + gap) {
+            assertNull(Hints.due(shown.copy(homeVisits = visits), home), "visit $visits")
+        }
+        assertEquals(Hint.DOCK_MENU, Hints.due(shown.copy(homeVisits = 1 + gap), home))
     }
 
     @Test
-    fun theStackHintIsNotPacedByHomeVisitsBecauseItStandsOverTheStream() {
+    fun theStackHintIsPacedLikeTheOthers() {
         val justPressed = progress(Hint.DOCK_PRESS, visits = 1, lastRetiredVisit = 1)
-        assertEquals(Hint.DOCK_SCRUB, Hints.due(justPressed, stream))
+        assertNull(Hints.due(justPressed, stream))
+        val later = justPressed.copy(homeVisits = 1 + Hints.MIN_VISITS_BETWEEN_HINTS)
+        assertEquals(Hint.DOCK_SCRUB, Hints.due(later, stream))
+    }
+
+    @Test
+    fun aFirstEverHintIsNotPaced() {
+        assertEquals(Hint.DOCK_PRESS, Hints.due(progress(visits = 1, lastRetiredVisit = null), home))
+    }
+
+    @Test
+    fun aShownHintStaysOnlyWhileItsSituationHolds() {
+        assertTrue(Hints.stillApplies(Hint.DOCK_PRESS, home))
+        assertFalse(Hints.stillApplies(Hint.DOCK_PRESS, stream))
+        assertFalse(Hints.stillApplies(Hint.DOCK_PRESS, home.copy(libraryShown = true)))
+        assertFalse(Hints.stillApplies(Hint.DOCK_PRESS, home.copy(dockBusy = true)))
+        assertFalse(Hints.stillApplies(Hint.DOCK_PRESS, home.copy(dragging = true)))
+        assertFalse(Hints.stillApplies(Hint.DOCK_PRESS, home.copy(simpleMode = true)))
+        assertTrue(Hints.stillApplies(Hint.DOCK_SCRUB, stream))
+        assertFalse(Hints.stillApplies(Hint.DOCK_SCRUB, home))
+        assertFalse(Hints.stillApplies(Hint.DOCK_MENU, home.copy(dockHasItems = false)))
+        assertFalse(Hints.stillApplies(Hint.DOCK_PULL, home.copy(libraryAvailable = false)))
+    }
+
+    @Test
+    fun aHintAlreadyShownIsNeverDueAgainEvenWithoutAGesture() {
+        val shown = Hints.reduce(progress(visits = 1), HintEvent.Shown(Hint.DOCK_PRESS))
+        assertTrue(Hint.DOCK_PRESS in shown.retired)
+        assertEquals(1, shown.lastRetiredVisit)
+        for (visits in 1..50) {
+            assertTrue(Hints.due(shown.copy(homeVisits = visits), home) != Hint.DOCK_PRESS)
+        }
+    }
+
+    @Test
+    fun aHintForAGesturePerformedIsNeverDue() {
+        val pressed = Hints.reduce(progress(visits = 1), HintEvent.StreamOpened)
+        assertTrue(Hints.due(pressed.copy(homeVisits = 20), home) != Hint.DOCK_PRESS)
     }
 
     @Test
     fun theStackHintNeedsTwoOrMoreStacks() {
-        val seen = progress(Hint.DOCK_PRESS)
+        val seen = progress(Hint.DOCK_PRESS, visits = 9, lastRetiredVisit = 1)
         assertNull(Hints.due(seen, stream.copy(stackCount = 1)))
         assertEquals(Hint.DOCK_SCRUB, Hints.due(seen, stream.copy(stackCount = 2)))
     }
@@ -60,21 +102,31 @@ class HintsTest {
     @Test
     fun thePullIsHintedAfterTheLibraryWasOpenedAnotherWayOrAfterEnoughVisits() {
         val others = arrayOf(Hint.DOCK_PRESS, Hint.DOCK_MENU)
-        assertNull(Hints.due(progress(*others, visits = 3), home))
-        assertEquals(Hint.DOCK_PULL, Hints.due(progress(*others, visits = Hints.PULL_AFTER_HOME_VISITS), home))
-        assertEquals(Hint.DOCK_PULL, Hints.due(progress(*others, visits = 2, elsewhere = true), home))
+        assertNull(Hints.due(progress(*others, visits = 3, lastRetiredVisit = 1), home))
+        val enough = Hints.PULL_AFTER_HOME_VISITS
+        assertEquals(Hint.DOCK_PULL, Hints.due(progress(*others, visits = enough, lastRetiredVisit = 1), home))
+        assertEquals(
+            Hint.DOCK_PULL,
+            Hints.due(progress(*others, visits = 4, elsewhere = true, lastRetiredVisit = 1), home),
+        )
     }
 
     @Test
     fun thePullIsNeverHintedWithoutALibrary() {
         val others = arrayOf(Hint.DOCK_PRESS, Hint.DOCK_MENU)
-        assertNull(Hints.due(progress(*others, visits = 9, elsewhere = true), home.copy(libraryAvailable = false)))
+        assertNull(
+            Hints.due(
+                progress(*others, visits = 9, elsewhere = true, lastRetiredVisit = 1),
+                home.copy(libraryAvailable = false),
+            ),
+        )
     }
 
     @Test
     fun theMenuHintNeedsAnItemOnTheDock() {
-        val seen = progress(Hint.DOCK_PRESS, visits = 2)
-        assertNull(Hints.due(seen, home.copy(dockHasItems = false)))
+        val seen = progress(Hint.DOCK_PRESS, visits = 4, lastRetiredVisit = 1)
+        val noPull = seen.copy(retired = seen.retired + Hint.DOCK_PULL)
+        assertNull(Hints.due(noPull, home.copy(dockHasItems = false)))
         assertEquals(Hint.DOCK_MENU, Hints.due(seen, home))
     }
 
@@ -114,10 +166,10 @@ class HintsTest {
     }
 
     @Test
-    fun performingAGestureOrDismissingRetiresItForGood() {
+    fun performingAGestureOrShowingItRetiresItForGood() {
         assertTrue(Hint.DOCK_SCRUB in Hints.reduce(progress(), HintEvent.StackScrubbed).retired)
         assertTrue(Hint.DOCK_MENU in Hints.reduce(progress(), HintEvent.DockMenuOpened).retired)
-        assertTrue(Hint.DOCK_MENU in Hints.reduce(progress(), HintEvent.Dismissed(Hint.DOCK_MENU)).retired)
+        assertTrue(Hint.DOCK_MENU in Hints.reduce(progress(), HintEvent.Shown(Hint.DOCK_MENU)).retired)
         // Retiring twice changes nothing, so the visit it was put away on stays the first.
         val once = Hints.reduce(progress(visits = 1), HintEvent.DockMenuOpened)
         assertEquals(once, Hints.reduce(once.copy(homeVisits = 3), HintEvent.DockMenuOpened).copy(homeVisits = 1))

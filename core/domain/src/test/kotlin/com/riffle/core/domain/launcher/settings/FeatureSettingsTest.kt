@@ -28,7 +28,7 @@ class FeatureSettingsTest {
 
     @Test
     fun eachSwitchTurnsOffOnlyItself() {
-        val base = FeatureSettings()
+        val base = FeatureSettings(dockStreamHandle = true, streamViewButton = true)
         assertEquals(base.copy(stream = false), base.with(LauncherFeature.STREAM, false))
         assertEquals(base.copy(dockLiveApps = false), base.with(LauncherFeature.DOCK_LIVE_APPS, false))
         assertEquals(base.copy(library = false), base.with(LauncherFeature.LIBRARY, false))
@@ -46,15 +46,19 @@ class FeatureSettingsTest {
     }
 
     @Test
-    fun theVisibleCuesAreOnByDefaultAndGoWithTheStreamAndSimpleMode() {
-        val on = FeatureSettings().effective(HomeMode.PlacedItems)
-        assertTrue(on.dockStreamHandle && on.streamViewButton)
+    fun theVisibleCuesAreOffByDefaultOptInAndGoWithTheStreamAndSimpleMode() {
+        val default = FeatureSettings().effective(HomeMode.PlacedItems)
+        assertFalse(default.dockStreamHandle || default.streamViewButton)
 
-        val off = FeatureSettings(dockStreamHandle = false, streamViewButton = false).effective(HomeMode.PlacedItems)
-        assertFalse(off.dockStreamHandle || off.streamViewButton)
+        val optedIn = FeatureSettings(dockStreamHandle = true, streamViewButton = true)
+        val on = optedIn.effective(HomeMode.PlacedItems)
+        assertTrue(on.dockStreamHandle && on.streamViewButton)
+        assertFalse(optedIn.copy(simpleMode = true).effective(HomeMode.PlacedItems).dockStreamHandle)
 
         // Without a Stream there is nothing for the handle to open and no page for the button.
-        val noStream = FeatureSettings(stream = false).effective(HomeMode.PlacedItems)
+        val noStream =
+            FeatureSettings(stream = false, dockStreamHandle = true, streamViewButton = true)
+                .effective(HomeMode.PlacedItems)
         assertFalse(noStream.dockStreamHandle || noStream.streamViewButton)
     }
 
