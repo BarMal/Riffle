@@ -591,6 +591,7 @@ internal fun DockSurfaceStrip(
             header = header,
             headerAtEnd = position == DockPosition.TOP,
             modifier = anchoring.then(modifier).then(decor),
+            cornerRadius = dock.cornerRadiusDp.dp,
         ) {
             Box(
                 modifier = sizing.then(padding),

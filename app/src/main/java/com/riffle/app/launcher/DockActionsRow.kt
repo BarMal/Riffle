@@ -94,6 +94,16 @@ private fun DockHeaderState.wanted(): HeaderContent? =
         else -> null
     }
 
+/**
+ * How far the row's content stands in from the Dock's sides. The row lies in the Dock's rounded end, so with a round
+ * corner a chip at the padding other rows use would touch the curve of the Dock's edge.
+ */
+internal object DockHeaderInset {
+    fun forCorner(cornerRadius: Dp): Dp = (cornerRadius * CORNER_SHARE).coerceIn(RiffleSpacing.s, RiffleSpacing.xl)
+
+    private const val CORNER_SHARE = 0.4f
+}
+
 /** The actions the Dock's body holds above (or, on a top Dock, below) its icons; null: it holds none. */
 internal val LocalDockHeader = compositionLocalOf<DockHeaderState?> { null }
 
@@ -107,6 +117,7 @@ internal fun DockBodyWithHeader(
     header: DockHeaderState,
     headerAtEnd: Boolean,
     modifier: Modifier = Modifier,
+    cornerRadius: Dp = 0.dp,
     strip: @Composable () -> Unit,
 ) {
     Layout(
@@ -114,7 +125,7 @@ internal fun DockBodyWithHeader(
         modifier = modifier.reportsGridCover(withOpenCard = false, active = header.wanted() != null),
         content = {
             strip()
-            DockActionsHeader(header, headerAtEnd)
+            DockActionsHeader(header, headerAtEnd, DockHeaderInset.forCorner(cornerRadius))
         },
     ) { measurables, constraints ->
         val stripPlaceable = measurables[0].measure(constraints)
@@ -152,6 +163,7 @@ internal fun DockBodyWithHeader(
 private fun DockActionsHeader(
     header: DockHeaderState,
     atEnd: Boolean,
+    edgePadding: Dp,
 ) {
     val target = header.wanted()
     // What is drawn: the content stays while the row leaves, so it does not blank before it has gone.
@@ -229,9 +241,9 @@ private fun DockActionsHeader(
                                     actions = content.actions.actions,
                                     callbacks = content.actions.callbacks,
                                     modifier =
-                                        Modifier.padding(horizontal = RiffleSpacing.s, vertical = RiffleSpacing.xxs),
+                                        Modifier.padding(horizontal = edgePadding, vertical = RiffleSpacing.xxs),
                                 )
-                            is HeaderContent.Quick -> QuickActionsRow(content.quick)
+                            is HeaderContent.Quick -> QuickActionsRow(content.quick, edgePadding = edgePadding)
                         }
                         if (!atEnd) Hairline(divider)
                     }
