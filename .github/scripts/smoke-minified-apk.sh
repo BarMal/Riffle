@@ -14,7 +14,12 @@ adb logcat -c
 adb shell am start -W -a android.intent.action.MAIN -c android.intent.category.HOME \
   -n "$package/.MainActivity"
 sleep 10
-adb shell pidof "$package" >/dev/null || { echo "Process is not running after launch." >&2; exit 1; }
+if ! adb shell pidof "$package" >/dev/null; then
+  echo "Process is not running after launch." >&2
+  adb logcat -d -b crash | tail -n 120 >&2
+  adb logcat -d -t 400 '*:E' | tail -n 120 >&2
+  exit 1
+fi
 
 # Seeded so a failure is reproducible. Ignoring timeouts/security exceptions keeps the run about
 # crashes in app code, which is what a missing keep rule produces.
