@@ -355,12 +355,18 @@ caveat that the Home button may still open the current launcher appears only aft
 
 An investigation aid for "the swipe-up-to-home gesture stops reaching the launcher after an update until the navigation
 mode is toggled" (no confirmed cause). The manifest declares on the Home activity `android:clearTaskOnLaunch`,
-`android:stateNotNeeded` and `android:resumeWhilePausing`, as AOSP's Launcher3 does; the LAUNCHER intent filter is
-unchanged. The first process start after the version code or the last-update time changes records one entry
-(`AfterUpdateLog`, kept to the last ten, newest first; see Settings > About > After-update starts). The work
-runs on its own thread, adds no receiver, background start or permission, and a failure there never reaches the launcher.
-Without a stored earlier version (this build's first start) an update is recorded with the old version unknown; a fresh
-install records nothing. The five-minute window for Home intents is wall-clock time since the start.
+`android:stateNotNeeded` and `android:resumeWhilePausing`, as AOSP's Launcher3 does; that did not fix it. The first
+evidence (two updates) showed a task rooted in a LAUNCHER intent while the Home role was held, and a cold start of 8.9 s.
+Two changes follow it: the LAUNCHER filter moved to `LauncherEntryActivity` and `MainActivity` heals a wrongly rooted
+task (`standard-launcher-mode.md`, "How the app is opened"), and the log now also times the start.
+
+Every process start records one entry (`AfterUpdateLog`, kept to the last ten, newest first; see Settings > About >
+After-update starts), marked as an update start when the version code or the last-update time changed (a fresh install is
+a normal start). Milestones (`StartupTimeline`) are stamps in a small in-memory list (a clock read each, no context),
+written with the entry once, on the diagnostics thread, after the first frame, and once more if `onResume` or the first
+window focus comes later. The work runs on its own thread, adds no receiver, background start or permission, and a
+failure there never reaches the launcher. Without a stored earlier version (this build's first start) an update is
+recorded with the old version unknown. The five-minute window for Home intents is wall-clock time since the start.
 
 ## Home drag
 

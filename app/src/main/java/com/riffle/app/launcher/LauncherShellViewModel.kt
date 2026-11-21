@@ -4,6 +4,8 @@ package com.riffle.app.launcher
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.riffle.app.launcher.diagnostics.StartMilestones
+import com.riffle.app.launcher.diagnostics.StartupTimeline
 import com.riffle.app.launcher.pool.PoolHomeLayoutRepository
 import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
 import com.riffle.app.launcher.savedhome.SavedHomeAccess
@@ -201,7 +203,9 @@ class LauncherShellViewModel(
             // Design 1.2: one bounded read before the first frame, so the home opens on the active workspace rather
             // than on the migrated home for a moment. On a timeout the load finishes in the background, and until
             // then home edits are held (the arrangement they belong to is not known yet).
-            if (loadWorkspacesAtStartup(workspaces)) {
+            val workspacesLoaded = loadWorkspacesAtStartup(workspaces)
+            StartupTimeline.mark(StartMilestones.WORKSPACES_LOADED)
+            if (workspacesLoaded) {
                 followActiveWorkspace()
             } else {
                 (homeLayoutRepository as? PoolHomeLayoutRepository)?.awaitWorkspaces()
@@ -221,6 +225,7 @@ class LauncherShellViewModel(
             refreshNotifications()
             refreshWidgetProviders()
         }
+        StartupTimeline.mark(StartMilestones.VIEW_MODEL_CREATED)
     }
 
     /**
@@ -879,6 +884,7 @@ private fun createInitialState(
             ?: firstRunRepository.homeRoleRequestDestination().takeIf { hasRecoveredHomeRoleRequest }
 
     val storedLayoutSet = homeLayoutRepository.loadHomeLayoutSet()
+    StartupTimeline.mark(StartMilestones.HOME_LAYOUT_LOADED)
     val initialLayoutSet =
         storedLayoutSet?.let { layoutSet ->
             layoutSet.selectInitialDeviceClass(
@@ -898,6 +904,7 @@ private fun createInitialState(
     val layoutSet = committedLayoutSet ?: HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard())
 
     val storedSettings = launcherSettingsRepository.loadLauncherSettings() ?: LauncherSettings()
+    StartupTimeline.mark(StartMilestones.SETTINGS_LOADED)
     val launcherSettings = storedSettings
     if (launcherSettings != storedSettings) {
         launcherSettingsRepository.saveLauncherSettings(launcherSettings)
@@ -929,7 +936,9 @@ private fun createInitialState(
         hasRecoveredHomeRoleRequest = hasRecoveredHomeRoleRequest,
         setupCardDismissed = firstRunRepository.isSetupCardDismissed(),
     ).withNotificationState(
-        notifications = platformDependencies.notificationRepository.activeNotifications(),
+        notifications =
+            platformDependencies.notificationRepository.activeNotifications()
+                .also { StartupTimeline.mark(StartMilestones.NOTIFICATIONS_LOADED) },
         appNotificationCounter = AppNotificationCounter(),
         appNotificationGrouper = AppNotificationGrouper(),
         notificationStaleFilter = NotificationStaleFilter(),

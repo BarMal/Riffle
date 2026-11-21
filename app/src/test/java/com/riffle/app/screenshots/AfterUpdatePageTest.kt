@@ -1,6 +1,7 @@
 package com.riffle.app.screenshots
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -14,6 +15,7 @@ import com.riffle.app.launcher.SettingsPage
 import com.riffle.app.launcher.SettingsSurface
 import com.riffle.app.launcher.settingsSurfaceState
 import com.riffle.core.domain.launcher.diagnostics.AfterUpdateStart
+import com.riffle.core.domain.launcher.diagnostics.StartMilestone
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -36,12 +38,38 @@ class AfterUpdatePageTest {
             atMillis = 1_767_225_600_000,
             fromVersionCode = 41,
             toVersionCode = 42,
-            intentText = "act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000",
+            intentText = "act=MAIN cat=[LAUNCHER] flg=0x10200000",
             isTaskRoot = true,
             homeRoleHeld = true,
-            homeResolvesTo = "com.riffle.app/com.riffle.app.MainActivity",
+            homeResolvesTo = "com.example.app/.Main",
             firstFrameMillis = 812,
             homeIntentsAtMillis = listOf(1_767_225_660_000),
+            afterUpdate = true,
+            cold = true,
+            sdkInt = 34,
+            taskBaseIntent = "act=MAIN cat=[LAUNCHER] flg=0x10000000",
+            milestones =
+                listOf(
+                    StartMilestone("application", 140),
+                    StartMilestone("MainActivity.onCreate entered", 260),
+                    StartMilestone("home layout and pool read", 410),
+                    StartMilestone("settings loaded", 470),
+                    StartMilestone("workspaces loaded", 520),
+                    StartMilestone("setContent called", 640),
+                    StartMilestone("onResume", 700),
+                    StartMilestone("window focus", 880),
+                ),
+        )
+
+    private val normalEntry =
+        entry.copy(
+            atMillis = 1_767_225_700_000,
+            fromVersionCode = 42,
+            afterUpdate = false,
+            firstFrameMillis = 690,
+            taskBaseIntent = "act=MAIN cat=[HOME] flg=0x10000000",
+            milestones = listOf(StartMilestone("application", 90)),
+            homeIntentsAtMillis = emptyList(),
         )
 
     @Test
@@ -66,18 +94,39 @@ class AfterUpdatePageTest {
     fun theRecordedEntriesShowEveryFactAndCopySendsTheSameText() {
         val copied = mutableListOf<String>()
         composeRule.setContent {
-            ScreenshotBackdrop { SettingsAfterUpdateContent(entries = listOf(entry), onCopy = { copied += it }) }
+            ScreenshotBackdrop {
+                SettingsAfterUpdateContent(
+                    entries = listOf(entry, normalEntry),
+                    onCopy = { copied += it },
+                )
+            }
         }
         composeRule.captureScreen()
 
         composeRule.onNodeWithTag(AFTER_UPDATE_TEXT_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithText("41 -> 42", substring = true).assertIsDisplayed()
         composeRule.onNodeWithText("first frame: 812 ms", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText("(after update)", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText("setContent called: 640 ms", substring = true).assertIsDisplayed()
         composeRule.onNodeWithTag(AFTER_UPDATE_COPY_TEST_TAG).performClick()
 
         assertEquals(1, copied.size)
         assertTrue(copied.single().contains("home role held: true"))
         composeRule.onNodeWithText("Copied").assertIsDisplayed()
+    }
+
+    @Test
+    fun anAfterUpdateStartAndANormalStartAreToldApartAndCopiedTogether() {
+        composeRule.setContent {
+            ScreenshotBackdrop { SettingsAfterUpdateContent(entries = listOf(normalEntry, entry), onCopy = {}) }
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(AFTER_UPDATE_TEXT_TEST_TAG).assertTextContains("(normal start)", substring = true)
+        composeRule.onNodeWithTag(AFTER_UPDATE_TEXT_TEST_TAG).assertTextContains("(after update)", substring = true)
+        composeRule.onNodeWithTag(
+            AFTER_UPDATE_TEXT_TEST_TAG,
+        ).assertTextContains("start: cold, Android SDK 34", substring = true)
     }
 
     @Test
