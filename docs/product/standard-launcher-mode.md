@@ -20,6 +20,32 @@ launcher experience fully usable without contextual pages, cards, or smart behav
 - Dynamic pages, cards and TimeScape-inspired surfaces are optional enhancements. They must not be required for
   navigation, layout persistence, settings or launcher performance.
 
+## How the app is opened
+
+Riffle has two entry points, and they are deliberately different activities (`AndroidManifest.xml`):
+
+- **`MainActivity` carries only the Home filter** (`MAIN` + `HOME` + `DEFAULT`). It is what the system starts for the
+  Home button, the Home gesture and Recents.
+- **`LauncherEntryActivity` carries the launcher icon** (`MAIN` + `LAUNCHER`; same label and icon). It draws nothing,
+  has its own empty task affinity, is `noHistory` and `excludeFromRecents`, and ends at once. The app icon, the
+  installer's "Open" button and `getLaunchIntentForPackage` start it.
+
+What it does when it starts, decided by `launcherEntryTarget` (`:core:domain`):
+
+| Riffle is | The entry activity |
+| --- | --- |
+| the default Home app (the Home role is held) | asks the system for Home with an implicit intent: `ACTION_MAIN` + `CATEGORY_HOME`, new task, no component, no package |
+| not the default Home app (preview) | opens `MainActivity` explicitly in a new task, as the icon always did, so the app can be tried and set up |
+
+Why: the system types a task from the intent that created it. A task created from a `LAUNCHER` intent is a standard
+task, not the home task. `MainActivity` is `singleTask`, so every later Home press is delivered to that standard task
+and no home task ever exists; the Home gesture and Recents animation, which target the home task, then have nothing to
+animate to (the symptom: the screen zooms out slightly and touches stop registering until the navigation mode is
+toggled). An implicit Home intent resolved by the system gives the home activity type. (From AOSP's
+`ActivityRecord.setActivityType`, as recalled and checked against secondary descriptions of it; not confirmed on a
+device. An explicit component or a second category on a Home intent also gives a standard task, unless the caller is
+allowed to start Home.)
+
 ## Disabled-feature contract
 
 With the Stream and the live apps switched off (or Simple mode on), Riffle must keep the standard Home, Library, Dock

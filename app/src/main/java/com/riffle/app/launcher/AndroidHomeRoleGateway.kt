@@ -21,6 +21,10 @@ class AndroidHomeRoleGateway(
                 ),
         )
 
+    /** Whether the app is the default Home now; false when that cannot be asked. */
+    fun isDefaultHome(): Boolean =
+        runCatching { getHomeRoleStatus() == HomeRoleStatus.DEFAULT_HOME }.getOrDefault(false)
+
     fun createHomeRoleRequestIntent(): Intent =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             context.getSystemService(RoleManager::class.java)

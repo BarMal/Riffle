@@ -183,16 +183,30 @@
             android:stateNotNeeded="true"
             android:theme="@style/Theme.Riffle"
             android:windowSoftInputMode="adjustNothing">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+            <!-- Home only. The launcher icon lives on LauncherEntryActivity: a task created from a LAUNCHER intent is a
+                 standard task, not the home task, so MainActivity must never be the one the icon starts. -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <!-- The launcher icon, the installer's "Open" button and getLaunchIntentForPackage. It draws nothing and ends at
+             once: as the default Home it asks the system for Home (so the task is the home task), otherwise it opens
+             MainActivity. Its own empty affinity and noHistory keep it out of the launcher's task and out of Recents.
+             Label and icon are the application's. -->
+        <activity
+            android:name=".LauncherEntryActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Riffle.Entry">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <!-- App pair experiment (Settings > About > Developer options): starts two apps from a window that is on screen. -->
