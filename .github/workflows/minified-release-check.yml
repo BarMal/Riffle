@@ -9,6 +9,9 @@ on:
     paths:
       - app/build.gradle.kts
       - app/proguard-rules.pro
+      # What decides whether the app starts at all: the manifest and the activity/application classes.
+      - app/src/main/AndroidManifest.xml
+      - app/src/main/java/com/riffle/app/*.kt
       - build-logic/**
       - gradle/libs.versions.toml
       - .github/workflows/minified-release-check.yml
