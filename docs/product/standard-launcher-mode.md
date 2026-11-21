@@ -46,6 +46,12 @@ toggled). An implicit Home intent resolved by the system gives the home activity
 device. An explicit component or a second category on a Home intent also gives a standard task, unless the caller is
 allowed to start Home.)
 
+**Self-heal.** If `MainActivity.onCreate` runs as the root of its task from a non-Home intent while Riffle holds the
+Home role (an old shortcut, `am start -n` without the Home category, another app starting the component), it finishes
+and removes that task and asks for Home with the same implicit intent, before any start-up work. At most once per
+process, never when the intent carries `CATEGORY_HOME`, never when the role is not held. So the emulator smoke test
+(`am start -c HOME -n .../.MainActivity`, Riffle not the default Home) is left alone.
+
 ## Disabled-feature contract
 
 With the Stream and the live apps switched off (or Simple mode on), Riffle must keep the standard Home, Library, Dock

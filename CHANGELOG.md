@@ -11,11 +11,12 @@ installing. Entries are in the order they were built; where a later one changes 
 
 ### Changed
 
-- The Home gesture after an update (investigation): the app icon, the installer's "Open" button and
+- The Home gesture after an update (investigation, two changes): the app icon, the installer's "Open" button and
   `getLaunchIntentForPackage` now start a tiny `LauncherEntryActivity` that draws nothing. As the default Home it asks the
   system for Home with an implicit Home intent, so the launcher's task is a real home task (a task created from the
   LAUNCHER intent was a standard task, which the Home gesture has nothing to animate to); before Riffle is the default
-  Home it opens the app as before. `MainActivity` keeps only the Home filter. Not run on a device: whether
+  Home it opens the app as before. `MainActivity` keeps only the Home filter, and if it is ever started as the root of a
+  task from another intent while Riffle is the Home app, it hands over to a Home start once. Not run on a device: whether
   the gesture stays healthy after an update. See `docs/product/standard-launcher-mode.md`, "How the app is opened".
 - Quieter hints ([ADR 0003](docs/architecture/adr/0003-places-and-views.md), Amendment 21): the Dock's gesture hints are
   shown **once and then never**, have **no "Got it" button**, and leave after about 6 seconds or on your next touch

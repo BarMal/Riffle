@@ -54,6 +54,7 @@ import com.riffle.app.launcher.diagnostics.AfterUpdateProcess
 import com.riffle.app.launcher.diagnostics.pair.PairActivityHub
 import com.riffle.app.launcher.failureMessage
 import com.riffle.app.launcher.fallbackWallpaperSourceAction
+import com.riffle.app.launcher.handOverMisrootedTaskToHome
 import com.riffle.app.launcher.isLauncherHomeIntent
 import com.riffle.app.launcher.isWidgetProviderGone
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
@@ -561,6 +562,9 @@ class MainActivity : ComponentActivity() {
         SettingsTextHolder.install(applicationContext.resources)
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        // A task rooted in a non-Home intent while this app is the Home app is a standard task, which the system's Home
+        // gesture cannot animate to: give way to a real Home start before any start-up work (the view model reads).
+        if (handOverMisrootedTaskToHome(this, isTaskRoot, intent) { homeRoleGateway.isDefaultHome() }) return
         wallpaperController.applySource(shellViewModel.state.value.launcherSettings.appearance.wallpaper.source)
         // Diagnostics only (Settings > About > After-update starts): what this start looked like.
         AfterUpdateProcess.start(this)
