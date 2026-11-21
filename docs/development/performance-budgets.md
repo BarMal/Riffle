@@ -37,6 +37,11 @@ The first benchmark suite should cover:
 - page switching on phone, unfolded, and tablet layouts;
 - backup import validation for representative documents.
 
+Until a benchmark exists, the owner's device is the measure: Settings > About > After-update starts keeps the last ten
+starts with milestones in milliseconds since the process started (`application`, `MainActivity.onCreate entered`, each
+blocking read in `onCreate`, `setContent called`, `first frame`, `onResume`, `window focus`), so a normal cold start can be
+compared with one after an update before any start-up work is moved off the main thread.
+
 Until Android device benchmarks exist, reviewers should treat this document and the smoke tests as the baseline performance contract and ask for focused tests around pure logic that can be measured locally.
 
 ## TimeScape Manual Check

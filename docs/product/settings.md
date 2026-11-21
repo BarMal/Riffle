@@ -395,12 +395,19 @@ Two buttons and one switch (`SettingsHomeFillSection`; the rules are `HomeArrang
 
 ## About > After-update starts (always available)
 
-What the first start after each update looked like, for the last ten updates, with a Copy button: time, old and new
-version code, the intent the activity was started with (action, categories, flags, component), whether it was the task
-root, whether Riffle held the Home role, which component resolved `ACTION_MAIN` + `CATEGORY_HOME`, the time from process
-start to the first frame, and the time of each new intent that carried `CATEGORY_HOME` in the first five minutes. It is
-device-local (`riffle_after_update`, outside the launcher settings, the backup document and Auto Backup). See
-`places-views-plan.md`, "After-update starts".
+What each process start looked like, for the last ten starts (not only those after an update: each is marked "(after
+update)" or "(normal start)", so the two can be compared), with a Copy button: time, old and new version code, whether the
+start was cold (the activity was created within 10 s of the process starting) and the Android SDK, the base intent of the
+activity's task (what the task is rooted in), the intent the activity was started with (action, categories, flags,
+component), whether it was the task root, whether Riffle held the Home role, which component resolved `ACTION_MAIN` +
+`CATEGORY_HOME`, and the start-up milestones, one `label: N ms` line each (milliseconds since the process started):
+`application`, `MainActivity.onCreate entered`, the blocking reads in `onCreate` (`home layout and pool read`, `dock
+overrides restored`, `home layout set loaded`, `settings loaded`, `notification snapshot loaded`, `workspaces loaded`,
+`view model created`), `setContent called`, `first frame`, `onResume` and `window focus`, then the time of each new intent
+that carried `CATEGORY_HOME` in the first five minutes. A start that handed over to a Home start (see
+`standard-launcher-mode.md`, "How the app is opened") shows `handed over to a Home start`. It is device-local
+(`riffle_after_update`, outside the launcher settings, the backup document and Auto Backup); entries stored by earlier
+builds still show, as update starts. See `places-views-plan.md`, "After-update starts".
 
 ## About > Developer options > Drag tuning
 

@@ -9,6 +9,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import com.riffle.app.launcher.diagnostics.StartMilestones
+import com.riffle.app.launcher.diagnostics.StartupTimeline
 import com.riffle.app.launcher.pairs.AppPairsRepositories
 import com.riffle.app.launcher.pool.CachedPoolRepository
 import com.riffle.app.launcher.pool.DataStorePoolStore
@@ -186,9 +188,11 @@ internal object HomeLayoutRepositories {
         val preference = PoolHomePreference(context)
         val providerOf = appWidgetProviderLookup(context)
         val opening = openHomeLayoutsAtStartup(store, pool, providerOf)
+        StartupTimeline.mark(StartMilestones.HOME_LAYOUT_OPENED)
         if (opening.poolHome) {
             // P8 dropped a workspace's dock size and edge; the stored workspaces still hold them (once, not guessed).
             restoreDockOverridesAtStartup(pool, preference) { DataStoreWorkspaceStore(context).read() }
+            StartupTimeline.mark(StartMilestones.DOCK_OVERRIDES_RESTORED)
         }
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val writeBehind =

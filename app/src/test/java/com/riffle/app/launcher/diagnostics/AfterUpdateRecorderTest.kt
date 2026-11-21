@@ -4,8 +4,10 @@ import com.riffle.core.domain.launcher.diagnostics.AfterUpdateLog
 import com.riffle.core.domain.launcher.diagnostics.AfterUpdateStart
 import com.riffle.core.domain.launcher.diagnostics.AfterUpdateState
 import com.riffle.core.domain.launcher.diagnostics.PackageStamp
+import com.riffle.core.domain.launcher.diagnostics.StartMilestone
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -25,13 +27,23 @@ class AfterUpdateRecorderTest {
     private val known = AfterUpdateState(lastVersionCode = 11, lastUpdateTimeMillis = 2_000)
 
     @Test
-    fun theFirstStartAfterAnUpdateIsRecordedWithItsFactsAndLaterStartsOfTheSameVersionAreNot() {
+    fun theFirstStartAfterAnUpdateIsMarkedWithItsFactsAndLaterStartsOfTheSameVersionAreRecordedAsNormalStarts() {
         val store = InMemoryAfterUpdateStore(known)
         val recorder = AfterUpdateRecorder(store, inline)
 
-        recorder.onStart(atMillis = 10_000, intentText = "act=MAIN cat=[HOME]", isTaskRoot = true) { probe() }
+        recorder.onStart(
+            atMillis = 10_000,
+            intentText = "act=MAIN cat=[HOME]",
+            isTaskRoot = true,
+            cold = true,
+            sdkInt = 34,
+        ) { probe().copy(taskBaseIntent = "act=MAIN cat=[LAUNCHER]") }
 
         val entry = store.read().entries.single()
+        assertTrue(entry.afterUpdate)
+        assertEquals(true, entry.cold)
+        assertEquals(34, entry.sdkInt)
+        assertEquals("act=MAIN cat=[LAUNCHER]", entry.taskBaseIntent)
         assertEquals(11L, entry.fromVersionCode)
         assertEquals(12L, entry.toVersionCode)
         assertEquals("act=MAIN cat=[HOME]", entry.intentText)
@@ -40,7 +52,7 @@ class AfterUpdateRecorderTest {
 
         val next = AfterUpdateRecorder(store, inline)
         next.onStart(atMillis = 99_000, intentText = "x", isTaskRoot = true) { probe() }
-        assertEquals(1, store.read().entries.size)
+        assertEquals(listOf(false, true), store.read().entries.map { it.afterUpdate })
     }
 
     @Test
@@ -59,7 +71,7 @@ class AfterUpdateRecorderTest {
     }
 
     @Test
-    fun aStartThatWasNoUpdateOpensNothingSoLaterCallsWriteNothing() {
+    fun aStartThatWasNoUpdateIsRecordedAndItsFrameAndHomeIntentsAttachToIt() {
         val store = InMemoryAfterUpdateStore(AfterUpdateState(lastVersionCode = 12, lastUpdateTimeMillis = 5_000))
         val recorder = AfterUpdateRecorder(store, inline)
 
@@ -67,7 +79,32 @@ class AfterUpdateRecorderTest {
         recorder.onFirstFrame(500)
         recorder.onHomeIntent(10_100)
 
-        assertEquals(0, store.writes)
+        val entry = store.read().entries.single()
+        assertFalse(entry.afterUpdate)
+        assertEquals(500L, entry.firstFrameMillis)
+        assertEquals(listOf(10_100L), entry.homeIntentsAtMillis)
+    }
+
+    @Test
+    fun theFirstFrameAndTheMilestonesSoFarAreOneWriteAndALaterMilestoneReplacesTheList() {
+        val store = InMemoryAfterUpdateStore(known)
+        val recorder = AfterUpdateRecorder(store, inline)
+        recorder.onStart(atMillis = 10_000, intentText = "x", isTaskRoot = true) { probe() }
+        val writesAfterStart = store.writes
+        val early = listOf(StartMilestone("application", 100), StartMilestone("onResume", 400))
+
+        recorder.onFirstFrame(640, early)
+        assertEquals(writesAfterStart + 1, store.writes)
+        assertEquals(early, store.read().entries.single().milestones)
+
+        recorder.onMilestones(early + StartMilestone("window focus", 700))
+        assertEquals(
+            listOf("application", "onResume", "window focus"),
+            store.read().entries.single().milestones.map {
+                it.label
+            },
+        )
+        assertEquals(640L, store.read().entries.single().firstFrameMillis)
     }
 
     @Test
@@ -99,6 +136,11 @@ class AfterUpdateRecorderTest {
                             homeResolvesTo = null,
                             firstFrameMillis = 9,
                             homeIntentsAtMillis = listOf(4),
+                            afterUpdate = false,
+                            cold = true,
+                            sdkInt = 34,
+                            taskBaseIntent = "act=MAIN cat=[HOME]",
+                            milestones = listOf(StartMilestone("application", 3)),
                         ),
                     ),
             )
@@ -107,6 +149,22 @@ class AfterUpdateRecorderTest {
         assertEquals(state, decodeAfterUpdateState(text))
         listOf(null, "", "nope", "[]", "7").forEach { assertEquals(it, AfterUpdateState(), decodeAfterUpdateState(it)) }
         assertEquals(setOf("version", "lastVersionCode", "lastUpdateTime", "entries"), JSONObject(text).keySet())
+    }
+
+    @Test
+    fun textStoredByTheOldFormatStillDecodes() {
+        val old =
+            """{"version":1,"lastVersionCode":1785,"lastUpdateTime":2000,"entries":[{"at":5,"from":1783,"to":1785,""" +
+                """"intent":"act=MAIN","taskRoot":true,"role":true,"homeResolvesTo":"a/b","firstFrame":1229,""" +
+                """"homeIntents":[9]}]}"""
+
+        val entry = decodeAfterUpdateState(old).entries.single()
+
+        assertEquals(1785L, entry.toVersionCode)
+        assertEquals(1229L, entry.firstFrameMillis)
+        assertTrue(entry.afterUpdate)
+        assertNull(entry.cold)
+        assertEquals(emptyList<StartMilestone>(), entry.milestones)
     }
 
     @Test

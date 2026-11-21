@@ -18,6 +18,11 @@ installing. Entries are in the order they were built; where a later one changes 
   Home it opens the app as before. `MainActivity` keeps only the Home filter, and if it is ever started as the root of a
   task from another intent while Riffle is the Home app, it hands over to a Home start once. Not run on a device: whether
   the gesture stays healthy after an update. See `docs/product/standard-launcher-mode.md`, "How the app is opened".
+- Settings > About > After-update starts now keeps the last ten starts of any kind (marked "after update" or "normal
+  start"), each with the cold/not cold flag, the Android SDK, the base intent of the task and the start-up milestones one
+  per line (application, `onCreate`, each blocking read, `setContent`, first frame, `onResume`, first window focus), to
+  show where a slow start goes. Entries recorded before still show. Nothing in start-up moved.
+
 - Quieter hints ([ADR 0003](docs/architecture/adr/0003-places-and-views.md), Amendment 21): the Dock's gesture hints are
   shown **once and then never**, have **no "Got it" button**, and leave after about 6 seconds or on your next touch
   (with a screen reader on they wait for your next interaction instead), and a hint waits 3 Home visits after the last.

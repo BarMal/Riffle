@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import com.riffle.app.MainActivity
+import com.riffle.app.launcher.diagnostics.StartMilestones
+import com.riffle.app.launcher.diagnostics.StartupTimeline
 import com.riffle.core.domain.launcher.entry.shouldHandOverToHome
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -65,6 +67,7 @@ internal fun handOverMisrootedTaskToHome(
             homeRoleHeld = homeRoleHeld,
         ) && attempts.claim()
     if (!handOver) return false
+    StartupTimeline.mark(StartMilestones.HANDED_OVER_TO_HOME)
     Log.i(HOME_ENTRY_LOG_TAG, "Task root started from a non-Home intent while Home: handing over to a Home start")
     activity.finishAndRemoveTask()
     runCatching { activity.startActivity(implicitHomeIntent()) }

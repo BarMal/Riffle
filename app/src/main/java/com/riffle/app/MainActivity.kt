@@ -51,6 +51,8 @@ import com.riffle.app.launcher.completeGlanceWidgetAdd
 import com.riffle.app.launcher.completeWidgetAdd
 import com.riffle.app.launcher.deleteHostedWidgetIdWhenRejected
 import com.riffle.app.launcher.diagnostics.AfterUpdateProcess
+import com.riffle.app.launcher.diagnostics.StartMilestones
+import com.riffle.app.launcher.diagnostics.StartupTimeline
 import com.riffle.app.launcher.diagnostics.pair.PairActivityHub
 import com.riffle.app.launcher.failureMessage
 import com.riffle.app.launcher.fallbackWallpaperSourceAction
@@ -558,6 +560,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        StartupTimeline.mark(StartMilestones.ON_CREATE_ENTERED)
         // The launcher's own search offers every setting; its reducers have no context, so it reads text from here.
         SettingsTextHolder.install(applicationContext.resources)
         enableEdgeToEdge()
@@ -594,6 +597,7 @@ class MainActivity : ComponentActivity() {
         composeLauncherShellAfterStatusRefresh(
             refreshStatuses = ::refreshPlatformStatuses,
             compose = {
+                StartupTimeline.mark(StartMilestones.SET_CONTENT)
                 setContent {
                     CompositionLocalProvider(
                         LocalFeedRefreshCoordinator provides dependencies.feedRefreshCoordinator,
