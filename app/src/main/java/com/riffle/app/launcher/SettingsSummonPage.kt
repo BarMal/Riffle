@@ -152,6 +152,13 @@ internal fun SettingsSummonPageContent(
             subtitle = headerLabel(summon.header, state.homeLayout),
             onClick = { choosingHeader = true },
         )
+        SettingsSwitchRow(
+            modifier = Modifier.settingAnchor(SettingKey.SUMMON_HINTS),
+            title = SettingKey.SUMMON_HINTS.label(),
+            subtitle = stringResource(R.string.settings_summon_hints_subtitle),
+            checked = summon.showHints,
+            onCheckedChange = { on -> set(summon.copy(showHints = on)) },
+        )
     }
 
     SettingsSection(title = stringResource(R.string.setting_summon_timing_section)) {

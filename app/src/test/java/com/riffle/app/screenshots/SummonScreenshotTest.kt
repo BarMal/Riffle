@@ -179,6 +179,7 @@ class SummonScreenshotTest {
                         readout = readout,
                         placement = summonReadoutPlacement(centre.y, height),
                         live = live,
+                        showHint = true,
                         appIconLoader = SolidColorAppIconLoader(),
                         insets = PaddingValues(0.dp),
                     )

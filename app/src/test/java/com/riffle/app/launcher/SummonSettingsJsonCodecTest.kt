@@ -31,6 +31,7 @@ class SummonSettingsJsonCodecTest {
                 ),
             header = SummonHeader.HomeWidget(LauncherItemId("widget-3")),
             timings = SummonTimings(armMillis = 250, previewMillis = 400, acceptMillis = 500, slideMillis = 700),
+            showHints = false,
         )
 
     @Test
@@ -39,6 +40,14 @@ class SummonSettingsJsonCodecTest {
         val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
         assertEquals(custom, decoded.summon)
         assertEquals(true, decoded.features.summon)
+    }
+
+    @Test
+    fun hintsAreShownUnlessTurnedOff() {
+        assertEquals(true, SummonSettings().showHints)
+        val saved = JSONObject(encodeLauncherSettings(LauncherSettings(summon = SummonSettings())))
+        saved.getJSONObject("summon").remove("showHints")
+        assertEquals(true, decodeLauncherSettings(saved.toString()).summon.showHints)
     }
 
     @Test

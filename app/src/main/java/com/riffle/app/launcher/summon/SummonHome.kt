@@ -154,7 +154,7 @@ private fun SummonOpenRing(
         appIconLoader = appIconLoader,
         reducedMotion = state.launcherSettings.motion.reducedMotion,
         onDockIconPlaced = controller::placeDockIcon,
-        hint = ringHint(open),
+        hint = ringHint(open).takeIf { state.launcherSettings.summon.showHints },
         heightPx = heightPx,
     )
     summonReadout(open, model)?.let { readout ->
@@ -162,6 +162,7 @@ private fun SummonOpenRing(
             readout = readout,
             placement = summonReadoutPlacement(open.layout.centre.y, heightPx),
             live = open.live,
+            showHint = state.launcherSettings.summon.showHints,
             appIconLoader = appIconLoader,
             insets = insets,
         )

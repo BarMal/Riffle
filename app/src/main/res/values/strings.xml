@@ -1534,6 +1534,9 @@
     <string name="settings_summon_nothing_to_add">Everything is already on the ring.</string>
     <string name="setting_summon_header">Top of the screen</string>
     <string name="setting_summon_header_keywords">summon clock date widget header top</string>
+    <string name="setting_summon_hints">Show hints</string>
+    <string name="setting_summon_hints_keywords">summon hints help tips text instructions</string>
+    <string name="settings_summon_hints_subtitle">Short lines on the ring and the readout saying what letting go will do</string>
     <string name="settings_summon_header_none">Nothing</string>
     <string name="settings_summon_header_clock">Clock</string>
     <string name="settings_summon_header_clock_and_date">Clock and date</string>

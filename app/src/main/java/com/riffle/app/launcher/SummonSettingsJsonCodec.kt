@@ -24,6 +24,7 @@ internal fun encodeSummonSettings(settings: SummonSettings): JSONObject =
         .put("slotCount", settings.slotCount)
         .put("slots", JSONArray().apply { settings.slots.forEach { put(encodeSummonSlot(it)) } })
         .put("header", encodeSummonHeader(settings.header))
+        .put("showHints", settings.showHints)
         .put(
             "timings",
             JSONObject()
@@ -46,6 +47,7 @@ internal fun JSONObject.toSummonSettings(defaults: SummonSettings): SummonSettin
     return SummonSettings(
         slots = slots,
         header = optJSONObject("header")?.toSummonHeader() ?: defaults.header,
+        showHints = optBoolean("showHints", defaults.showHints),
         timings =
             SummonTimings(
                 armMillis = timings?.optInt("armMillis", defaults.timings.armMillis) ?: defaults.timings.armMillis,

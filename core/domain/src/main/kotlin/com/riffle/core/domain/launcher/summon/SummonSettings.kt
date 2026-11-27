@@ -77,6 +77,8 @@ data class SummonSettings(
     val slots: List<SummonSlot> = emptyList(),
     val header: SummonHeader = SummonHeader.DEFAULT,
     val timings: SummonTimings = SummonTimings(),
+    /** The short lines that say what letting go will do (on the ring and the readout). */
+    val showHints: Boolean = true,
 ) {
     val ringSlots: List<SummonSlot> get() = slots.take(slotCount)
 

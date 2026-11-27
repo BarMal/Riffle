@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -107,7 +106,7 @@ private fun AppCardBody(
     val group = entry.notifications ?: return
     val top = group.notifications.firstOrNull()
     Row(horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m), verticalAlignment = Alignment.CenterVertically) {
-        LauncherAppIcon(entry.identity, entry.label, appIconLoader, Modifier.size(CARD_ICON_SIZE), CircleShape)
+        LauncherAppIcon(entry.identity, entry.label, appIconLoader, Modifier.size(CARD_ICON_SIZE))
         Column {
             Text(entry.label, style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.summon_card_count, group.count), style = MaterialTheme.typography.labelMedium)

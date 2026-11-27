@@ -68,7 +68,8 @@ internal fun SummonRing(
     appIconLoader: AppIconLoader,
     reducedMotion: Boolean,
     onDockIconPlaced: (Int, LayoutCoordinates) -> Unit,
-    hint: String,
+    /** What to do while nothing is aimed at; null when hints are off. */
+    hint: String?,
     heightPx: Float,
 ) {
     val entries = model.level(phase.path)
@@ -89,7 +90,7 @@ internal fun SummonRing(
     }
 
     // Once something is aimed at, the readout says what it is; until then, how to aim.
-    if (aimed == null && dockAimed == null) {
+    if (hint != null && aimed == null && dockAimed == null) {
         SummonLabel(hint = hint, centre = phase.layout.centre, radius = phase.layout.radius)
     }
 
@@ -130,7 +131,6 @@ private fun SummonSlot(
                     entry.label,
                     appIconLoader,
                     Modifier.size(GLOWING_ICON_SIZE).summonGlow(glow) { look.glow },
-                    CircleShape,
                 )
             }
         }
@@ -158,7 +158,7 @@ internal fun SlotGlyph(
 ) {
     when (entry) {
         is SummonEntry.App ->
-            LauncherAppIcon(entry.identity, entry.label, appIconLoader, Modifier.size(SLOT_ICON_SIZE), CircleShape)
+            LauncherAppIcon(entry.identity, entry.label, appIconLoader, Modifier.size(SLOT_ICON_SIZE))
         is SummonEntry.Folder ->
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 entry.apps.take(FOLDER_PREVIEW_COUNT).chunked(2).forEach { row ->
@@ -169,7 +169,6 @@ internal fun SlotGlyph(
                                 app.label,
                                 appIconLoader,
                                 Modifier.size(FOLDER_ICON_SIZE),
-                                CircleShape,
                             )
                         }
                     }
@@ -270,7 +269,6 @@ private fun SummonFavouritesRow(
                                 scaleY = look.scale
                             }.summonGlow(glow) { look.glow }
                             .onGloballyPositioned { coordinates -> onIconPlaced(index, coordinates) },
-                        CircleShape,
                     )
                 }
             }

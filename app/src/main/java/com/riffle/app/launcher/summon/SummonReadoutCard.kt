@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -64,6 +63,7 @@ internal fun SummonReadoutCard(
     readout: SummonReadout,
     placement: SummonReadoutPlacement,
     live: Boolean,
+    showHint: Boolean,
     appIconLoader: AppIconLoader,
     insets: PaddingValues,
 ) {
@@ -103,12 +103,14 @@ internal fun SummonReadoutCard(
                     is SummonEntry.Folder -> FolderApps(entry, appIconLoader)
                     is SummonEntry.App, is SummonEntry.Favourites -> Unit
                 }
-                GlowText(
-                    stringResource(readout.hint.label()),
-                    MaterialTheme.typography.labelMedium,
-                    light,
-                    summonReadoutGlow(HINT_DISTANCE_DP),
-                )
+                if (showHint) {
+                    GlowText(
+                        stringResource(readout.hint.label()),
+                        MaterialTheme.typography.labelMedium,
+                        light,
+                        summonReadoutGlow(HINT_DISTANCE_DP),
+                    )
+                }
             }
         }
     }
@@ -131,7 +133,6 @@ private fun ReadoutHeader(
                     entry.label,
                     appIconLoader,
                     iconModifier.size(READOUT_ICON_SIZE),
-                    CircleShape,
                 )
             else -> Box(iconModifier.size(READOUT_ICON_SIZE), Alignment.Center) { SlotGlyph(entry, appIconLoader) }
         }
@@ -160,7 +161,7 @@ private fun FolderApps(
         verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
     ) {
         folder.apps.take(FOLDER_APPS_SHOWN).forEach { app ->
-            LauncherAppIcon(app.identity, app.label, appIconLoader, Modifier.size(FOLDER_APP_ICON_SIZE), CircleShape)
+            LauncherAppIcon(app.identity, app.label, appIconLoader, Modifier.size(FOLDER_APP_ICON_SIZE))
         }
     }
 }
