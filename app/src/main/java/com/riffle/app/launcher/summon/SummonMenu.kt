@@ -18,9 +18,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -78,7 +78,7 @@ internal fun SummonMenu(
     ) {
         GlassSurface(
             modifier = Modifier.widthIn(max = MENU_MAX_WIDTH).fillMaxWidth(),
-            weight = GlassWeight.Regular,
+            weight = GlassWeight.Thick,
             shape = RoundedCornerShape(28.dp),
         ) {
             Column(Modifier.padding(RiffleSpacing.l), verticalArrangement = Arrangement.spacedBy(RiffleSpacing.m)) {
@@ -136,5 +136,7 @@ private fun MenuButton(
     label: Int,
     onClick: () -> Unit,
 ) {
-    TextButton(onClick = onClick, modifier = Modifier.sizeIn(minHeight = MIN_TOUCH)) { Text(stringResource(label)) }
+    FilledTonalButton(onClick = onClick, modifier = Modifier.sizeIn(minHeight = MIN_TOUCH)) {
+        Text(stringResource(label))
+    }
 }

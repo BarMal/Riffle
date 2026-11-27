@@ -14,11 +14,13 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.HomeWidgetPlaceholder
+import com.riffle.app.launcher.LABEL_TEXT_SHADOW
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.glance.GlanceWidget
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
@@ -43,11 +45,12 @@ internal fun SummonHeaderArea(
     widgetViewFactory: HomeWidgetViewFactory,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier = Modifier,
+    nowMillis: () -> Long = System::currentTimeMillis,
 ) {
     when (header) {
         SummonHeader.None -> Unit
-        SummonHeader.Clock -> SummonClock(showDate = false, modifier = modifier)
-        SummonHeader.ClockAndDate -> SummonClock(showDate = true, modifier = modifier)
+        SummonHeader.Clock -> SummonClock(showDate = false, nowMillis = nowMillis, modifier = modifier)
+        SummonHeader.ClockAndDate -> SummonClock(showDate = true, nowMillis = nowMillis, modifier = modifier)
         is SummonHeader.Glance ->
             Box(modifier.fillMaxWidth().height(WIDGET_HEADER_HEIGHT)) {
                 GlanceWidget(kind = header.kind, span = header.kind.defaultSpan, interactive = { true })
@@ -55,7 +58,7 @@ internal fun SummonHeaderArea(
         is SummonHeader.HomeWidget -> {
             val widget = homeLayout.widgetById(header.itemId.value)
             if (widget == null) {
-                SummonClock(showDate = true, modifier = modifier)
+                SummonClock(showDate = true, nowMillis = nowMillis, modifier = modifier)
             } else {
                 Box(modifier.fillMaxWidth().height(WIDGET_HEADER_HEIGHT)) {
                     HomeWidgetPlaceholder(
@@ -76,22 +79,24 @@ private fun HomeLayout.widgetById(id: String): WidgetItem? =
 @Composable
 private fun SummonClock(
     showDate: Boolean,
+    nowMillis: () -> Long,
     modifier: Modifier,
 ) {
     val context = LocalContext.current
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var now by remember { mutableLongStateOf(nowMillis()) }
     LaunchedEffect(Unit) {
         while (true) {
             delay(MILLIS_PER_MINUTE - now % MILLIS_PER_MINUTE)
-            now = System.currentTimeMillis()
+            now = nowMillis()
         }
     }
     val date = Date(now)
     Column(modifier) {
         Text(
             DateFormat.getTimeFormat(context).format(date),
-            style = MaterialTheme.typography.displayLarge,
+            style = MaterialTheme.typography.displayLarge.copy(shadow = LABEL_TEXT_SHADOW),
             fontWeight = FontWeight.Light,
+            color = Color.White,
         )
         if (showDate) {
             Text(
@@ -99,7 +104,8 @@ private fun SummonClock(
                     DateFormat.getBestDateTimePattern(java.util.Locale.getDefault(), "EEEEdMMMM"),
                     date,
                 ).toString(),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.copy(shadow = LABEL_TEXT_SHADOW),
+                color = Color.White,
             )
         }
     }

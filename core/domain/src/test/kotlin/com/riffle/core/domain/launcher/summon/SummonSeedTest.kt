@@ -29,8 +29,21 @@ class SummonSeedTest {
         appShortcutId = if (deep) AppShortcutId("deep") else null,
     )
 
+    private fun layout(
+        home: List<AppShortcutItem>,
+        dock: List<AppShortcutItem>,
+    ) = HomeLayout(
+        viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+        pages =
+            listOf(
+                LauncherPage(LauncherPageId("p0"), grid = GridDimensions(4, 5), items = home),
+            ),
+        selectedPageId = LauncherPageId("p0"),
+        dock = DockModel(capacity = 4, items = dock),
+    )
+
     @Test
-    fun theDockComesFirstThenHomeInPageOrderSkippingDeepShortcutsFoldersAndRepeats() {
+    fun homeComesFirstInPageOrderSkippingDeepShortcutsFoldersAndRepeats() {
         val layout =
             HomeLayout(
                 viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
@@ -42,9 +55,9 @@ class SummonSeedTest {
                             items =
                                 listOf(
                                     shortcut("maps"),
-                                    shortcut("phone"),
                                     FolderItem(LauncherItemId("f"), "Work", listOf(shortcut("files"))),
                                     shortcut("mail", deep = true),
+                                    shortcut("maps"),
                                 ),
                         ),
                         LauncherPage(
@@ -54,8 +67,20 @@ class SummonSeedTest {
                         ),
                     ),
                 selectedPageId = LauncherPageId("p0"),
-                dock = DockModel(capacity = 4, items = listOf(shortcut("phone"), shortcut("messages"))),
+                dock = DockModel(capacity = 4),
             )
-        assertEquals(listOf("phone", "messages", "maps", "camera").map(::app), summonSeedApps(layout))
+        assertEquals(listOf("maps", "camera").map(::app), summonSeedApps(layout))
+    }
+
+    @Test
+    fun theDocksAppsComeLastSoTheRingDoesNotRepeatFavourites() {
+        val seeded =
+            summonSeedApps(
+                layout(
+                    home = listOf(shortcut("maps"), shortcut("phone"), shortcut("camera")),
+                    dock = listOf(shortcut("phone"), shortcut("messages")),
+                ),
+            )
+        assertEquals(listOf("maps", "camera", "phone", "messages").map(::app), seeded)
     }
 }
