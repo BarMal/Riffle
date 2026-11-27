@@ -12,8 +12,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.summon.SummonHeaderArea
 import com.riffle.app.launcher.summon.SummonMenu
-import com.riffle.app.launcher.summon.SummonRing
 import com.riffle.app.launcher.summon.SummonReadoutCard
+import com.riffle.app.launcher.summon.SummonRing
 import com.riffle.app.launcher.summon.SummonRingModel
 import com.riffle.app.launcher.summon.summonReadout
 import com.riffle.app.launcher.summon.summonReadoutPlacement

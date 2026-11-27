@@ -114,24 +114,7 @@ internal fun SummonHome(
                 )
             }
             if (open != null) {
-                SummonRing(
-                    phase = open,
-                    model = model,
-                    appIconLoader = appIconLoader,
-                    reducedMotion = state.launcherSettings.motion.reducedMotion,
-                    onDockIconPlaced = controller::placeDockIcon,
-                    hint = ringHint(open),
-                    heightPx = heightPx,
-                )
-                summonReadout(open, model)?.let { readout ->
-                    SummonReadoutCard(
-                        readout = readout,
-                        placement = summonReadoutPlacement(open.layout.centre.y, heightPx),
-                        live = open.live,
-                        appIconLoader = appIconLoader,
-                        insets = insets,
-                    )
-                }
+                SummonOpenRing(open, model, appIconLoader, state, controller, insets, heightPx)
             }
         }
         controller.keptCard?.let { card ->
@@ -151,6 +134,37 @@ internal fun SummonHome(
                 onDismiss = { controller.menuOpen = false },
             )
         }
+    }
+}
+
+/** The ring under the thumb and the readout for what it is aimed at. */
+@Composable
+private fun SummonOpenRing(
+    open: SummonPhase.Open,
+    model: SummonRingModel,
+    appIconLoader: AppIconLoader,
+    state: LauncherShellState,
+    controller: SummonController,
+    insets: PaddingValues,
+    heightPx: Float,
+) {
+    SummonRing(
+        phase = open,
+        model = model,
+        appIconLoader = appIconLoader,
+        reducedMotion = state.launcherSettings.motion.reducedMotion,
+        onDockIconPlaced = controller::placeDockIcon,
+        hint = ringHint(open),
+        heightPx = heightPx,
+    )
+    summonReadout(open, model)?.let { readout ->
+        SummonReadoutCard(
+            readout = readout,
+            placement = summonReadoutPlacement(open.layout.centre.y, heightPx),
+            live = open.live,
+            appIconLoader = appIconLoader,
+            insets = insets,
+        )
     }
 }
 

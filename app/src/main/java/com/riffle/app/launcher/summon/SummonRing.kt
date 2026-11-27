@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -44,7 +43,6 @@ import com.riffle.core.domain.launcher.glance.GlanceWidgetKind
 import com.riffle.core.domain.launcher.summon.RingLayout
 import com.riffle.core.domain.launcher.summon.RingPoint
 import com.riffle.core.domain.launcher.summon.SummonPhase
-import com.riffle.core.domain.launcher.summon.SummonSlotRole
 import kotlin.math.roundToInt
 
 internal val SUMMON_SLOT_SIZE: Dp = 56.dp
