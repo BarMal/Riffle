@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -44,7 +43,6 @@ import com.riffle.core.domain.launcher.glance.GlanceWidgetKind
 import com.riffle.core.domain.launcher.summon.RingLayout
 import com.riffle.core.domain.launcher.summon.RingPoint
 import com.riffle.core.domain.launcher.summon.SummonPhase
-import com.riffle.core.domain.launcher.summon.SummonSlotRole
 import kotlin.math.roundToInt
 
 internal val SUMMON_SLOT_SIZE: Dp = 56.dp
@@ -90,30 +88,9 @@ internal fun SummonRing(
         )
     }
 
-    val card = aimed?.takeIf { phase.previewing && it.role == SummonSlotRole.PREVIEW && dockAimed == null }
-    if (card != null) {
-        val slotPx = halfSlotPx * 2f
-        Box(Modifier.fillMaxSize().padding(horizontal = RiffleSpacing.l)) {
-            SummonCard(
-                entry = card,
-                live = phase.live,
-                interactive = false,
-                appIconLoader = appIconLoader,
-                onAction = {},
-                modifier =
-                    Modifier.summonCardPlacement(
-                        aboveBottom = phase.layout.centre.y - phase.layout.radius - slotPx,
-                        belowTop = phase.layout.centre.y + phase.layout.radius + slotPx,
-                    ),
-            )
-        }
-    } else {
-        SummonLabel(
-            title = (dockAimed ?: aimed)?.label.orEmpty(),
-            hint = hint,
-            centre = phase.layout.centre,
-            radius = phase.layout.radius,
-        )
+    // Once something is aimed at, the readout says what it is; until then, how to aim.
+    if (aimed == null && dockAimed == null) {
+        SummonLabel(hint = hint, centre = phase.layout.centre, radius = phase.layout.radius)
     }
 
     if (phase.favouritesOpen) {
@@ -175,7 +152,7 @@ private fun SummonSlot(
 }
 
 @Composable
-private fun SlotGlyph(
+internal fun SlotGlyph(
     entry: SummonEntry,
     appIconLoader: AppIconLoader,
 ) {
@@ -220,7 +197,6 @@ private fun GlanceWidgetKind.glyph(): ImageVector =
 /** The name of what is aimed at, centred above the ring; below it when the ring sits too high for room above. */
 @Composable
 private fun SummonLabel(
-    title: String,
     hint: String,
     centre: RingPoint,
     radius: Float,
@@ -238,12 +214,6 @@ private fun SummonLabel(
                 .padding(horizontal = RiffleSpacing.l),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            title,
-            style = MaterialTheme.typography.headlineSmall.copy(shadow = LABEL_TEXT_SHADOW),
-            color = Color.White,
-            textAlign = TextAlign.Center,
-        )
         Text(
             hint,
             style = MaterialTheme.typography.labelMedium.copy(shadow = LABEL_TEXT_SHADOW),
@@ -309,7 +279,7 @@ private fun SummonFavouritesRow(
 }
 
 private val FAVOURITES_GAP: Dp = 72.dp
-private val FAVOURITES_STAR = Color(0xFFFFC857)
+internal val FAVOURITES_STAR = Color(0xFFFFC857)
 
 /** How big each Favourite is so the whole row fits [availableWidth]: full size when it can, never below a floor. */
 internal fun summonFavouriteIconSize(

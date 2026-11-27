@@ -2,6 +2,7 @@ package com.riffle.app.screenshots
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -11,8 +12,11 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.summon.SummonHeaderArea
 import com.riffle.app.launcher.summon.SummonMenu
+import com.riffle.app.launcher.summon.SummonReadoutCard
 import com.riffle.app.launcher.summon.SummonRing
 import com.riffle.app.launcher.summon.SummonRingModel
+import com.riffle.app.launcher.summon.summonReadout
+import com.riffle.app.launcher.summon.summonReadoutPlacement
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
@@ -27,6 +31,11 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.notifications.LauncherNotification
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
+import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.settings.EffectiveFeatures
 import com.riffle.core.domain.launcher.summon.RingBounds
 import com.riffle.core.domain.launcher.summon.RingPoint
@@ -98,11 +107,36 @@ class SummonScreenshotTest {
         composeRule.captureScreen()
     }
 
+    @Test
+    fun theReadoutShowsTheAimedAppsNotificationsAtTheTop() {
+        composeRule.setContent { ScreenshotBackdrop { OpenRing(aim = 0, favouritesOpen = false, dockAim = null) } }
+        composeRule.captureScreen()
+    }
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun theReadoutPushedThroughInTheDarkTheme() {
+        composeRule.setContent {
+            ScreenshotBackdrop { OpenRing(aim = 0, favouritesOpen = false, dockAim = null, live = true) }
+        }
+        composeRule.captureScreen()
+    }
+
+    @Test
+    fun aRingHeldHighPutsTheReadoutAtTheBottom() {
+        composeRule.setContent {
+            ScreenshotBackdrop { OpenRing(aim = 1, favouritesOpen = false, dockAim = null, centreFraction = 0.3f) }
+        }
+        composeRule.captureScreen()
+    }
+
     @Composable
     private fun OpenRing(
-        aim: Int,
+        aim: Int?,
         favouritesOpen: Boolean,
         dockAim: Int?,
+        live: Boolean = false,
+        centreFraction: Float = 0.62f,
     ) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val density = LocalDensity.current
@@ -110,7 +144,7 @@ class SummonScreenshotTest {
             val height = with(density) { maxHeight.toPx() }
             val radius = with(density) { 108.dp.toPx() }
             val half = with(density) { 28.dp.toPx() }
-            val centre = RingPoint(width / 2f, height * 0.42f)
+            val centre = RingPoint(width / 2f, height * centreFraction)
             val ring =
                 SummonRingGeometry.layout(
                     centre = centre,
@@ -120,17 +154,19 @@ class SummonScreenshotTest {
                     clearance = with(density) { 34.dp.toPx() },
                 )
             Box(Modifier.fillMaxSize()) {
+                val phase =
+                    SummonPhase.Open(
+                        origin = centre,
+                        path = emptyList(),
+                        layout = ring,
+                        finger = aim?.let(ring::position) ?: centre,
+                        aim = aim,
+                        live = live,
+                        favouritesOpen = favouritesOpen,
+                        dockAim = dockAim,
+                    )
                 SummonRing(
-                    phase =
-                        SummonPhase.Open(
-                            origin = centre,
-                            path = emptyList(),
-                            layout = ring,
-                            finger = ring.position(aim),
-                            aim = aim,
-                            favouritesOpen = favouritesOpen,
-                            dockAim = dockAim,
-                        ),
+                    phase = phase,
                     model = model,
                     appIconLoader = SolidColorAppIconLoader(),
                     reducedMotion = true,
@@ -138,6 +174,15 @@ class SummonScreenshotTest {
                     hint = "Release to open",
                     heightPx = height,
                 )
+                summonReadout(phase, model)?.let { readout ->
+                    SummonReadoutCard(
+                        readout = readout,
+                        placement = summonReadoutPlacement(centre.y, height),
+                        live = live,
+                        appIconLoader = SolidColorAppIconLoader(),
+                        insets = PaddingValues(0.dp),
+                    )
+                }
             }
         }
     }
@@ -176,6 +221,32 @@ class SummonScreenshotTest {
                 installed = (ringApps + dockApps).map { InstalledApp(app(it), it.replaceFirstChar(Char::uppercase)) },
                 glanceLabel = { "Now playing" },
                 favouritesLabel = "Favourites",
+                notifications =
+                    listOf(
+                        AppNotificationGroup(
+                            packageName = app("maps").packageName,
+                            profileId = app("maps").profile.id,
+                            latestCategory = NotificationCategory.UNKNOWN,
+                            latestAgeBucket = NotificationAgeBucket.entries.first(),
+                            notifications =
+                                listOf(
+                                    note("route", "Leave in 12 min", "Traffic is light on your usual route"),
+                                    note("saved", "New place saved", "Added to your Weekend list"),
+                                ),
+                        ),
+                    ),
             )
+
+        fun note(
+            key: String,
+            title: String,
+            text: String,
+        ) = LauncherNotification(
+            key = LauncherNotificationKey(key),
+            packageName = app("maps").packageName,
+            title = title,
+            text = text,
+            postedAtEpochMillis = 0L,
+        )
     }
 }

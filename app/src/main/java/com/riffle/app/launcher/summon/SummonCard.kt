@@ -28,7 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -42,7 +41,6 @@ import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.glance.GlanceWidget
 import com.riffle.app.launcher.rememberAppIconColor
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
-import kotlin.math.roundToInt
 
 private val CARD_MAX_WIDTH: Dp = 380.dp
 private val CARD_ICON_SIZE: Dp = 40.dp
@@ -127,22 +125,6 @@ private fun AppCardBody(
         }
     }
 }
-
-/**
- * Places the card with its bottom edge at [aboveBottom] (over the ring, where the thumb does not cover it), or with its
- * top at [belowTop] when there is not room above for its measured height.
- */
-internal fun Modifier.summonCardPlacement(
-    aboveBottom: Float,
-    belowTop: Float,
-): Modifier =
-    layout { measurable, constraints ->
-        val placeable = measurable.measure(constraints)
-        val top = if (aboveBottom - placeable.height >= 0f) aboveBottom - placeable.height else belowTop
-        layout(constraints.maxWidth, constraints.maxHeight) {
-            placeable.place((constraints.maxWidth - placeable.width) / 2, top.roundToInt())
-        }
-    }
 
 /**
  * A card kept after release: in thumb reach at the bottom, interactive, and closed by a tap anywhere outside it. Its
