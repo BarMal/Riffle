@@ -103,7 +103,8 @@ internal fun SummonHome(
                     }.summonInput(controller),
         ) {
             val open = controller.phase as? SummonPhase.Open
-            AnimatedVisibility(visible = open == null && !controller.menuOpen, enter = fadeIn(), exit = fadeOut()) {
+            val calm = open == null && !controller.menuOpen && controller.keptCard == null
+            AnimatedVisibility(visible = calm, enter = fadeIn(), exit = fadeOut()) {
                 SummonHeaderArea(
                     header = settings.header,
                     homeLayout = state.homeLayout,
@@ -123,6 +124,14 @@ internal fun SummonHome(
                     heightPx = heightPx,
                 )
             }
+        }
+        controller.keptCard?.let { card ->
+            SummonKeptCard(
+                entry = card,
+                appIconLoader = appIconLoader,
+                onAction = onAction,
+                onDismiss = { controller.keptCard = null },
+            )
         }
         if (controller.menuOpen) {
             SummonMenu(
@@ -149,13 +158,14 @@ private fun rememberSummonRingModel(state: LauncherShellState): SummonRingModel 
     val context = LocalContext.current
     val favouritesLabel = stringResource(R.string.summon_favourites)
     val settings = state.launcherSettings.summon
-    return remember(settings, state.homeLayout, state.installedApps, favouritesLabel) {
+    return remember(settings, state.homeLayout, state.installedApps, state.notificationGroupsByApp, favouritesLabel) {
         SummonRingModel.from(
             settings = settings,
             layout = state.homeLayout,
             installed = state.installedApps,
             glanceLabel = { kind -> context.getString(kind.labelRes()) },
             favouritesLabel = favouritesLabel,
+            notifications = state.notificationGroupsByApp,
         )
     }
 }

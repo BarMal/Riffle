@@ -37,6 +37,9 @@ internal class SummonController(
     var phase: SummonPhase by mutableStateOf(SummonPhase.Idle)
         private set
     var menuOpen: Boolean by mutableStateOf(false)
+
+    /** A card kept by pushing through its slot and letting go; null when none is open. */
+    var keptCard: SummonEntry? by mutableStateOf(null)
     var root: LayoutCoordinates? = null
     private val dockIcons = mutableStateMapOf<Int, Rect>()
 
@@ -63,6 +66,7 @@ internal class SummonController(
         when (effect) {
             SummonEffect.MenuRequested, is SummonEffect.Tapped -> menuOpen = true
             SummonEffect.FavouritesHidden -> dockIcons.clear()
+            is SummonEffect.KeepCard -> keptCard = model().entry(effect.path, effect.index)
             else -> summonActionFor(effect, model())?.let(onAction())
         }
     }

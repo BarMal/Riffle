@@ -14,6 +14,11 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.notifications.LauncherNotification
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
+import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.summon.SummonSettings
 import com.riffle.core.domain.launcher.summon.SummonSlot
 import com.riffle.core.domain.launcher.summon.SummonSlotRole
@@ -77,7 +82,7 @@ class SummonRingModelTest {
         val root = model(settings).level(emptyList())
         assertEquals(listOf("Maps", "Work", "now-playing", "Favourites"), root.map { it.label })
         assertEquals(
-            listOf(SummonSlotRole.APP, SummonSlotRole.FOLDER, SummonSlotRole.APP, SummonSlotRole.FAVOURITES),
+            listOf(SummonSlotRole.APP, SummonSlotRole.FOLDER, SummonSlotRole.PREVIEW, SummonSlotRole.FAVOURITES),
             model(settings).roles(emptyList()),
         )
     }
@@ -116,6 +121,38 @@ class SummonRingModelTest {
                 favouritesLabel = "Favourites",
             )
         assertEquals(3, folderRing.level(listOf(0)).size)
+    }
+
+    @Test
+    fun anAppWithNotificationsHasACardToPreviewAndOneWithoutDoesNot() {
+        val mail = app("mail")
+        val group =
+            AppNotificationGroup(
+                packageName = mail.packageName,
+                profileId = mail.profile.id,
+                latestCategory = NotificationCategory.UNKNOWN,
+                latestAgeBucket = NotificationAgeBucket.entries.first(),
+                notifications =
+                    listOf(
+                        LauncherNotification(
+                            key = LauncherNotificationKey("n1"),
+                            packageName = mail.packageName,
+                            title = "Ana",
+                            text = "Lunch?",
+                        ),
+                    ),
+            )
+        val ring =
+            SummonRingModel.from(
+                SummonSettings(slots = listOf(SummonSlot.App(mail), SummonSlot.App(app("maps")))),
+                layout,
+                apps,
+                glanceLabel = { it.storedId },
+                favouritesLabel = "Favourites",
+                notifications = listOf(group),
+            )
+        assertEquals(listOf(SummonSlotRole.PREVIEW, SummonSlotRole.APP), ring.roles(emptyList()))
+        assertEquals(group, (ring.entry(emptyList(), 0) as SummonEntry.App).notifications)
     }
 
     @Test
