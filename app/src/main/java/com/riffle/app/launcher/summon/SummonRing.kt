@@ -3,6 +3,7 @@ package com.riffle.app.launcher.summon
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.AppIconLoader
 import com.riffle.app.launcher.GlassSurface
+import com.riffle.app.launcher.LABEL_TEXT_SHADOW
 import com.riffle.app.launcher.LauncherAppIcon
 import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.app.launcher.designsystem.RiffleSpacing
@@ -50,7 +52,10 @@ import kotlin.math.roundToInt
 internal val SUMMON_SLOT_SIZE: Dp = 56.dp
 private val SLOT_ICON_SIZE: Dp = 36.dp
 private val FOLDER_ICON_SIZE: Dp = 18.dp
-private val DOCK_ICON_SIZE: Dp = 40.dp
+internal val SUMMON_FAVOURITE_ICON_SIZE: Dp = 40.dp
+private val MIN_FAVOURITE_ICON_SIZE: Dp = 24.dp
+private val FAVOURITES_ROW_GAP: Dp = RiffleSpacing.m
+private val FAVOURITES_ROW_PADDING: Dp = RiffleSpacing.m
 private const val AIMED_SCALE = 1.12f
 private const val LABEL_WIDTH_FRACTION = 1f
 
@@ -187,7 +192,7 @@ private fun SlotGlyph(
             Icon(
                 Icons.Filled.Star,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.tertiary,
+                tint = FAVOURITES_STAR,
             )
     }
 }
@@ -222,8 +227,18 @@ private fun SummonLabel(
                 .padding(horizontal = RiffleSpacing.l),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(title, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
-        Text(hint, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center)
+        Text(
+            title,
+            style = MaterialTheme.typography.headlineSmall.copy(shadow = LABEL_TEXT_SHADOW),
+            color = Color.White,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            hint,
+            style = MaterialTheme.typography.labelMedium.copy(shadow = LABEL_TEXT_SHADOW),
+            color = Color.White,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -242,21 +257,23 @@ private fun SummonFavouritesRow(
 ) {
     val density = LocalDensity.current
     val gapPx = with(density) { FAVOURITES_GAP.toPx() }
-    val rowPx = with(density) { (DOCK_ICON_SIZE + RiffleSpacing.m * 2).toPx() }
+    val rowPx = with(density) { (SUMMON_FAVOURITE_ICON_SIZE + FAVOURITES_ROW_PADDING * 2).toPx() }
     val under = below.y + radius + gapPx
     // Under the ring when there is room, else over it: the Dock is where the thumb keeps going.
     val top = if (under + rowPx <= heightPx) under else below.y - radius - gapPx - rowPx
-    Box(
+    BoxWithConstraints(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .offset { IntOffset(0, top.roundToInt().coerceAtLeast(0)) },
+                .offset { IntOffset(0, top.roundToInt().coerceAtLeast(0)) }
+                .padding(horizontal = RiffleSpacing.l),
         contentAlignment = Alignment.TopCenter,
     ) {
+        val iconSize = summonFavouriteIconSize(maxWidth, apps.size)
         GlassSurface(weight = GlassWeight.Regular, shape = RoundedCornerShape(percent = 50)) {
             Row(
-                modifier = Modifier.padding(RiffleSpacing.m),
-                horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
+                modifier = Modifier.padding(FAVOURITES_ROW_PADDING),
+                horizontalArrangement = Arrangement.spacedBy(FAVOURITES_ROW_GAP),
             ) {
                 apps.forEachIndexed { index, app ->
                     val scale by animateFloatAsState(if (index == aim) AIMED_SCALE else 1f, label = "summon-dock")
@@ -265,7 +282,7 @@ private fun SummonFavouritesRow(
                         app.label,
                         appIconLoader,
                         Modifier
-                            .size(DOCK_ICON_SIZE)
+                            .size(iconSize)
                             .graphicsLayer {
                                 scaleX = scale
                                 scaleY = scale
@@ -279,5 +296,22 @@ private fun SummonFavouritesRow(
 }
 
 private val FAVOURITES_GAP: Dp = 72.dp
+private val FAVOURITES_STAR = Color(0xFFFFC857)
+
+/** How big each Favourite is so the whole row fits [availableWidth]: full size when it can, never below a floor. */
+internal fun summonFavouriteIconSize(
+    availableWidth: Dp,
+    count: Int,
+): Dp {
+    if (count == 0) return SUMMON_FAVOURITE_ICON_SIZE
+    val fitting = (availableWidth - FAVOURITES_ROW_PADDING * 2 - FAVOURITES_ROW_GAP * (count - 1)) / count
+    return fitting.coerceIn(MIN_FAVOURITE_ICON_SIZE, SUMMON_FAVOURITE_ICON_SIZE)
+}
+
+/** The Favourites row's whole width with [count] icons of [iconSize]. */
+internal fun summonFavouritesRowWidth(
+    iconSize: Dp,
+    count: Int,
+): Dp = iconSize * count + FAVOURITES_ROW_GAP * (count - 1).coerceAtLeast(0) + FAVOURITES_ROW_PADDING * 2
 
 private fun RingPoint.minus(half: Float): IntOffset = IntOffset((x - half).roundToInt(), (y - half).roundToInt())

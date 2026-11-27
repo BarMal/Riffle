@@ -81,7 +81,8 @@ fun WallpaperReadableLabel(
     }
 }
 
-private val LABEL_TEXT_SHADOW =
+/** Keeps white text legible straight on the wallpaper, with no background behind it. */
+internal val LABEL_TEXT_SHADOW =
     Shadow(color = Color.Black.copy(alpha = 0.55f), offset = Offset(0f, 1f), blurRadius = 6f)
 
 internal data class WallpaperReadableLabelColors(
