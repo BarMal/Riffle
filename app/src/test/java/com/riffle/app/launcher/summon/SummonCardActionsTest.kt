@@ -21,7 +21,12 @@ class SummonCardActionsTest {
     private fun notification(
         key: String,
         canDismiss: Boolean,
-    ) = LauncherNotification(LauncherNotificationKey(key), mail.packageName, canDismiss = canDismiss)
+    ) = LauncherNotification(
+        key = LauncherNotificationKey(key),
+        packageName = mail.packageName,
+        canDismiss = canDismiss,
+        postedAtEpochMillis = 0L,
+    )
 
     private fun group(vararg notifications: LauncherNotification) =
         AppNotificationGroup(

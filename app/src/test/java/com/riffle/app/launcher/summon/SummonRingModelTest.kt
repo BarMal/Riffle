@@ -139,6 +139,7 @@ class SummonRingModelTest {
                             packageName = mail.packageName,
                             title = "Ana",
                             text = "Lunch?",
+                            postedAtEpochMillis = 0L,
                         ),
                     ),
             )
