@@ -152,7 +152,11 @@ private fun SummonOpenRing(
         phase = open,
         model = model,
         appIconLoader = appIconLoader,
-        reducedMotion = state.launcherSettings.motion.reducedMotion,
+        look =
+            SummonRingLook(
+                iconSize = state.launcherSettings.summon.iconSizeDp.dp,
+                reducedMotion = state.launcherSettings.motion.reducedMotion,
+            ),
         onDockIconPlaced = controller::placeDockIcon,
         hint = ringHint(open).takeIf { state.launcherSettings.summon.showHints },
         heightPx = heightPx,

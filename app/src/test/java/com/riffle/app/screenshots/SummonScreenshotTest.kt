@@ -14,6 +14,7 @@ import com.riffle.app.launcher.summon.SummonHeaderArea
 import com.riffle.app.launcher.summon.SummonMenu
 import com.riffle.app.launcher.summon.SummonReadoutCard
 import com.riffle.app.launcher.summon.SummonRing
+import com.riffle.app.launcher.summon.SummonRingLook
 import com.riffle.app.launcher.summon.SummonRingModel
 import com.riffle.app.launcher.summon.summonReadout
 import com.riffle.app.launcher.summon.summonReadoutPlacement
@@ -169,7 +170,7 @@ class SummonScreenshotTest {
                     phase = phase,
                     model = model,
                     appIconLoader = SolidColorAppIconLoader(),
-                    reducedMotion = true,
+                    look = SummonRingLook(iconSize = 44.dp, reducedMotion = true),
                     onDockIconPlaced = { _, _ -> },
                     hint = "Release to open",
                     heightPx = height,

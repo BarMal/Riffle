@@ -326,6 +326,7 @@ internal class LauncherSettingsStateReducer(
                                 summon =
                                     action.settings
                                         .withSlotCount(action.settings.slotCount)
+                                        .withIconSize(action.settings.iconSizeDp)
                                         .copy(timings = action.settings.timings.clamped()),
                             ),
                         launcherSettingsRepository = launcherSettingsRepository,

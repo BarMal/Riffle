@@ -1548,6 +1548,9 @@
     <string name="setting_summon_timing_keywords">summon timing hold delay speed milliseconds haptic</string>
     <string name="setting_summon_timing_section">Timing</string>
     <string name="settings_summon_millis">%1$d ms</string>
+    <string name="settings_summon_dp">%1$d dp</string>
+    <string name="setting_summon_icon_size">Icon size</string>
+    <string name="setting_summon_icon_size_keywords">summon icon size bigger smaller ring</string>
     <string name="summon_favourites">Favourites</string>
     <string name="summon_surface_description">Home. Hold anywhere and aim to open an app; tap for the menu.</string>
     <string name="summon_open_app">Open %1$s</string>

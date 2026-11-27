@@ -32,6 +32,7 @@ class SummonSettingsJsonCodecTest {
             header = SummonHeader.HomeWidget(LauncherItemId("widget-3")),
             timings = SummonTimings(armMillis = 250, previewMillis = 400, acceptMillis = 500, slideMillis = 700),
             showHints = false,
+            iconSizeDp = 52,
         )
 
     @Test

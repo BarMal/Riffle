@@ -20,6 +20,11 @@ enum class SettingKey(
         R.string.setting_summon_slot_count,
         R.string.setting_summon_slot_count_keywords,
     ),
+    SUMMON_ICON_SIZE(
+        SettingsPage.SUMMON,
+        R.string.setting_summon_icon_size,
+        R.string.setting_summon_icon_size_keywords,
+    ),
     SUMMON_SLOTS(SettingsPage.SUMMON, R.string.setting_summon_slots, R.string.setting_summon_slots_keywords),
     SUMMON_ADD(SettingsPage.SUMMON, R.string.setting_summon_add, R.string.setting_summon_add_keywords),
     SUMMON_HEADER(SettingsPage.SUMMON, R.string.setting_summon_header, R.string.setting_summon_header_keywords),
