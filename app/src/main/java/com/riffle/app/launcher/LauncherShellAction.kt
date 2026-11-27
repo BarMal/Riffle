@@ -70,6 +70,7 @@ import com.riffle.core.domain.launcher.settings.PairsMode
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.SearchSettings
+import com.riffle.core.domain.launcher.summon.SummonSettings
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import com.riffle.core.domain.launcher.workspace.ReturnBehavior
@@ -666,6 +667,19 @@ sealed interface LauncherShellAction {
     /** Settings: Simple mode, the preset that leaves only the app library as Home and the Dock. */
     data class SetSimpleMode(
         val enabled: Boolean,
+    ) : LauncherShellAction
+
+    /**
+     * Settings > Home > Summon (experimental): Home becomes the Summon ring. Turning it on for the first time builds a
+     * ring from the Dock and Home; turning it off brings the arranged Home and the Dock straight back.
+     */
+    data class SetSummonMode(
+        val enabled: Boolean,
+    ) : LauncherShellAction
+
+    /** Settings > Home > Summon: the ring's slots, their count, the clock area and the timings, as edited. */
+    data class SetSummonSettings(
+        val settings: SummonSettings,
     ) : LauncherShellAction
 
     /** Settings > Home > Show hints again: the stored press-hint flag is cleared (the other hints are onboarding's). */

@@ -165,6 +165,8 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SetAppsBehindCards,
         is LauncherShellAction.SetFeatureEnabled,
         is LauncherShellAction.SetSimpleMode,
+        is LauncherShellAction.SetSummonMode,
+        is LauncherShellAction.SetSummonSettings,
         LauncherShellAction.ShowHintsAgain,
         is LauncherShellAction.SetScreenContentProtection,
         is LauncherShellAction.SelectReturnBehavior,

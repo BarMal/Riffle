@@ -14,6 +14,31 @@ enum class SettingKey(
     @StringRes val keywordsRes: Int,
 ) {
     SIMPLE_MODE(SettingsPage.HOME, R.string.setting_simple_mode, R.string.setting_simple_mode_keywords),
+    SUMMON_MODE(SettingsPage.SUMMON, R.string.setting_summon_mode, R.string.setting_summon_mode_keywords),
+    SUMMON_SLOT_COUNT(
+        SettingsPage.SUMMON,
+        R.string.setting_summon_slot_count,
+        R.string.setting_summon_slot_count_keywords,
+    ),
+    SUMMON_SLOTS(SettingsPage.SUMMON, R.string.setting_summon_slots, R.string.setting_summon_slots_keywords),
+    SUMMON_ADD(SettingsPage.SUMMON, R.string.setting_summon_add, R.string.setting_summon_add_keywords),
+    SUMMON_HEADER(SettingsPage.SUMMON, R.string.setting_summon_header, R.string.setting_summon_header_keywords),
+    SUMMON_ARM_TIME(SettingsPage.SUMMON, R.string.setting_summon_arm_time, R.string.setting_summon_timing_keywords),
+    SUMMON_PREVIEW_TIME(
+        SettingsPage.SUMMON,
+        R.string.setting_summon_preview_time,
+        R.string.setting_summon_timing_keywords,
+    ),
+    SUMMON_ACCEPT_TIME(
+        SettingsPage.SUMMON,
+        R.string.setting_summon_accept_time,
+        R.string.setting_summon_timing_keywords,
+    ),
+    SUMMON_SLIDE_TIME(
+        SettingsPage.SUMMON,
+        R.string.setting_summon_slide_time,
+        R.string.setting_summon_timing_keywords,
+    ),
     ADD_NEW_APPS(SettingsPage.HOME, R.string.setting_add_new_apps, R.string.setting_add_new_apps_keywords),
     HOME_ADD_ALL_APPS(
         SettingsPage.HOME,

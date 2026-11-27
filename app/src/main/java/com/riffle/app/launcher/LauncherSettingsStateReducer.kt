@@ -16,6 +16,7 @@ import com.riffle.core.domain.launcher.settings.StreamSettings
 import com.riffle.core.domain.launcher.settings.coerced
 import com.riffle.core.domain.launcher.settings.with
 import com.riffle.core.domain.launcher.settings.withReducedTransparency
+import com.riffle.core.domain.launcher.summon.summonSeedApps
 
 internal class LauncherSettingsStateReducer(
     private val homeLayoutRepository: HomeLayoutRepository,
@@ -299,6 +300,33 @@ internal class LauncherSettingsStateReducer(
                         settings =
                             state.launcherSettings.copy(
                                 features = state.launcherSettings.features.copy(simpleMode = action.enabled),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.SetSummonMode ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                features = state.launcherSettings.features.copy(summon = action.enabled),
+                                summon =
+                                    if (action.enabled) {
+                                        state.launcherSettings.summon.seeded(summonSeedApps(state.homeLayout))
+                                    } else {
+                                        state.launcherSettings.summon
+                                    },
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.SetSummonSettings ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                summon =
+                                    action.settings
+                                        .withSlotCount(action.settings.slotCount)
+                                        .copy(timings = action.settings.timings.clamped()),
                             ),
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
