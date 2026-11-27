@@ -69,6 +69,7 @@ import com.riffle.core.domain.launcher.settings.PairsMode
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.SearchSettings
+import com.riffle.core.domain.launcher.summon.SummonSettings
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
@@ -473,6 +474,8 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SetFeatureEnabled(LauncherFeature.STREAM, enabled = false),
                 ),
                 settings("SetSimpleMode", LauncherShellAction.SetSimpleMode(enabled = true)),
+                settings("SetSummonMode", LauncherShellAction.SetSummonMode(enabled = true)),
+                settings("SetSummonSettings", LauncherShellAction.SetSummonSettings(SummonSettings())),
                 settings("ShowHintsAgain", LauncherShellAction.ShowHintsAgain),
                 settings(
                     "SetScreenContentProtection",

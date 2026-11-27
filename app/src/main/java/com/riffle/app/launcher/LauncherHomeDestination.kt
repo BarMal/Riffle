@@ -49,6 +49,7 @@ import com.riffle.app.launcher.stream.LocalStreamViewButton
 import com.riffle.app.launcher.stream.StreamDestination
 import com.riffle.app.launcher.stream.StreamDockLink
 import com.riffle.app.launcher.stream.StreamHost
+import com.riffle.app.launcher.summon.SummonHome
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.ShellDestination
@@ -370,28 +371,45 @@ private fun HomeDestinationContent(
                 // The one dock, outside the mode surface: composed at the same place whichever surface runs below
                 // (#1205, Decision 2). Composed first so the mode's overlays cover it; the grid's own frame sits
                 // beneath it (see HOME_CONTENT_Z_INDEX). The dock never moves with a pull: it is the handle.
-                HomeDockHost(
-                    layout = dockHostState.homeLayout,
-                    installedApps = dockHostState.installedApps,
-                    presentation = dockPresentation,
-                    position = plan.dockEdge,
-                    hostState = dockHost,
-                    appIconLoader = appIconLoader,
-                    onAction = onAction,
-                    interpreter = dockInterpreter,
-                    haptics = haptics,
-                    dockModifier = pull.dockModifier,
-                    dockDipDp = pull::dockDipDp,
-                    choice = choice,
-                    entrance = entrance,
-                )
+                // Summon draws its own Favourites row only when asked for: the Dock is not drawn under it.
+                if (!features.summon) {
+                    HomeDockHost(
+                        layout = dockHostState.homeLayout,
+                        installedApps = dockHostState.installedApps,
+                        presentation = dockPresentation,
+                        position = plan.dockEdge,
+                        hostState = dockHost,
+                        appIconLoader = appIconLoader,
+                        onAction = onAction,
+                        interpreter = dockInterpreter,
+                        haptics = haptics,
+                        dockModifier = pull.dockModifier,
+                        dockDipDp = pull::dockDipDp,
+                        choice = choice,
+                        entrance = entrance,
+                    )
+                }
                 // Home first, then the Stream over it: while the Dock's change runs both are composed, and the
                 // Stream's cards rise out of the Dock over Home. Both stay direct siblings of the dock, so their zIndex
                 // ranks them against it (see HOME_CONTENT_Z_INDEX) and the dock keeps the touches where they overlap.
                 val homeContent: @Composable () -> Unit = {
                     CompositionLocalProvider(LocalGridFade provides column.fade.takeIf { homeBehind }) {
-                        key(plan.currentMode, features.homeMode) {
-                            if (features.homeMode == HomeMode.AppLibrary) {
+                        key(plan.currentMode, features.homeMode, features.summon) {
+                            if (features.summon) {
+                                SummonHome(
+                                    state = plan.stateFor(plan.currentMode),
+                                    features = features,
+                                    appIconLoader = appIconLoader,
+                                    haptics = haptics,
+                                    widgetRenderers = widgetRenderers,
+                                    onAction = onAction,
+                                    modifier =
+                                        Modifier
+                                            .zIndex(HOME_CONTENT_Z_INDEX)
+                                            .then(pull.homeModifier(libraryShown = shownLibraryForHome))
+                                            .then(coveredSemantics),
+                                )
+                            } else if (features.homeMode == HomeMode.AppLibrary) {
                                 AppLibraryHome(
                                     state = plan.stateFor(plan.currentMode),
                                     features = features,

@@ -38,6 +38,17 @@ class FeatureSettingsTest {
     }
 
     @Test
+    fun summonIsAnOptInExperimentThatSimpleModeOverrides() {
+        assertFalse(FeatureSettings().summon)
+        assertFalse(FeatureSettings().effective(HomeMode.PlacedItems).summon)
+        assertTrue(FeatureSettings(summon = true).effective(HomeMode.PlacedItems).summon)
+        // Simple mode is the locked-down Home: while it is on, Summon is not in effect (but stays stored).
+        val both = FeatureSettings(summon = true, simpleMode = true)
+        assertFalse(both.effective(HomeMode.PlacedItems).summon)
+        assertTrue(both.summon)
+    }
+
+    @Test
     fun theStreamSwitchTakesTheLiveAppsWithIt() {
         val effective = FeatureSettings(stream = false).effective(HomeMode.PlacedItems)
         assertFalse(effective.stream)

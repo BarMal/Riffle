@@ -44,6 +44,7 @@ internal fun SettingsPageContent(
             SettingsPage.HOME ->
                 SettingsHomePageContent(state = state, onPageSelected = onPageSelected, onAction = onAction)
             SettingsPage.HOME_LAYOUTS -> SettingsHomeLayoutsPageContent(state = state, onAction = onAction)
+            SettingsPage.SUMMON -> SettingsSummonPageContent(state = state, onAction = onAction)
             SettingsPage.DOCK ->
                 SettingsDockPageContent(
                     state = state,
@@ -128,6 +129,7 @@ private fun SettingsHomePageContent(
     )
     SettingsDeviceConfigurationTabs(state = state, onAction = onAction)
     SettingsHomeFillSection(state = state, onAction = onAction)
+    SettingsSummonRow(state = state, onOpen = { onPageSelected(SettingsPage.SUMMON) })
     SettingsHomeLayoutsRow(state = state, onOpen = { onPageSelected(SettingsPage.HOME_LAYOUTS) })
     SettingsSection(title = stringResource(R.string.settings_section_grid)) {
         HomeGridSetting(

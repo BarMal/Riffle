@@ -47,6 +47,11 @@ data class FeatureSettings(
     val dockStreamHandle: Boolean = false,
     /** Opt-in: the small "Show as" button on the Stream's page (the menu a long-press of a tile opens anyway). */
     val streamViewButton: Boolean = false,
+    /**
+     * Experimental: Home becomes the Summon ring (hold anywhere, aim, release). Like Simple mode it replaces what Home
+     * draws without touching what is stored, so turning it off brings the arranged Home and the Dock straight back.
+     */
+    val summon: Boolean = false,
 ) {
     /** What is actually on, given the stored Home mode. */
     fun effective(homeMode: HomeMode): EffectiveFeatures =
@@ -69,6 +74,7 @@ data class FeatureSettings(
                 simpleMode = false,
                 dockStreamHandle = dockStreamHandle && stream,
                 streamViewButton = streamViewButton && stream,
+                summon = summon,
             )
         }
 }
@@ -109,6 +115,8 @@ data class EffectiveFeatures(
     val dockStreamHandle: Boolean = false,
     /** The "Show as" button draws on the Stream's page. */
     val streamViewButton: Boolean = false,
+    /** Home is the Summon ring. Never with Simple mode, which wins. */
+    val summon: Boolean = false,
 )
 
 /** The switches in effect for these settings (Simple mode applied). */

@@ -40,6 +40,9 @@ import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.SearchSettings
 import com.riffle.core.domain.launcher.settings.StreamSettings
 import com.riffle.core.domain.launcher.settings.homeSystemBars
+import com.riffle.core.domain.launcher.summon.SUMMON_ARM_MILLIS_RANGE
+import com.riffle.core.domain.launcher.summon.SummonTimings
+import com.riffle.core.domain.launcher.summon.summonSeedApps
 import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
@@ -149,6 +152,38 @@ class LauncherSettingsStateReducerTest {
         assertEquals(clamped.launcherSettings, repository.savedSettings)
         // Everything the earlier choices set is kept.
         assertEquals(OpenCardPlacement.ABOVE_DOCK, clamped.launcherSettings.stream.openCardPlacement)
+    }
+
+    @Test
+    fun summonSeedsItsRingOnceAndLeavesEverythingElseForWhenItIsTurnedOff() {
+        val repository = FakeLauncherSettingsRepository()
+        val reducer = reducer(launcherSettingsRepository = repository)
+        val start = LauncherShellState()
+
+        val on = reducer.reduce(start, LauncherShellAction.SetSummonMode(true))
+        assertEquals(true, on.launcherSettings.features.summon)
+        assertEquals(
+            summonSeedApps(start.homeLayout).take(7).size + 1,
+            on.launcherSettings.summon.slots.size,
+        )
+        assertEquals(on.launcherSettings, repository.savedSettings)
+
+        val edited =
+            reducer.reduce(
+                on,
+                LauncherShellAction.SetSummonSettings(
+                    on.launcherSettings.summon.withSlotCount(5).copy(timings = SummonTimings(armMillis = 1)),
+                ),
+            )
+        assertEquals(5, edited.launcherSettings.summon.slotCount)
+        assertEquals(SUMMON_ARM_MILLIS_RANGE.first, edited.launcherSettings.summon.timings.armMillis)
+
+        // Off and on again keeps the user's ring rather than seeding a new one.
+        val off = reducer.reduce(edited, LauncherShellAction.SetSummonMode(false))
+        assertEquals(false, off.launcherSettings.features.summon)
+        assertEquals(start.launcherSettings.copy(summon = edited.launcherSettings.summon), off.launcherSettings)
+        val again = reducer.reduce(off, LauncherShellAction.SetSummonMode(true))
+        assertEquals(edited.launcherSettings.summon, again.launcherSettings.summon)
     }
 
     @Test
