@@ -10,6 +10,7 @@ import com.riffle.core.domain.launcher.icons.IconStyleSettings
 import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.search.wider.SearchSourceId
 import com.riffle.core.domain.launcher.search.wider.WiderSearchMerger
+import com.riffle.core.domain.launcher.summon.SummonSettings
 import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 
@@ -31,6 +32,7 @@ data class LauncherSettings(
     val rss: RssSettings = RssSettings(),
     val search: SearchSettings = SearchSettings(),
     val stream: StreamSettings = StreamSettings(),
+    val summon: SummonSettings = SummonSettings(),
     val diagnostics: DiagnosticsSettings = DiagnosticsSettings(),
 )
 

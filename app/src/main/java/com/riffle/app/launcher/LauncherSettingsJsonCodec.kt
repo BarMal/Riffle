@@ -99,6 +99,7 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
         .put("rss", encodeRssSettings(settings.rss))
         .put("search", encodeSearchSettings(settings.search))
         .put("stream", encodeStreamSettings(settings.stream))
+        .put("summon", encodeSummonSettings(settings.summon))
         .toString()
 
 /**
@@ -150,6 +151,7 @@ private fun decodeLauncherSections(
         rss = json.guarded("rss", defaults.rss, JSONObject::toRssSettings),
         search = json.guarded("search", defaults.search, JSONObject::toSearchSettings),
         stream = json.decodeStreamSettings(defaults.stream),
+        summon = json.guarded("summon", defaults.summon, JSONObject::toSummonSettings),
     )
 }
 
@@ -282,12 +284,14 @@ private fun encodeFeatures(settings: FeatureSettings): JSONObject =
         .put("simpleMode", settings.simpleMode)
         .put(DOCK_STREAM_HANDLE_KEY, settings.dockStreamHandle)
         .put(STREAM_VIEW_BUTTON_KEY, settings.streamViewButton)
+        .put(SUMMON_KEY, settings.summon)
 
 // The handle and the "Show as" button began as on-by-default switches stored as `dockStreamHandle` and
 // `streamViewButton`, which cannot tell a default from a choice. They are opt-in now, under new keys: the old ones are
 // ignored, so every existing install starts with both off (ADR 0003, Amendment 21).
 private const val DOCK_STREAM_HANDLE_KEY = "dockStreamHandleOptIn"
 private const val STREAM_VIEW_BUTTON_KEY = "streamViewButtonOptIn"
+private const val SUMMON_KEY = "summonMode"
 
 // Absent (settings saved before the switches) or not a boolean: the default, today's behaviour.
 private fun JSONObject.toFeatures(defaults: FeatureSettings): FeatureSettings =
@@ -298,6 +302,7 @@ private fun JSONObject.toFeatures(defaults: FeatureSettings): FeatureSettings =
         simpleMode = (opt("simpleMode") as? Boolean) ?: defaults.simpleMode,
         dockStreamHandle = (opt(DOCK_STREAM_HANDLE_KEY) as? Boolean) ?: defaults.dockStreamHandle,
         streamViewButton = (opt(STREAM_VIEW_BUTTON_KEY) as? Boolean) ?: defaults.streamViewButton,
+        summon = (opt(SUMMON_KEY) as? Boolean) ?: defaults.summon,
     )
 
 private fun encodeDragTuning(tuning: HomeDragTuning): JSONObject =

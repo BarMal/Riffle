@@ -79,9 +79,9 @@ private fun encodeLaunchTarget(target: LauncherGestureLaunchTarget): JSONObject 
 
 private fun JSONObject.toLaunchTarget(): LauncherGestureLaunchTarget? =
     when (optString("type")) {
-        "app" -> optJSONObject("identity")?.toAppIdentity()?.let(LauncherGestureLaunchTarget::App)
+        "app" -> optJSONObject("identity")?.toAppIdentityOrNull()?.let(LauncherGestureLaunchTarget::App)
         "shortcut" ->
-            optJSONObject("identity")?.toAppIdentity()?.let { identity ->
+            optJSONObject("identity")?.toAppIdentityOrNull()?.let { identity ->
                 optString("id").takeIf(String::isNotBlank)?.let { id ->
                     LauncherGestureLaunchTarget.Shortcut(
                         AppShortcut(
@@ -99,14 +99,14 @@ private fun JSONObject.toLaunchTarget(): LauncherGestureLaunchTarget? =
         else -> null
     }
 
-private fun encodeAppIdentity(identity: AppIdentity): JSONObject =
+internal fun encodeAppIdentity(identity: AppIdentity): JSONObject =
     JSONObject()
         .put("packageName", identity.packageName.value)
         .put("activityName", identity.activityName.value)
         .put("profileId", identity.profile.id.value)
         .put("profileType", identity.profile.type.name)
 
-private fun JSONObject.toAppIdentity(): AppIdentity? =
+internal fun JSONObject.toAppIdentityOrNull(): AppIdentity? =
     optString("packageName").takeIf(String::isNotBlank)?.let { packageName ->
         optString("activityName").takeIf(String::isNotBlank)?.let { activityName ->
             AppIdentity(
