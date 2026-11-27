@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -43,6 +44,7 @@ import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.glance.GlanceWidgetKind
 import com.riffle.core.domain.launcher.summon.RingPoint
 import com.riffle.core.domain.launcher.summon.SummonPhase
+import com.riffle.core.domain.launcher.summon.SummonSlotRole
 import kotlin.math.roundToInt
 
 internal val SUMMON_SLOT_SIZE: Dp = 56.dp
@@ -54,7 +56,8 @@ private const val LABEL_WIDTH_FRACTION = 1f
 
 /**
  * The open ring: each slot of the current level at its place around the thumb, the name of what is aimed at above it
- * (the thumb hides the centre), and the Favourites row once Favourites has been entered. [onDockIconPlaced] reports
+ * (the thumb hides the centre) or, once its card is previewing, the card there instead, and the Favourites row once
+ * Favourites has been entered. [onDockIconPlaced] reports
  * where each Dock icon is, so the gesture can tell which one is under the finger.
  */
 @Composable
@@ -84,12 +87,31 @@ internal fun SummonRing(
         )
     }
 
-    SummonLabel(
-        title = (dockAimed ?: aimed)?.label.orEmpty(),
-        hint = hint,
-        centre = phase.layout.centre,
-        radius = phase.layout.radius,
-    )
+    val card = aimed?.takeIf { phase.previewing && it.role == SummonSlotRole.PREVIEW && dockAimed == null }
+    if (card != null) {
+        val slotPx = halfSlotPx * 2f
+        Box(Modifier.fillMaxSize().padding(horizontal = RiffleSpacing.l)) {
+            SummonCard(
+                entry = card,
+                live = phase.live,
+                interactive = false,
+                appIconLoader = appIconLoader,
+                onAction = {},
+                modifier =
+                    Modifier.summonCardPlacement(
+                        aboveBottom = phase.layout.centre.y - phase.layout.radius - slotPx,
+                        belowTop = phase.layout.centre.y + phase.layout.radius + slotPx,
+                    ),
+            )
+        }
+    } else {
+        SummonLabel(
+            title = (dockAimed ?: aimed)?.label.orEmpty(),
+            hint = hint,
+            centre = phase.layout.centre,
+            radius = phase.layout.radius,
+        )
+    }
 
     if (phase.favouritesOpen) {
         SummonFavouritesRow(

@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.summon.SummonSettings
 import com.riffle.core.domain.launcher.summon.SummonSlot
 import com.riffle.core.domain.launcher.summon.SummonSlotRole
@@ -17,13 +18,16 @@ internal sealed interface SummonEntry {
     val label: String
     val role: SummonSlotRole
 
+    /** [notifications] is the app's group in the Stream when it has any: then resting on it shows its card. */
     data class App(
         val identity: AppIdentity,
         override val label: String,
+        val notifications: AppNotificationGroup? = null,
     ) : SummonEntry {
         override val key: String
             get() = "app:${identity.packageName.value}/${identity.activityName.value}:${identity.profile.id.value}"
-        override val role: SummonSlotRole get() = SummonSlotRole.APP
+        override val role: SummonSlotRole
+            get() = if (notifications?.notifications.isNullOrEmpty()) SummonSlotRole.APP else SummonSlotRole.PREVIEW
     }
 
     data class Folder(
@@ -35,13 +39,13 @@ internal sealed interface SummonEntry {
         override val role: SummonSlotRole get() = SummonSlotRole.FOLDER
     }
 
-    /** Released, it opens its section of the Stream. */
+    /** Resting on it shows the glance itself as a card; released, it opens its section of the Stream. */
     data class Glance(
         val kind: GlanceWidgetKind,
         override val label: String,
     ) : SummonEntry {
         override val key: String get() = "glance:${kind.storedId}"
-        override val role: SummonSlotRole get() = SummonSlotRole.APP
+        override val role: SummonSlotRole get() = SummonSlotRole.PREVIEW
     }
 
     data class Favourites(
@@ -92,15 +96,14 @@ internal class SummonRingModel private constructor(
             installed: List<InstalledApp>,
             glanceLabel: (GlanceWidgetKind) -> String,
             favouritesLabel: String,
+            notifications: List<AppNotificationGroup> = emptyList(),
         ): SummonRingModel {
             val labels = installed.filter { it.enabled }.associate { it.identity to it.label }
+            val groups = notifications.associateBy { it.packageName to it.profileId }
 
             fun appEntry(identity: AppIdentity): SummonEntry.App? =
-                labels[identity]?.let {
-                    SummonEntry.App(
-                        identity,
-                        it,
-                    )
+                labels[identity]?.let { label ->
+                    SummonEntry.App(identity, label, groups[identity.packageName to identity.profile.id])
                 }
 
             fun appsOf(items: List<AppShortcutItem>): List<SummonEntry.App> =

@@ -80,6 +80,8 @@ class SummonEffectsTest {
             SummonEffect.Armed,
             SummonEffect.Cancelled,
             SummonEffect.MenuRequested,
+            // A kept card is shown by Home itself, not launched.
+            SummonEffect.KeepCard(emptyList(), 1),
             SummonEffect.ReleasedOn(emptyList(), 2, SummonSlotRole.FAVOURITES),
             SummonEffect.Launch(emptyList(), 9),
             SummonEffect.LaunchFavourite(9),
