@@ -120,9 +120,18 @@ internal fun SummonHome(
                     appIconLoader = appIconLoader,
                     reducedMotion = state.launcherSettings.motion.reducedMotion,
                     onDockIconPlaced = controller::placeDockIcon,
-                    hint = ringHint(open, model),
+                    hint = ringHint(open),
                     heightPx = heightPx,
                 )
+                summonReadout(open, model)?.let { readout ->
+                    SummonReadoutCard(
+                        readout = readout,
+                        placement = summonReadoutPlacement(open.layout.centre.y, heightPx),
+                        live = open.live,
+                        appIconLoader = appIconLoader,
+                        insets = insets,
+                    )
+                }
             }
         }
         controller.keptCard?.let { card ->
@@ -203,21 +212,10 @@ private fun rememberSummonGestureConfig(
     }
 }
 
+/** What to do while nothing is aimed at; once something is, the readout says. */
 @Composable
-private fun ringHint(
-    phase: SummonPhase.Open,
-    model: SummonRingModel,
-): String {
-    val entry = phase.aim?.let { model.entry(phase.path, it) }
-    return when {
-        phase.dockAim != null -> stringResource(R.string.summon_hint_release_to_open)
-        entry is SummonEntry.Folder -> stringResource(R.string.summon_hint_folder)
-        entry is SummonEntry.Favourites -> stringResource(R.string.summon_hint_favourites)
-        entry != null -> stringResource(R.string.summon_hint_release_to_open)
-        phase.path.isNotEmpty() -> stringResource(R.string.summon_hint_back)
-        else -> stringResource(R.string.summon_hint_aim)
-    }
-}
+private fun ringHint(phase: SummonPhase.Open): String =
+    stringResource(if (phase.path.isNotEmpty()) R.string.summon_hint_back else R.string.summon_hint_aim)
 
 /** TalkBack's route to everything the ring holds, plus the menu, without the gesture (AGENTS.md: a non-gesture way). */
 @Composable

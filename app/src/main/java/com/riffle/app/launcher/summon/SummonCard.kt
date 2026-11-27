@@ -129,22 +129,6 @@ private fun AppCardBody(
 }
 
 /**
- * Places the card with its bottom edge at [aboveBottom] (over the ring, where the thumb does not cover it), or with its
- * top at [belowTop] when there is not room above for its measured height.
- */
-internal fun Modifier.summonCardPlacement(
-    aboveBottom: Float,
-    belowTop: Float,
-): Modifier =
-    layout { measurable, constraints ->
-        val placeable = measurable.measure(constraints)
-        val top = if (aboveBottom - placeable.height >= 0f) aboveBottom - placeable.height else belowTop
-        layout(constraints.maxWidth, constraints.maxHeight) {
-            placeable.place((constraints.maxWidth - placeable.width) / 2, top.roundToInt())
-        }
-    }
-
-/**
  * A card kept after release: in thumb reach at the bottom, interactive, and closed by a tap anywhere outside it. Its
  * buttons run their action and close it.
  */
