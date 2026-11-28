@@ -24,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.app.launcher.glance.labelRes
+import com.riffle.app.launcher.summon.SummonAddChoices
 import com.riffle.app.launcher.summon.summonAddChoices
 import com.riffle.app.launcher.summon.summonHeaderChoices
 import com.riffle.core.domain.launcher.apps.InstalledApp
@@ -36,6 +37,7 @@ import com.riffle.core.domain.launcher.summon.SUMMON_ARM_MILLIS_RANGE
 import com.riffle.core.domain.launcher.summon.SUMMON_ICON_SIZE_DP_RANGE
 import com.riffle.core.domain.launcher.summon.SUMMON_PREVIEW_MILLIS_RANGE
 import com.riffle.core.domain.launcher.summon.SUMMON_SLIDE_MILLIS_RANGE
+import com.riffle.core.domain.launcher.summon.SummonCollection
 import com.riffle.core.domain.launcher.summon.SummonHeader
 import com.riffle.core.domain.launcher.summon.SummonKeepGesture
 import com.riffle.core.domain.launcher.summon.SummonSettings
@@ -78,7 +80,7 @@ internal fun SettingsSummonPageContent(
     val set: (SummonSettings) -> Unit = { onAction(LauncherShellAction.SetSummonSettings(it)) }
     var adding by rememberSaveable { mutableStateOf(false) }
     var choosingHeader by rememberSaveable { mutableStateOf(false) }
-    val label = rememberSummonSlotLabel(state.homeLayout, state.installedApps)
+    val label = rememberSummonSlotLabel(state.homeLayout, state.installedApps, summon.collections)
     val context = LocalContext.current
 
     SettingsSection(title = stringResource(R.string.settings_page_summon)) {
@@ -157,6 +159,8 @@ internal fun SettingsSummonPageContent(
         )
     }
 
+    SummonCollectionsSection(summon = summon, installed = state.installedApps, label = label, set = set)
+
     SettingsSection(title = SettingKey.SUMMON_HEADER.label()) {
         SettingsClickableRow(
             modifier = Modifier.settingAnchor(SettingKey.SUMMON_HEADER),
@@ -210,9 +214,12 @@ internal fun SettingsSummonPageContent(
     }
 
     if (adding) {
-        SummonAddDialog(summon, state.homeLayout, state.installedApps, label, onAdd = { set(summon.added(it)) }) {
-            adding = false
-        }
+        SummonAddDialog(
+            title = SettingKey.SUMMON_ADD.label(),
+            choices = summonAddChoices(summon, state.homeLayout, state.installedApps),
+            label = label,
+            onAdd = { set(summon.added(it)) },
+        ) { adding = false }
     }
     if (choosingHeader) {
         SummonHeaderDialog(state.homeLayout, onChoose = { set(summon.copy(header = it)) }) { choosingHeader = false }
@@ -242,6 +249,7 @@ private fun TimingSlider(
 private fun rememberSummonSlotLabel(
     layout: HomeLayout,
     installed: List<InstalledApp>,
+    collections: List<SummonCollection>,
 ): (SummonSlot) -> String {
     val context = LocalContext.current
     val favourites = stringResource(R.string.summon_favourites)
@@ -253,6 +261,7 @@ private fun rememberSummonSlotLabel(
             is SummonSlot.Folder -> folders[slot.folderId] ?: slot.folderId.value
             is SummonSlot.Glance -> context.getString(slot.kind.labelRes())
             SummonSlot.Favourites -> favourites
+            is SummonSlot.Collection -> collections.firstOrNull { it.id == slot.id }?.name ?: slot.id.value
         }
     }
 }
@@ -274,15 +283,13 @@ private fun headerLabel(
 }
 
 @Composable
-private fun SummonAddDialog(
-    summon: SummonSettings,
-    layout: HomeLayout,
-    installed: List<InstalledApp>,
+internal fun SummonAddDialog(
+    title: String,
+    choices: SummonAddChoices,
     label: (SummonSlot) -> String,
     onAdd: (SummonSlot) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val choices = summonAddChoices(summon, layout, installed)
     val groups =
         listOf(
             R.string.settings_summon_add_section_places to choices.places,
@@ -291,7 +298,7 @@ private fun SummonAddDialog(
         ).filter { it.second.isNotEmpty() }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(SettingKey.SUMMON_ADD.label()) },
+        title = { Text(title) },
         text = {
             if (groups.isEmpty()) {
                 Text(stringResource(R.string.settings_summon_nothing_to_add))

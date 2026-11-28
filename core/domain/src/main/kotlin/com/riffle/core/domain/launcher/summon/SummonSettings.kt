@@ -20,13 +20,19 @@ val SUMMON_SLIDE_MILLIS_RANGE: IntRange = 200..1200
 sealed interface SummonSlot {
     data class App(val identity: AppIdentity) : SummonSlot
 
-    /** A folder placed on Home, by its item id; a folder that no longer exists is skipped when the ring draws. */
+    /**
+     * A folder placed on Home, by its item id; a folder that no longer exists is skipped when the ring draws. Kept only
+     * to read rings saved before collections: [withHomeFoldersCopied] turns each into a [Collection].
+     */
     data class Folder(val folderId: LauncherItemId) : SummonSlot
 
     data class Glance(val kind: GlanceWidgetKind) : SummonSlot
 
     /** The Dock's pinned apps: the only way the Dock appears while Summon is on. */
     data object Favourites : SummonSlot
+
+    /** One of Summon's own collections ([SummonSettings.collections]); one that no longer exists is skipped. */
+    data class Collection(val id: SummonCollectionId) : SummonSlot
 }
 
 /** What sits above the ring at rest, where Home's clock would be. */
@@ -94,6 +100,8 @@ data class SummonSettings(
     /** How big each app icon on the ring and the Favourites row draws; the touch target stays the slot's. */
     val iconSizeDp: Int = DEFAULT_SUMMON_ICON_SIZE_DP,
     val keepGesture: SummonKeepGesture = SummonKeepGesture.PUSH_THROUGH,
+    /** Summon's own folders, which can hold apps, glances and other collections. */
+    val collections: List<SummonCollection> = emptyList(),
 ) {
     val ringSlots: List<SummonSlot> get() = slots.take(slotCount)
 

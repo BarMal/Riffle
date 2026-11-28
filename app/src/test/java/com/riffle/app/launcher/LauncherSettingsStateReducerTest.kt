@@ -4,12 +4,17 @@ import com.riffle.app.launcher.rss.CachedFeedArticle
 import com.riffle.app.launcher.rss.FeedArticleCacheRepository
 import com.riffle.app.launcher.rss.FeedCacheResult
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.designsystem.CardTint
+import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
@@ -42,7 +47,11 @@ import com.riffle.core.domain.launcher.settings.StreamSettings
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.summon.SUMMON_ARM_MILLIS_RANGE
 import com.riffle.core.domain.launcher.summon.SUMMON_ICON_SIZE_DP_RANGE
+import com.riffle.core.domain.launcher.summon.SummonSettings
+import com.riffle.core.domain.launcher.summon.SummonSlot
 import com.riffle.core.domain.launcher.summon.SummonTimings
+import com.riffle.core.domain.launcher.summon.collection
+import com.riffle.core.domain.launcher.summon.homeFolderCollectionId
 import com.riffle.core.domain.launcher.summon.summonSeedApps
 import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 import org.junit.Assert.assertEquals
@@ -153,6 +162,47 @@ class LauncherSettingsStateReducerTest {
         assertEquals(clamped.launcherSettings, repository.savedSettings)
         // Everything the earlier choices set is kept.
         assertEquals(OpenCardPlacement.ABOVE_DOCK, clamped.launcherSettings.stream.openCardPlacement)
+    }
+
+    @Test
+    fun homeFoldersAddedToTheRingAreSavedAsCollectionCopies() {
+        val repository = FakeLauncherSettingsRepository()
+        val reducer = reducer(launcherSettingsRepository = repository)
+        val folder =
+            FolderItem(
+                LauncherItemId("f1"),
+                "Social",
+                listOf(
+                    AppShortcutItem(
+                        LauncherItemId("a"),
+                        AppIdentity(AppPackageName("pkg.chat"), AppActivityName("pkg.chat.Main")),
+                        "Chat",
+                    ),
+                ),
+            )
+        val start = LauncherShellState()
+        val layout = start.homeLayout
+        val withFolder =
+            start.copy(
+                homeLayout =
+                    layout.copy(
+                        pages =
+                            layout.pages.mapIndexed {
+                                    i,
+                                    p,
+                                ->
+                                if (i == 0) p.copy(items = p.items + folder) else p
+                            },
+                    ),
+            )
+        val saved =
+            reducer.reduce(
+                withFolder,
+                LauncherShellAction.SetSummonSettings(SummonSettings(slots = listOf(SummonSlot.Folder(folder.id)))),
+            )
+        val id = homeFolderCollectionId(folder.id)
+        assertEquals(listOf<SummonSlot>(SummonSlot.Collection(id)), saved.launcherSettings.summon.slots)
+        assertEquals("Social", saved.launcherSettings.summon.collection(id)?.name)
     }
 
     @Test

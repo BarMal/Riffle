@@ -5,8 +5,11 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.glance.GlanceWidgetKind
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.icons.IconPackDrawableRef
 import com.riffle.core.domain.launcher.settings.FeatureSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.summon.SummonCollection
+import com.riffle.core.domain.launcher.summon.SummonCollectionId
 import com.riffle.core.domain.launcher.summon.SummonHeader
 import com.riffle.core.domain.launcher.summon.SummonKeepGesture
 import com.riffle.core.domain.launcher.summon.SummonSettings
@@ -29,6 +32,17 @@ class SummonSettingsJsonCodecTest {
                     SummonSlot.Folder(LauncherItemId("folder-1")),
                     SummonSlot.Glance(GlanceWidgetKind.NOW_PLAYING),
                     SummonSlot.Favourites,
+                    SummonSlot.Collection(SummonCollectionId("work")),
+                ),
+            collections =
+                listOf(
+                    SummonCollection(
+                        SummonCollectionId("work"),
+                        "Work",
+                        listOf(SummonSlot.App(mail), SummonSlot.Collection(SummonCollectionId("tools"))),
+                        icon = IconPackDrawableRef("pack.icons", "folder_work"),
+                    ),
+                    SummonCollection(SummonCollectionId("tools"), "Tools"),
                 ),
             header = SummonHeader.HomeWidget(LauncherItemId("widget-3")),
             timings = SummonTimings(armMillis = 250, previewMillis = 400, acceptMillis = 500, slideMillis = 700),

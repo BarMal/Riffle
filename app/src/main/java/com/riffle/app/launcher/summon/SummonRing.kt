@@ -157,21 +157,7 @@ internal fun SlotGlyph(
     when (entry) {
         is SummonEntry.App ->
             LauncherAppIcon(entry.identity, entry.label, appIconLoader, Modifier.size(SLOT_ICON_SIZE))
-        is SummonEntry.Folder ->
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                entry.apps.take(FOLDER_PREVIEW_COUNT).chunked(2).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                        row.forEach { app ->
-                            LauncherAppIcon(
-                                app.identity,
-                                app.label,
-                                appIconLoader,
-                                Modifier.size(FOLDER_ICON_SIZE),
-                            )
-                        }
-                    }
-                }
-            }
+        is SummonEntry.Folder -> FolderGlyph(entry, appIconLoader)
         is SummonEntry.Glance -> Icon(entry.kind.glyph(), contentDescription = null)
         is SummonEntry.Favourites ->
             Icon(
@@ -183,6 +169,27 @@ internal fun SlotGlyph(
 }
 
 private const val FOLDER_PREVIEW_COUNT = 4
+
+/** A folder's first apps in a 2×2; a collection holding only collections or glances shows its initial instead. */
+@Composable
+private fun FolderGlyph(
+    folder: SummonEntry.Folder,
+    appIconLoader: AppIconLoader,
+) {
+    if (folder.apps.isEmpty()) {
+        Text(folder.label.take(1).uppercase(), style = MaterialTheme.typography.titleMedium)
+        return
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        folder.apps.take(FOLDER_PREVIEW_COUNT).chunked(2).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                row.forEach { app ->
+                    LauncherAppIcon(app.identity, app.label, appIconLoader, Modifier.size(FOLDER_ICON_SIZE))
+                }
+            }
+        }
+    }
+}
 
 private fun GlanceWidgetKind.glyph(): ImageVector =
     when (this) {

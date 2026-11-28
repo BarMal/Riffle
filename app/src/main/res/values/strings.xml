@@ -1549,6 +1549,21 @@
     <string name="setting_summon_timing_section">Timing</string>
     <string name="settings_summon_millis">%1$d ms</string>
     <string name="settings_summon_dp">%1$d dp</string>
+    <string name="setting_summon_collections">Collections</string>
+    <string name="setting_summon_collections_keywords">summon collection folder group nested nest</string>
+    <string name="settings_summon_collections_subtitle">Summon\'s own folders. They can hold apps, glances and other collections.</string>
+    <string name="settings_summon_collection_new">New collection</string>
+    <string name="settings_summon_collection_new_name">Collection %1$d</string>
+    <string name="settings_summon_collection_edit">Edit collection</string>
+    <string name="settings_summon_collection_name">Name</string>
+    <string name="settings_summon_collection_add">Add to this collection</string>
+    <string name="settings_summon_collection_add_to">Add to %1$s</string>
+    <string name="settings_summon_collection_delete">Delete collection</string>
+    <string name="settings_summon_collection_remove">Remove %1$s from this collection</string>
+    <plurals name="settings_summon_collection_items">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
     <string name="summon_hint_rest_to_keep">Let go to open · rest here to keep the card</string>
     <string name="summon_hint_slide_to_keep">Slide onto this card and let go to keep it</string>
     <string name="setting_summon_keep">Keep cards by resting</string>

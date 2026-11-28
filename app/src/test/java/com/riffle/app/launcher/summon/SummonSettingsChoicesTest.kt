@@ -15,9 +15,12 @@ import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WidgetItem
+import com.riffle.core.domain.launcher.summon.SummonCollection
+import com.riffle.core.domain.launcher.summon.SummonCollectionId
 import com.riffle.core.domain.launcher.summon.SummonHeader
 import com.riffle.core.domain.launcher.summon.SummonSettings
 import com.riffle.core.domain.launcher.summon.SummonSlot
+import com.riffle.core.domain.launcher.summon.homeFolderCollectionId
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -56,6 +59,44 @@ class SummonSettingsChoicesTest {
             listOf(SummonSlot.Glance(GlanceWidgetKind.NEXT_EVENT), SummonSlot.Glance(GlanceWidgetKind.TOP_STORY)),
             choices.glances,
         )
+        assertEquals(listOf("alpha", "Zed"), choices.apps.map { it.label })
+    }
+
+    @Test
+    fun collectionsAreOfferedAndAHomeFolderAlreadyCopiedOntoTheRingIsNot() {
+        val mine = SummonCollectionId("mine")
+        val settings =
+            SummonSettings(
+                slots = listOf(SummonSlot.Collection(homeFolderCollectionId(LauncherItemId("work")))),
+                collections =
+                    listOf(
+                        SummonCollection(homeFolderCollectionId(LauncherItemId("work")), "Work"),
+                        SummonCollection(mine, "Mine"),
+                    ),
+            )
+        assertEquals(
+            listOf(SummonSlot.Favourites, SummonSlot.Collection(mine)),
+            summonAddChoices(settings, layout, installed).places,
+        )
+    }
+
+    @Test
+    fun aCollectionOffersAppsGlancesAndOtherCollectionsItDoesNotHoldOrSitInside() {
+        val outer = SummonCollectionId("outer")
+        val inner = SummonCollectionId("inner")
+        val spare = SummonCollectionId("spare")
+        val settings =
+            SummonSettings(
+                collections =
+                    listOf(
+                        SummonCollection(outer, "Outer", listOf(SummonSlot.Collection(inner))),
+                        SummonCollection(inner, "Inner", listOf(SummonSlot.App(app("maps")))),
+                        SummonCollection(spare, "Spare"),
+                    ),
+            )
+        val choices = summonCollectionAddChoices(settings, inner, installed)
+        assertEquals(listOf<SummonSlot>(SummonSlot.Collection(spare)), choices.places)
+        assertEquals(GlanceWidgetKind.entries.map(SummonSlot::Glance), choices.glances)
         assertEquals(listOf("alpha", "Zed"), choices.apps.map { it.label })
     }
 

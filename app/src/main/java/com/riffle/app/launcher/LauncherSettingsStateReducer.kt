@@ -17,6 +17,7 @@ import com.riffle.core.domain.launcher.settings.coerced
 import com.riffle.core.domain.launcher.settings.with
 import com.riffle.core.domain.launcher.settings.withReducedTransparency
 import com.riffle.core.domain.launcher.summon.summonSeedApps
+import com.riffle.core.domain.launcher.summon.withHomeFoldersCopied
 
 internal class LauncherSettingsStateReducer(
     private val homeLayoutRepository: HomeLayoutRepository,
@@ -311,7 +312,9 @@ internal class LauncherSettingsStateReducer(
                                 features = state.launcherSettings.features.copy(summon = action.enabled),
                                 summon =
                                     if (action.enabled) {
-                                        state.launcherSettings.summon.seeded(summonSeedApps(state.homeLayout))
+                                        state.launcherSettings.summon
+                                            .seeded(summonSeedApps(state.homeLayout))
+                                            .withHomeFoldersCopied(state.homeLayout)
                                     } else {
                                         state.launcherSettings.summon
                                     },
@@ -327,7 +330,8 @@ internal class LauncherSettingsStateReducer(
                                     action.settings
                                         .withSlotCount(action.settings.slotCount)
                                         .withIconSize(action.settings.iconSizeDp)
-                                        .copy(timings = action.settings.timings.clamped()),
+                                        .copy(timings = action.settings.timings.clamped())
+                                        .withHomeFoldersCopied(state.homeLayout),
                             ),
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
