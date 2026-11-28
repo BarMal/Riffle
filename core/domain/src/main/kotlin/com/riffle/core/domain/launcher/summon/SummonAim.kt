@@ -83,7 +83,10 @@ internal object SummonAim {
         )
     }
 
-    /** Past the ring on a folder opens it at once; past the ring on a card makes the card live. */
+    /**
+     * Past the ring on a folder opens it at once; on a card (when cards are kept by pushing through) it makes the card
+     * live; on an app with quick actions it opens them as a level.
+     */
     private fun pushThrough(
         step: SummonStep,
         event: SummonEvent.Move,
@@ -103,7 +106,19 @@ internal object SummonAim {
                     phase.copy(live = true, previewing = true),
                     step.effects + SummonEffect.WentLive(phase.path, aim),
                 )
+            hasOwnLevel(phase, aim, levels) ->
+                levels.enter(phase, event.atMillis).let { SummonStep(it.phase, step.effects + it.effects) }
             else -> step
         }
+    }
+
+    private fun hasOwnLevel(
+        phase: SummonPhase.Open,
+        aim: Int,
+        levels: SummonLevels,
+    ): Boolean {
+        val role = levels.roleOf(phase)
+        return (role == SummonSlotRole.APP || role == SummonSlotRole.PREVIEW) &&
+            levels.roles(phase.path + aim).isNotEmpty()
     }
 }

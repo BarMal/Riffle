@@ -15,6 +15,7 @@ internal fun summonActionFor(
             when (val entry = model.entry(effect.path, effect.index)) {
                 is SummonEntry.App -> LauncherShellAction.LaunchApp(entry.identity)
                 is SummonEntry.Glance -> LauncherShellAction.OpenStream
+                is SummonEntry.Action -> entry.action
                 else -> null
             }
         is SummonEffect.LaunchFavourite ->

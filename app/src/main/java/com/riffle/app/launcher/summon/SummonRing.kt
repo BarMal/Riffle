@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
@@ -37,6 +38,7 @@ import com.riffle.app.launcher.AppIconLoader
 import com.riffle.app.launcher.GlassSurface
 import com.riffle.app.launcher.LABEL_TEXT_SHADOW
 import com.riffle.app.launcher.LauncherAppIcon
+import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.rememberAppIconColor
 import com.riffle.app.launcher.rememberAppIconPipeline
@@ -161,6 +163,13 @@ internal fun SlotGlyph(
         is SummonEntry.App ->
             LauncherAppIcon(entry.identity, entry.label, appIconLoader, Modifier.size(SLOT_ICON_SIZE))
         is SummonEntry.Folder -> FolderGlyph(entry, appIconLoader)
+        // An app's quick action: App info's own glyph, or the app's icon for its shortcuts.
+        is SummonEntry.Action ->
+            if (entry.action is LauncherShellAction.OpenAppInfo) {
+                Icon(Icons.Filled.Info, contentDescription = null)
+            } else {
+                LauncherAppIcon(entry.app, entry.label, appIconLoader, Modifier.size(SLOT_ICON_SIZE))
+            }
         is SummonEntry.Glance -> Icon(entry.kind.glyph(), contentDescription = null)
         is SummonEntry.Favourites ->
             Icon(
