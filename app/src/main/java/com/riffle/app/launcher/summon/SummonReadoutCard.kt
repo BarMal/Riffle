@@ -23,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,6 +68,8 @@ internal fun SummonReadoutCard(
     showHint: Boolean,
     appIconLoader: AppIconLoader,
     insets: PaddingValues,
+    /** Where the card is, so the gesture can tell when the finger is on it. */
+    onPlaced: (LayoutCoordinates) -> Unit = {},
 ) {
     val entry = readout.entry
     val app = entry as? SummonEntry.App
@@ -75,7 +79,7 @@ internal fun SummonReadoutCard(
         contentAlignment = if (placement == SummonReadoutPlacement.TOP) Alignment.TopCenter else Alignment.BottomCenter,
     ) {
         GlassSurface(
-            modifier = Modifier.widthIn(max = READOUT_MAX_WIDTH).fillMaxWidth(),
+            modifier = Modifier.widthIn(max = READOUT_MAX_WIDTH).fillMaxWidth().onGloballyPositioned(onPlaced),
             weight = GlassWeight.Thick,
             shape = RoundedCornerShape(28.dp),
             spotlight = true,
@@ -207,6 +211,8 @@ private fun SummonReadoutHint.label(): Int =
         SummonReadoutHint.RELEASE_TO_OPEN -> R.string.summon_hint_release_to_open
         SummonReadoutHint.OPEN_OR_KEEP -> R.string.summon_card_hint_preview
         SummonReadoutHint.RELEASE_TO_KEEP -> R.string.summon_card_hint_live
+        SummonReadoutHint.REST_TO_KEEP -> R.string.summon_hint_rest_to_keep
+        SummonReadoutHint.SLIDE_TO_KEEP -> R.string.summon_hint_slide_to_keep
         SummonReadoutHint.OPEN_FOLDER -> R.string.summon_hint_folder
         SummonReadoutHint.SHOW_FAVOURITES -> R.string.summon_hint_favourites
     }

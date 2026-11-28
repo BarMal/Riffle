@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.settings.FeatureSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.summon.SummonHeader
+import com.riffle.core.domain.launcher.summon.SummonKeepGesture
 import com.riffle.core.domain.launcher.summon.SummonSettings
 import com.riffle.core.domain.launcher.summon.SummonSlot
 import com.riffle.core.domain.launcher.summon.SummonTimings
@@ -33,6 +34,7 @@ class SummonSettingsJsonCodecTest {
             timings = SummonTimings(armMillis = 250, previewMillis = 400, acceptMillis = 500, slideMillis = 700),
             showHints = false,
             iconSizeDp = 52,
+            keepGesture = SummonKeepGesture.REST_TO_LOCK,
         )
 
     @Test

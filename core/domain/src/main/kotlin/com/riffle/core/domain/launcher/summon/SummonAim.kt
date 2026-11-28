@@ -9,6 +9,7 @@ internal object SummonAim {
     ): SummonStep {
         val dockIndex = event.dockIndex
         return when {
+            SummonLock.isLocked(phase, levels) -> SummonLock.move(phase, event, levels)
             phase.origin.distanceTo(event.point) < levels.config.deadZone -> restInCentre(phase, event)
             phase.favouritesOpen && dockIndex != null -> aimDock(phase, event, dockIndex)
             else -> pushThrough(aimRing(phase, event, levels), event, levels)
@@ -95,7 +96,9 @@ internal object SummonAim {
             aim == null || !pushed -> step
             levels.roleOf(phase) == SummonSlotRole.FOLDER ->
                 levels.enter(phase, event.atMillis).let { SummonStep(it.phase, step.effects + it.effects) }
-            levels.roleOf(phase) == SummonSlotRole.PREVIEW && !phase.live ->
+            levels.roleOf(phase) == SummonSlotRole.PREVIEW &&
+                !phase.live &&
+                levels.config.keep == SummonKeepGesture.PUSH_THROUGH ->
                 SummonStep(
                     phase.copy(live = true, previewing = true),
                     step.effects + SummonEffect.WentLive(phase.path, aim),

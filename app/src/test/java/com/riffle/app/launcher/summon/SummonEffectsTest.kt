@@ -95,6 +95,7 @@ class SummonEffectsTest {
         assertEquals(LauncherHapticEvent.DETENT, summonHapticFor(SummonEffect.AimedDock(0)))
         assertEquals(LauncherHapticEvent.BOUNDARY, summonHapticFor(SummonEffect.OpenedFolder(listOf(1))))
         assertEquals(LauncherHapticEvent.BOUNDARY, summonHapticFor(SummonEffect.WentBack(emptyList())))
+        assertEquals(LauncherHapticEvent.BOUNDARY, summonHapticFor(SummonEffect.ReachedReadout(emptyList(), 1)))
         assertEquals(LauncherHapticEvent.COMMIT, summonHapticFor(SummonEffect.Launch(emptyList(), 0)))
         assertEquals(LauncherHapticEvent.COMMIT, summonHapticFor(SummonEffect.LaunchFavourite(0)))
         assertNull(summonHapticFor(SummonEffect.Cancelled))

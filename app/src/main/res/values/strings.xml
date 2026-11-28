@@ -1549,6 +1549,11 @@
     <string name="setting_summon_timing_section">Timing</string>
     <string name="settings_summon_millis">%1$d ms</string>
     <string name="settings_summon_dp">%1$d dp</string>
+    <string name="summon_hint_rest_to_keep">Let go to open · rest here to keep the card</string>
+    <string name="summon_hint_slide_to_keep">Slide onto this card and let go to keep it</string>
+    <string name="setting_summon_keep">Keep cards by resting</string>
+    <string name="setting_summon_keep_keywords">summon keep card pin rest slide push through readout</string>
+    <string name="settings_summon_keep_subtitle">On: rest on a card\'s slot, slide onto the readout and let go. Off: push past the ring through its slot.</string>
     <string name="setting_summon_icon_size">Icon size</string>
     <string name="setting_summon_icon_size_keywords">summon icon size bigger smaller ring</string>
     <string name="summon_favourites">Favourites</string>

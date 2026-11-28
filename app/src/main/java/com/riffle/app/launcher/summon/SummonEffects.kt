@@ -47,6 +47,7 @@ internal fun summonHapticFor(effect: SummonEffect): LauncherHapticEvent? =
         is SummonEffect.OpenedFolder,
         is SummonEffect.WentBack,
         is SummonEffect.WentLive,
+        is SummonEffect.ReachedReadout,
         SummonEffect.FavouritesShown,
         -> LauncherHapticEvent.BOUNDARY
         is SummonEffect.Launch, is SummonEffect.LaunchFavourite, is SummonEffect.KeepCard -> LauncherHapticEvent.COMMIT

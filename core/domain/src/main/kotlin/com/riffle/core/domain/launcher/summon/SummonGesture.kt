@@ -26,13 +26,22 @@ data class SummonGestureConfig(
     val pushThrough: Float,
     val touchSlop: Float,
     val hysteresisDegrees: Float = DEFAULT_HYSTERESIS_DEGREES,
+    val keep: SummonKeepGesture = SummonKeepGesture.PUSH_THROUGH,
 )
 
 sealed interface SummonEvent {
     data class Down(val point: RingPoint, val atMillis: Long) : SummonEvent
 
-    /** [dockIndex]: the Dock icon under the finger, when the Dock is showing (the UI hit-tests it). */
-    data class Move(val point: RingPoint, val atMillis: Long, val dockIndex: Int? = null) : SummonEvent
+    /**
+     * [dockIndex]: the Dock icon under the finger, when the Dock is showing (the UI hit-tests it). [overReadout]: the
+     * finger is on the readout card.
+     */
+    data class Move(
+        val point: RingPoint,
+        val atMillis: Long,
+        val dockIndex: Int? = null,
+        val overReadout: Boolean = false,
+    ) : SummonEvent
 
     data class Up(val atMillis: Long) : SummonEvent
 
@@ -51,7 +60,9 @@ sealed interface SummonPhase {
      * The ring is showing. [path] is the folders opened from the top level (slot indices); [layout] is the current
      * level's. [aim] is the slot pointed at since [aimSinceMillis]; [previewing] once its card shows; [live] once
      * pushed through, so release keeps the card. [inCentreSinceMillis] is set while the finger rests in the dead
-     * zone.
+     * zone. With [SummonKeepGesture.REST_TO_LOCK] a previewing card slot is locked: the finger can travel (to the
+     * readout, [overReadout]) without re-aiming, and resting on another slot, or the centre when [candidate] is null,
+     * since [candidateSinceMillis] moves the lock there.
      */
     data class Open(
         val origin: RingPoint,
@@ -66,6 +77,9 @@ sealed interface SummonPhase {
         val dockAim: Int? = null,
         val inCentreSinceMillis: Long? = null,
         val leftCentre: Boolean = false,
+        val overReadout: Boolean = false,
+        val candidate: Int? = null,
+        val candidateSinceMillis: Long? = null,
     ) : SummonPhase
 }
 
@@ -80,6 +94,9 @@ sealed interface SummonEffect {
     data class Previewed(val path: List<Int>, val index: Int) : SummonEffect
 
     data class WentLive(val path: List<Int>, val index: Int) : SummonEffect
+
+    /** A locked card's finger reached the readout: letting go now keeps the card. */
+    data class ReachedReadout(val path: List<Int>, val index: Int) : SummonEffect
 
     data class OpenedFolder(val path: List<Int>) : SummonEffect
 
@@ -153,6 +170,7 @@ object SummonGesture {
                     (phase.aimSinceMillis + t.previewMillis).takeIf { awaitingPreview },
                     (phase.aimSinceMillis + t.acceptMillis).takeIf { role == SummonSlotRole.FOLDER },
                     phase.inCentreSinceMillis?.plus(t.acceptMillis)?.takeIf { phase.path.isNotEmpty() },
+                    phase.candidateSinceMillis?.plus(t.previewMillis),
                 ).minOrNull()
             }
         }
@@ -210,7 +228,9 @@ object SummonGesture {
         val restedInCentre = phase.inCentreSinceMillis?.let { now - it >= t.acceptMillis } == true
         val restedOnAim = now - phase.aimSinceMillis
         val aim = phase.aim
+        val candidateSince = phase.candidateSinceMillis
         return when {
+            candidateSince != null && now - candidateSince >= t.previewMillis -> SummonLock.moveTo(phase, now, levels)
             phase.path.isNotEmpty() && restedInCentre -> levels.back(phase, now)
             role == SummonSlotRole.FOLDER && restedOnAim >= t.acceptMillis -> levels.enter(phase, now)
             aim != null && role == SummonSlotRole.PREVIEW && !phase.previewing && restedOnAim >= t.previewMillis ->

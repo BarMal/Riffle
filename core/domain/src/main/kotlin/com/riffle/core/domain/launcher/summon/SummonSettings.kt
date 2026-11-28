@@ -70,6 +70,15 @@ data class SummonTimings(
 const val DEFAULT_SUMMON_ICON_SIZE_DP = 44
 val SUMMON_ICON_SIZE_DP_RANGE = 32..56
 
+/** How a card is kept open after letting go. */
+enum class SummonKeepGesture {
+    /** Push past the ring through a card's slot; letting go keeps it. */
+    PUSH_THROUGH,
+
+    /** Rest on a card's slot to lock it, slide onto the readout and let go there. */
+    REST_TO_LOCK,
+}
+
 /**
  * The experimental Summon Home (switched on by `FeatureSettings.summon`). [slots] is the user's order, clockwise from
  * the top; the ring shows the first [slotCount] of them. Slots past the count are kept so lowering and raising the
@@ -84,6 +93,7 @@ data class SummonSettings(
     val showHints: Boolean = true,
     /** How big each app icon on the ring and the Favourites row draws; the touch target stays the slot's. */
     val iconSizeDp: Int = DEFAULT_SUMMON_ICON_SIZE_DP,
+    val keepGesture: SummonKeepGesture = SummonKeepGesture.PUSH_THROUGH,
 ) {
     val ringSlots: List<SummonSlot> get() = slots.take(slotCount)
 

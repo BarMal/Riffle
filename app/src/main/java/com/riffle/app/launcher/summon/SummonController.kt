@@ -42,10 +42,12 @@ internal class SummonController(
     var keptCard: SummonEntry? by mutableStateOf(null)
     var root: LayoutCoordinates? = null
     private val dockIcons = mutableStateMapOf<Int, Rect>()
+    private var readoutBounds: Rect? = null
 
     fun dispatch(event: SummonEvent) {
         val step = SummonGesture.reduce(phase, event, config(), model()::roles)
         phase = step.phase
+        if (phase !is SummonPhase.Open) readoutBounds = null
         step.effects.forEach(::handle)
     }
 
@@ -58,6 +60,13 @@ internal class SummonController(
         val origin = root?.takeIf { it.isAttached && coordinates.isAttached } ?: return
         dockIcons[index] = origin.localBoundingBoxOf(coordinates)
     }
+
+    fun placeReadout(coordinates: LayoutCoordinates) {
+        val origin = root?.takeIf { it.isAttached && coordinates.isAttached } ?: return
+        readoutBounds = origin.localBoundingBoxOf(coordinates)
+    }
+
+    fun isOverReadout(position: Offset): Boolean = readoutBounds?.contains(position) == true
 
     fun dockIndexAt(position: Offset): Int? = dockIcons.entries.firstOrNull { it.value.contains(position) }?.key
 
@@ -91,7 +100,12 @@ internal fun Modifier.summonInput(controller: SummonController): Modifier =
                     } else {
                         val dockIndex = controller.dockIndexAt(change.position)
                         controller.dispatch(
-                            SummonEvent.Move(change.position.toRingPoint(), change.uptimeMillis, dockIndex),
+                            SummonEvent.Move(
+                                point = change.position.toRingPoint(),
+                                atMillis = change.uptimeMillis,
+                                dockIndex = dockIndex,
+                                overReadout = controller.isOverReadout(change.position),
+                            ),
                         )
                         if (controller.phase is SummonPhase.Open) change.consume()
                     }

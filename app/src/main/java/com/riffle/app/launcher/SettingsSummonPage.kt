@@ -37,6 +37,7 @@ import com.riffle.core.domain.launcher.summon.SUMMON_ICON_SIZE_DP_RANGE
 import com.riffle.core.domain.launcher.summon.SUMMON_PREVIEW_MILLIS_RANGE
 import com.riffle.core.domain.launcher.summon.SUMMON_SLIDE_MILLIS_RANGE
 import com.riffle.core.domain.launcher.summon.SummonHeader
+import com.riffle.core.domain.launcher.summon.SummonKeepGesture
 import com.riffle.core.domain.launcher.summon.SummonSettings
 import com.riffle.core.domain.launcher.summon.SummonSlot
 
@@ -162,6 +163,19 @@ internal fun SettingsSummonPageContent(
             title = SettingKey.SUMMON_HEADER.label(),
             subtitle = headerLabel(summon.header, state.homeLayout),
             onClick = { choosingHeader = true },
+        )
+        SettingsSwitchRow(
+            modifier = Modifier.settingAnchor(SettingKey.SUMMON_KEEP),
+            title = SettingKey.SUMMON_KEEP.label(),
+            subtitle = stringResource(R.string.settings_summon_keep_subtitle),
+            checked = summon.keepGesture == SummonKeepGesture.REST_TO_LOCK,
+            onCheckedChange = { on ->
+                set(
+                    summon.copy(
+                        keepGesture = if (on) SummonKeepGesture.REST_TO_LOCK else SummonKeepGesture.PUSH_THROUGH,
+                    ),
+                )
+            },
         )
         SettingsSwitchRow(
             modifier = Modifier.settingAnchor(SettingKey.SUMMON_HINTS),
