@@ -119,8 +119,7 @@ internal class SummonRingModel private constructor(
             glanceLabel: (GlanceWidgetKind) -> String,
             favouritesLabel: String,
             notifications: List<AppNotificationGroup> = emptyList(),
-            shortcuts: AppShortcutsByApp = emptyMap(),
-            appInfoLabel: String? = null,
+            actions: SummonAppActionSource = SummonAppActionSource(),
         ): SummonRingModel {
             val labels = installed.filter { it.enabled }.associate { it.identity to it.label }
             val groups = notifications.associateBy { it.packageName to it.profileId }
@@ -131,7 +130,7 @@ internal class SummonRingModel private constructor(
                         identity = identity,
                         label = label,
                         notifications = groups[identity.packageName to identity.profile.id],
-                        actions = appActions(identity, shortcuts[identity].orEmpty(), appInfoLabel),
+                        actions = actions.actionsOf(identity),
                     )
                 }
 
@@ -182,16 +181,19 @@ internal class SummonRingModel private constructor(
     }
 }
 
-/** An app's level: its enabled shortcuts in the platform's order, then App info (when there is a label for it). */
-private fun appActions(
-    identity: AppIdentity,
-    shortcuts: List<AppShortcut>,
-    appInfoLabel: String?,
-): List<SummonEntry.Action> =
-    shortcuts
-        .filter { it.enabled }
-        .sortedBy { it.rank }
-        .map { SummonEntry.Action(identity, it.shortLabel, LauncherShellAction.LaunchAppShortcut(it)) } +
-        listOfNotNull(
-            appInfoLabel?.let { SummonEntry.Action(identity, it, LauncherShellAction.OpenAppInfo(identity)) },
-        )
+/** Where an app's quick actions come from: its shortcuts, and App info when there is a label for it. */
+internal data class SummonAppActionSource(
+    val shortcuts: AppShortcutsByApp = emptyMap(),
+    val appInfoLabel: String? = null,
+) {
+    /** An app's level: its enabled shortcuts in the platform's order, then App info. */
+    fun actionsOf(identity: AppIdentity): List<SummonEntry.Action> =
+        shortcuts[identity]
+            .orEmpty()
+            .filter(AppShortcut::enabled)
+            .sortedBy(AppShortcut::rank)
+            .map { SummonEntry.Action(identity, it.shortLabel, LauncherShellAction.LaunchAppShortcut(it)) } +
+            listOfNotNull(
+                appInfoLabel?.let { SummonEntry.Action(identity, it, LauncherShellAction.OpenAppInfo(identity)) },
+            )
+}

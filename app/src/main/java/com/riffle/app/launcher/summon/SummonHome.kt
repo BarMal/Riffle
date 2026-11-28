@@ -210,8 +210,7 @@ private fun rememberSummonRingModel(state: LauncherShellState): SummonRingModel 
             glanceLabel = { kind -> context.getString(kind.labelRes()) },
             favouritesLabel = favouritesLabel,
             notifications = state.notificationGroupsByApp,
-            shortcuts = state.appShortcutsByApp,
-            appInfoLabel = appInfoLabel,
+            actions = SummonAppActionSource(state.appShortcutsByApp, appInfoLabel),
         )
     }
 }

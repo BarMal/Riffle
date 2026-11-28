@@ -44,8 +44,11 @@ class SummonAppActionsTest {
             installed = listOf(InstalledApp(mail, "Mail")),
             glanceLabel = { "" },
             favouritesLabel = "Favourites",
-            shortcuts = mapOf(mail to listOf(compose, shortcut("Broken", rank = 2, enabled = false), inbox)),
-            appInfoLabel = "App info",
+            actions =
+                SummonAppActionSource(
+                    shortcuts = mapOf(mail to listOf(compose, shortcut("Broken", rank = 2, enabled = false), inbox)),
+                    appInfoLabel = "App info",
+                ),
         )
 
     @Test

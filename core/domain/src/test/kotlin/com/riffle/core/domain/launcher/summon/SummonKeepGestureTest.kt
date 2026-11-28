@@ -33,6 +33,7 @@ class SummonKeepGestureTest {
             SummonSlotRole.PREVIEW,
             SummonSlotRole.APP,
         )
+
     // Only the top level has slots: none of these apps has quick actions of its own.
     private val roles: (List<Int>) -> List<SummonSlotRole> = { path -> if (path.isEmpty()) root else emptyList() }
     private val centre = RingPoint(540f, 1100f)
