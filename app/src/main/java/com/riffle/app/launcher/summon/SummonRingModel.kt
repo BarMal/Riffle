@@ -6,8 +6,9 @@ import com.riffle.core.domain.launcher.glance.GlanceWidgetKind
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomeLayout
-import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.icons.IconPackDrawableRef
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.summon.SummonCollectionId
 import com.riffle.core.domain.launcher.summon.SummonSettings
 import com.riffle.core.domain.launcher.summon.SummonSlot
 import com.riffle.core.domain.launcher.summon.SummonSlotRole
@@ -30,13 +31,18 @@ internal sealed interface SummonEntry {
             get() = if (notifications?.notifications.isNullOrEmpty()) SummonSlotRole.APP else SummonSlotRole.PREVIEW
     }
 
+    /** A collection (or a Home folder not yet copied into one): its own level of apps, glances and collections. */
     data class Folder(
-        val id: LauncherItemId,
+        val id: String,
         override val label: String,
-        val apps: List<App>,
+        val items: List<SummonEntry>,
+        val icon: IconPackDrawableRef? = null,
     ) : SummonEntry {
-        override val key: String get() = "folder:${id.value}"
+        override val key: String get() = "folder:$id"
         override val role: SummonSlotRole get() = SummonSlotRole.FOLDER
+
+        /** The apps directly inside, for its preview. */
+        val apps: List<App> get() = items.filterIsInstance<App>()
     }
 
     /** Resting on it shows the glance itself as a card; released, it opens its section of the Stream. */
@@ -67,15 +73,8 @@ internal class SummonRingModel private constructor(
     private val folderCapacity: Int,
 ) {
     fun level(path: List<Int>): List<SummonEntry> =
-        when {
-            path.isEmpty() -> root
-            path.size == 1 ->
-                (
-                    root.getOrNull(
-                        path.first(),
-                    ) as? SummonEntry.Folder
-                )?.apps?.take(folderCapacity).orEmpty()
-            else -> emptyList()
+        path.fold(root) { level, index ->
+            (level.getOrNull(index) as? SummonEntry.Folder)?.items?.take(folderCapacity) ?: return emptyList()
         }
 
     fun roles(path: List<Int>): List<SummonSlotRole> = level(path).map { it.role }
@@ -114,20 +113,40 @@ internal class SummonRingModel private constructor(
                     .flatMap { it.items }
                     .filterIsInstance<FolderItem>()
                     .associateBy { it.id }
-            val root =
-                settings.ringSlots.mapNotNull { slot ->
-                    when (slot) {
-                        is SummonSlot.App -> appEntry(slot.identity)
-                        is SummonSlot.Folder ->
-                            folders[slot.folderId]?.let { SummonEntry.Folder(it.id, it.label, appsOf(it.items)) }
-                        is SummonSlot.Glance -> SummonEntry.Glance(slot.kind, glanceLabel(slot.kind))
-                        SummonSlot.Favourites ->
-                            SummonEntry.Favourites(
-                                favouritesLabel,
-                                appsOf(layout.dock.items.filterIsInstance<AppShortcutItem>()),
+            val collections = settings.collections.associateBy { it.id }
+
+            // [inside]: the collections already open on the way here, so one that reaches itself stops.
+            fun entryOf(
+                slot: SummonSlot,
+                inside: Set<SummonCollectionId>,
+            ): SummonEntry? =
+                when (slot) {
+                    is SummonSlot.App -> appEntry(slot.identity)
+                    is SummonSlot.Folder ->
+                        folders[slot.folderId]?.let {
+                            SummonEntry.Folder(
+                                "home:${it.id.value}",
+                                it.label,
+                                appsOf(it.items),
                             )
-                    }
+                        }
+                    is SummonSlot.Collection ->
+                        collections[slot.id]?.takeIf { slot.id !in inside }?.let { collection ->
+                            SummonEntry.Folder(
+                                id = collection.id.value,
+                                label = collection.name,
+                                items = collection.items.mapNotNull { entryOf(it, inside + collection.id) },
+                                icon = collection.icon,
+                            )
+                        }
+                    is SummonSlot.Glance -> SummonEntry.Glance(slot.kind, glanceLabel(slot.kind))
+                    SummonSlot.Favourites ->
+                        SummonEntry.Favourites(
+                            favouritesLabel,
+                            appsOf(layout.dock.items.filterIsInstance<AppShortcutItem>()),
+                        )
                 }
+            val root = settings.ringSlots.mapNotNull { entryOf(it, emptySet()) }
             return SummonRingModel(root, folderCapacity = (settings.slotCount - 1).coerceAtLeast(1))
         }
     }

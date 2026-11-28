@@ -44,6 +44,7 @@ import com.riffle.core.domain.launcher.summon.SummonEvent
 import com.riffle.core.domain.launcher.summon.SummonGestureConfig
 import com.riffle.core.domain.launcher.summon.SummonKeepGesture
 import com.riffle.core.domain.launcher.summon.SummonPhase
+import com.riffle.core.domain.launcher.summon.SummonSlot
 import com.riffle.core.domain.launcher.summon.SummonTimings
 import kotlinx.coroutines.delay
 
@@ -69,6 +70,10 @@ internal fun SummonHome(
 ) {
     val settings = state.launcherSettings.summon
     val model = rememberSummonRingModel(state)
+    // A ring saved before collections may still hold Home folders: saving it copies them into collections, once.
+    LaunchedEffect(settings.slots) {
+        if (settings.slots.any { it is SummonSlot.Folder }) onAction(LauncherShellAction.SetSummonSettings(settings))
+    }
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val insets = WindowInsets.safeDrawing.asPaddingValues()
         val config = rememberSummonGestureConfig(maxWidth, maxHeight, insets, settings.timings, settings.keepGesture)
