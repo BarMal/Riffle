@@ -20,13 +20,25 @@ internal object SummonLock {
         event: SummonEvent.Move,
         levels: SummonLevels,
     ): SummonStep {
-        val aim = phase.aim ?: return SummonStep(phase)
-        if (event.overReadout) {
-            return SummonStep(
-                phase.copy(finger = event.point, overReadout = true, candidate = null, candidateSinceMillis = null),
-                listOfNotNull(SummonEffect.ReachedReadout(phase.path, aim).takeIf { !phase.overReadout }),
-            )
+        val aim = phase.aim
+        return when {
+            aim == null -> SummonStep(phase)
+            event.overReadout ->
+                SummonStep(
+                    phase.copy(finger = event.point, overReadout = true, candidate = null, candidateSinceMillis = null),
+                    listOfNotNull(SummonEffect.ReachedReadout(phase.path, aim).takeIf { !phase.overReadout }),
+                )
+            else -> travel(phase, aim, event, levels)
         }
+    }
+
+    /** Away from the readout: note which slot (or the centre) the finger rests on, without re-aiming. */
+    private fun travel(
+        phase: SummonPhase.Open,
+        aim: Int,
+        event: SummonEvent.Move,
+        levels: SummonLevels,
+    ): SummonStep {
         val inCentre = phase.origin.distanceTo(event.point) < levels.config.deadZone
         val under =
             if (inCentre) {

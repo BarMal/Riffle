@@ -40,24 +40,29 @@ internal fun summonReadout(
     val favourite = phase.dockAim?.let { model.favourites.getOrNull(it) }
     val entry = favourite ?: phase.aim?.let { model.entry(phase.path, it) } ?: return null
     val group = (entry as? SummonEntry.App)?.notifications
-    val hint =
-        when {
-            favourite != null -> SummonReadoutHint.RELEASE_TO_OPEN
-            entry.role == SummonSlotRole.FOLDER -> SummonReadoutHint.OPEN_FOLDER
-            entry.role == SummonSlotRole.FAVOURITES -> SummonReadoutHint.SHOW_FAVOURITES
-            entry.role != SummonSlotRole.PREVIEW -> SummonReadoutHint.RELEASE_TO_OPEN
-            phase.live || phase.overReadout -> SummonReadoutHint.RELEASE_TO_KEEP
-            keep == SummonKeepGesture.PUSH_THROUGH -> SummonReadoutHint.OPEN_OR_KEEP
-            phase.previewing -> SummonReadoutHint.SLIDE_TO_KEEP
-            else -> SummonReadoutHint.REST_TO_KEEP
-        }
+    val role = if (favourite != null) SummonSlotRole.APP else entry.role
     return SummonReadout(
         entry = entry,
         notifications = group?.notifications.orEmpty().take(READOUT_NOTIFICATIONS),
         notificationCount = group?.count ?: 0,
-        hint = hint,
+        hint = readoutHint(role, phase, keep),
     )
 }
+
+private fun readoutHint(
+    role: SummonSlotRole,
+    phase: SummonPhase.Open,
+    keep: SummonKeepGesture,
+): SummonReadoutHint =
+    when {
+        role == SummonSlotRole.FOLDER -> SummonReadoutHint.OPEN_FOLDER
+        role == SummonSlotRole.FAVOURITES -> SummonReadoutHint.SHOW_FAVOURITES
+        role != SummonSlotRole.PREVIEW -> SummonReadoutHint.RELEASE_TO_OPEN
+        phase.live || phase.overReadout -> SummonReadoutHint.RELEASE_TO_KEEP
+        keep == SummonKeepGesture.PUSH_THROUGH -> SummonReadoutHint.OPEN_OR_KEEP
+        phase.previewing -> SummonReadoutHint.SLIDE_TO_KEEP
+        else -> SummonReadoutHint.REST_TO_KEEP
+    }
 
 /** At the top, out of the thumb's way; at the bottom when the ring is held high enough to cover the top. */
 internal fun summonReadoutPlacement(
