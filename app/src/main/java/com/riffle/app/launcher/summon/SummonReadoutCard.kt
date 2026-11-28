@@ -72,8 +72,8 @@ internal fun SummonReadoutCard(
     onPlaced: (LayoutCoordinates) -> Unit = {},
 ) {
     val entry = readout.entry
-    val app = entry as? SummonEntry.App
-    val light = readoutLight(entry, app?.let { rememberAppIconColor(it.identity, appIconLoader) })
+    val appIdentity = (entry as? SummonEntry.App)?.identity ?: (entry as? SummonEntry.Action)?.app
+    val light = readoutLight(entry, appIdentity?.let { rememberAppIconColor(it, appIconLoader) })
     Box(
         modifier = Modifier.fillMaxSize().padding(insets).padding(RiffleSpacing.l),
         contentAlignment = if (placement == SummonReadoutPlacement.TOP) Alignment.TopCenter else Alignment.BottomCenter,
@@ -105,7 +105,7 @@ internal fun SummonReadoutCard(
                             GlanceWidget(kind = entry.kind, span = entry.kind.defaultSpan, interactive = { false })
                         }
                     is SummonEntry.Folder -> FolderApps(entry, appIconLoader)
-                    is SummonEntry.App, is SummonEntry.Favourites -> Unit
+                    is SummonEntry.App, is SummonEntry.Favourites, is SummonEntry.Action -> Unit
                 }
                 if (showHint) {
                     GlowText(
@@ -201,7 +201,7 @@ private fun readoutLight(
     appColor: Color?,
 ): Color =
     when (entry) {
-        is SummonEntry.App -> summonGlowColor(appColor)
+        is SummonEntry.App, is SummonEntry.Action -> summonGlowColor(appColor)
         is SummonEntry.Favourites -> FAVOURITES_STAR
         is SummonEntry.Folder, is SummonEntry.Glance -> Color.White
     }
@@ -209,6 +209,7 @@ private fun readoutLight(
 private fun SummonReadoutHint.label(): Int =
     when (this) {
         SummonReadoutHint.RELEASE_TO_OPEN -> R.string.summon_hint_release_to_open
+        SummonReadoutHint.OPEN_OR_ACTIONS -> R.string.summon_hint_open_or_actions
         SummonReadoutHint.OPEN_OR_KEEP -> R.string.summon_card_hint_preview
         SummonReadoutHint.RELEASE_TO_KEEP -> R.string.summon_card_hint_live
         SummonReadoutHint.REST_TO_KEEP -> R.string.summon_hint_rest_to_keep

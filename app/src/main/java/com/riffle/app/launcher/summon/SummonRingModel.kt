@@ -1,6 +1,9 @@
 package com.riffle.app.launcher.summon
 
+import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.glance.GlanceWidgetKind
 import com.riffle.core.domain.launcher.home.AppShortcutItem
@@ -19,11 +22,15 @@ internal sealed interface SummonEntry {
     val label: String
     val role: SummonSlotRole
 
-    /** [notifications] is the app's group in the Stream when it has any: then resting on it shows its card. */
+    /**
+     * [notifications] is the app's group in the Stream when it has any: then resting on it shows its card. [actions] is
+     * its level: pushing through the app opens them.
+     */
     data class App(
         val identity: AppIdentity,
         override val label: String,
         val notifications: AppNotificationGroup? = null,
+        val actions: List<Action> = emptyList(),
     ) : SummonEntry {
         override val key: String
             get() = "app:${identity.packageName.value}/${identity.activityName.value}:${identity.profile.id.value}"
@@ -43,6 +50,16 @@ internal sealed interface SummonEntry {
 
         /** The apps directly inside, for its preview. */
         val apps: List<App> get() = items.filterIsInstance<App>()
+    }
+
+    /** One of an app's quick actions (a shortcut, or App info): letting go on it runs [action]. */
+    data class Action(
+        val app: AppIdentity,
+        override val label: String,
+        val action: LauncherShellAction,
+    ) : SummonEntry {
+        override val key: String get() = "action:${app.packageName.value}:$label"
+        override val role: SummonSlotRole get() = SummonSlotRole.APP
     }
 
     /** Resting on it shows the glance itself as a card; released, it opens its section of the Stream. */
@@ -74,7 +91,13 @@ internal class SummonRingModel private constructor(
 ) {
     fun level(path: List<Int>): List<SummonEntry> =
         path.fold(root) { level, index ->
-            (level.getOrNull(index) as? SummonEntry.Folder)?.items?.take(folderCapacity) ?: return emptyList()
+            val inner =
+                when (val entry = level.getOrNull(index)) {
+                    is SummonEntry.Folder -> entry.items
+                    is SummonEntry.App -> entry.actions
+                    else -> return emptyList()
+                }
+            inner.take(folderCapacity)
         }
 
     fun roles(path: List<Int>): List<SummonSlotRole> = level(path).map { it.role }
@@ -96,13 +119,20 @@ internal class SummonRingModel private constructor(
             glanceLabel: (GlanceWidgetKind) -> String,
             favouritesLabel: String,
             notifications: List<AppNotificationGroup> = emptyList(),
+            shortcuts: AppShortcutsByApp = emptyMap(),
+            appInfoLabel: String? = null,
         ): SummonRingModel {
             val labels = installed.filter { it.enabled }.associate { it.identity to it.label }
             val groups = notifications.associateBy { it.packageName to it.profileId }
 
             fun appEntry(identity: AppIdentity): SummonEntry.App? =
                 labels[identity]?.let { label ->
-                    SummonEntry.App(identity, label, groups[identity.packageName to identity.profile.id])
+                    SummonEntry.App(
+                        identity = identity,
+                        label = label,
+                        notifications = groups[identity.packageName to identity.profile.id],
+                        actions = appActions(identity, shortcuts[identity].orEmpty(), appInfoLabel),
+                    )
                 }
 
             fun appsOf(items: List<AppShortcutItem>): List<SummonEntry.App> =
@@ -151,3 +181,17 @@ internal class SummonRingModel private constructor(
         }
     }
 }
+
+/** An app's level: its enabled shortcuts in the platform's order, then App info (when there is a label for it). */
+private fun appActions(
+    identity: AppIdentity,
+    shortcuts: List<AppShortcut>,
+    appInfoLabel: String?,
+): List<SummonEntry.Action> =
+    shortcuts
+        .filter { it.enabled }
+        .sortedBy { it.rank }
+        .map { SummonEntry.Action(identity, it.shortLabel, LauncherShellAction.LaunchAppShortcut(it)) } +
+        listOfNotNull(
+            appInfoLabel?.let { SummonEntry.Action(identity, it, LauncherShellAction.OpenAppInfo(identity)) },
+        )

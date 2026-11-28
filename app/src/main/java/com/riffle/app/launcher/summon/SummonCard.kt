@@ -77,7 +77,7 @@ internal fun SummonCard(
                     Box(Modifier.fillMaxWidth().height(GLANCE_CARD_HEIGHT)) {
                         GlanceWidget(kind = entry.kind, span = entry.kind.defaultSpan, interactive = { interactive })
                     }
-                is SummonEntry.Folder, is SummonEntry.Favourites -> Unit
+                is SummonEntry.Folder, is SummonEntry.Favourites, is SummonEntry.Action -> Unit
             }
             if (live || interactive) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s)) {

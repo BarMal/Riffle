@@ -14,6 +14,7 @@ private const val GLOW_FALLOFF = 1.3
 /** What the readout says releasing (or pushing through) will do. */
 internal enum class SummonReadoutHint {
     RELEASE_TO_OPEN,
+    OPEN_OR_ACTIONS,
     OPEN_OR_KEEP,
     RELEASE_TO_KEEP,
     REST_TO_KEEP,
@@ -45,7 +46,7 @@ internal fun summonReadout(
         entry = entry,
         notifications = group?.notifications.orEmpty().take(READOUT_NOTIFICATIONS),
         notificationCount = group?.count ?: 0,
-        hint = readoutHint(role, phase, keep),
+        hint = readoutHint(role, phase, keep, hasActions = (entry as? SummonEntry.App)?.actions.orEmpty().isNotEmpty()),
     )
 }
 
@@ -53,8 +54,10 @@ private fun readoutHint(
     role: SummonSlotRole,
     phase: SummonPhase.Open,
     keep: SummonKeepGesture,
+    hasActions: Boolean,
 ): SummonReadoutHint =
     when {
+        role == SummonSlotRole.APP && hasActions -> SummonReadoutHint.OPEN_OR_ACTIONS
         role == SummonSlotRole.FOLDER -> SummonReadoutHint.OPEN_FOLDER
         role == SummonSlotRole.FAVOURITES -> SummonReadoutHint.SHOW_FAVOURITES
         role != SummonSlotRole.PREVIEW -> SummonReadoutHint.RELEASE_TO_OPEN

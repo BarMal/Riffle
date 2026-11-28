@@ -42,5 +42,5 @@ internal fun summonCardActions(entry: SummonEntry): List<SummonCardAction> =
             listOf(
                 SummonCardAction(R.string.summon_card_open_stream, LauncherShellAction.OpenStream),
             )
-        is SummonEntry.Folder, is SummonEntry.Favourites -> emptyList()
+        is SummonEntry.Folder, is SummonEntry.Favourites, is SummonEntry.Action -> emptyList()
     }

@@ -1568,6 +1568,7 @@
         <item quantity="one">%1$d item</item>
         <item quantity="other">%1$d items</item>
     </plurals>
+    <string name="summon_hint_open_or_actions">Let go to open · push through for its actions</string>
     <string name="summon_hint_rest_to_keep">Let go to open · rest here to keep the card</string>
     <string name="summon_hint_slide_to_keep">Slide onto this card and let go to keep it</string>
     <string name="setting_summon_keep">Keep cards by resting</string>

@@ -192,8 +192,17 @@ private class SummonInputs(
 private fun rememberSummonRingModel(state: LauncherShellState): SummonRingModel {
     val context = LocalContext.current
     val favouritesLabel = stringResource(R.string.summon_favourites)
+    val appInfoLabel = stringResource(R.string.menu_app_info)
     val settings = state.launcherSettings.summon
-    return remember(settings, state.homeLayout, state.installedApps, state.notificationGroupsByApp, favouritesLabel) {
+    return remember(
+        settings,
+        state.homeLayout,
+        state.installedApps,
+        state.notificationGroupsByApp,
+        state.appShortcutsByApp,
+        favouritesLabel,
+        appInfoLabel,
+    ) {
         SummonRingModel.from(
             settings = settings,
             layout = state.homeLayout,
@@ -201,6 +210,8 @@ private fun rememberSummonRingModel(state: LauncherShellState): SummonRingModel 
             glanceLabel = { kind -> context.getString(kind.labelRes()) },
             favouritesLabel = favouritesLabel,
             notifications = state.notificationGroupsByApp,
+            shortcuts = state.appShortcutsByApp,
+            appInfoLabel = appInfoLabel,
         )
     }
 }
