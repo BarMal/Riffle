@@ -14,6 +14,7 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.icons.IconPackDrawableRef
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -69,6 +70,14 @@ class SummonCollectionsTest {
         // deep → work would make work contain itself through tools.
         assertEquals(nested, nested.withCollectionItem(deep, SummonSlot.Collection(work)))
         assertEquals(nested, nested.withCollectionItem(work, SummonSlot.Collection(work)))
+    }
+
+    @Test
+    fun aCollectionsIconIsAnIconPackDrawableUntilItIsCleared() {
+        val icon = IconPackDrawableRef("pack.icons", "folder_work")
+        val set = settings.withCollectionIcon(work, icon)
+        assertEquals(icon, set.collection(work)?.icon)
+        assertNull(set.withCollectionIcon(work, null).collection(work)?.icon)
     }
 
     @Test

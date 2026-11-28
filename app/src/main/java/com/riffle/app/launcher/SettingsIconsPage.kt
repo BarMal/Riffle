@@ -51,7 +51,7 @@ internal const val ICONS_PREVIEW_COUNT = 6
 private const val PACK_ICON_PX = 96
 
 @Composable
-private fun rememberPipeline(): AppIconPipeline {
+internal fun rememberAppIconPipeline(): AppIconPipeline {
     val context = LocalContext.current
     return LocalAppIconPipeline.current ?: remember(context) { AppIconPipeline.shared(context) }
 }
@@ -186,7 +186,7 @@ private fun IconPackChoice(
     selected: String?,
     onSelect: (String?) -> Unit,
 ) {
-    val pipeline = rememberPipeline()
+    val pipeline = rememberAppIconPipeline()
     val listVersion = pipeline.packs.packListVersion
     val packs by rememberLoaded(emptyList<InstalledIconPack>(), pipeline, listVersion) {
         pipeline.packs.installedPacks()

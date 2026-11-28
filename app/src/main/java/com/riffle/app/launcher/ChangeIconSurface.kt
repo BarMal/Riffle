@@ -86,17 +86,6 @@ internal fun ChangeIconSurface(
     val context = LocalContext.current
     val pipeline = LocalAppIconPipeline.current ?: remember(context) { AppIconPipeline.shared(context) }
     val override = style.overrideFor(target.identity)
-    val packs by rememberLoaded(emptyList<InstalledIconPack>(), pipeline, pipeline.packs.packListVersion) {
-        pipeline.packs.installedPacks()
-    }
-    var browsing by remember(packs) {
-        mutableStateOf(
-            override?.icon?.packPackage?.takeIf { p -> packs.any { it.packageName == p } }
-                ?: style.iconPack?.takeIf { p -> packs.any { it.packageName == p } }
-                ?: packs.firstOrNull()?.packageName,
-        )
-    }
-    var query by remember { mutableStateOf("") }
     var name by remember(target) { mutableStateOf(override?.label ?: target.label) }
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
@@ -133,44 +122,16 @@ internal fun ChangeIconSurface(
                         onAction(LauncherShellAction.SetAppLabelOverride(target.identity, null))
                     },
                 )
-                if (packs.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.icon_pack_none_installed),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                } else {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        packs.forEach { pack ->
-                            FilterChip(
-                                selected = pack.packageName == browsing,
-                                onClick = { browsing = pack.packageName },
-                                label = { Text(pack.label) },
-                                modifier = Modifier.heightIn(min = 48.dp).semantics { role = Role.RadioButton },
-                            )
-                        }
-                    }
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        modifier = Modifier.fillMaxWidth().testTag(CHANGE_ICON_SEARCH_TEST_TAG),
-                        singleLine = true,
-                        label = { Text(stringResource(R.string.change_icon_search)) },
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    )
-                    browsing?.let { pack ->
-                        PackIconGrid(
-                            pipeline = pipeline,
-                            pack = pack,
-                            query = query,
-                            selected = override?.icon,
-                            onChoose = { ref ->
-                                onAction(LauncherShellAction.SetAppIconOverride(target.identity, ref))
-                                onDismiss()
-                            },
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                    }
-                }
+                IconPackChooser(
+                    pipeline = pipeline,
+                    preferredPack = override?.icon?.packPackage ?: style.iconPack,
+                    selected = override?.icon,
+                    onChoose = { ref ->
+                        onAction(LauncherShellAction.SetAppIconOverride(target.identity, ref))
+                        onDismiss()
+                    },
+                    modifier = Modifier.weight(1f, fill = false),
+                )
                 TextButton(
                     onClick = {
                         onAction(LauncherShellAction.SetAppIconOverride(target.identity, null))
@@ -182,6 +143,77 @@ internal fun ChangeIconSurface(
             }
         }
     }
+}
+
+/**
+ * The installed icon packs as chips, a search field and the chosen pack's icons as a grid; [onChoose] gets the tapped
+ * icon. Opens on [preferredPack] when it is installed, else the first pack. Shared by every "choose an icon" surface.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun IconPackChooser(
+    pipeline: AppIconPipeline,
+    preferredPack: String?,
+    selected: IconPackDrawableRef?,
+    onChoose: (IconPackDrawableRef) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val packs by rememberLoaded(emptyList<InstalledIconPack>(), pipeline, pipeline.packs.packListVersion) {
+        pipeline.packs.installedPacks()
+    }
+    var browsing by remember(packs) {
+        mutableStateOf(
+            preferredPack?.takeIf { p -> packs.any { it.packageName == p } } ?: packs.firstOrNull()?.packageName,
+        )
+    }
+    var query by remember { mutableStateOf("") }
+    if (packs.isEmpty()) {
+        Text(text = stringResource(R.string.icon_pack_none_installed), style = MaterialTheme.typography.bodyMedium)
+        return
+    }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            packs.forEach { pack ->
+                FilterChip(
+                    selected = pack.packageName == browsing,
+                    onClick = { browsing = pack.packageName },
+                    label = { Text(pack.label) },
+                    modifier = Modifier.heightIn(min = 48.dp).semantics { role = Role.RadioButton },
+                )
+            }
+        }
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            modifier = Modifier.fillMaxWidth().testTag(CHANGE_ICON_SEARCH_TEST_TAG),
+            singleLine = true,
+            label = { Text(stringResource(R.string.change_icon_search)) },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        )
+        browsing?.let { pack ->
+            PackIconGrid(
+                pipeline = pipeline,
+                pack = pack,
+                query = query,
+                selected = selected,
+                onChoose = onChoose,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+        }
+    }
+}
+
+/** An icon-pack drawable decoded off the main thread at [sizePx]; null until it is ready or if the pack lost it. */
+@Composable
+internal fun rememberPackIcon(
+    pipeline: AppIconPipeline,
+    ref: IconPackDrawableRef,
+    sizePx: Int,
+): ImageBitmap? {
+    val icon by rememberLoaded<ImageBitmap?>(null, ref, sizePx) {
+        pipeline.packs.drawable(ref.packPackage, ref.drawableName)?.toBitmap(sizePx, sizePx)?.asImageBitmap()
+    }
+    return icon
 }
 
 @Composable
@@ -264,12 +296,7 @@ private fun PackIconCell(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val icon by rememberLoaded<ImageBitmap?>(null, pipeline, ref) {
-        pipeline.packs.drawable(
-            ref.packPackage,
-            ref.drawableName,
-        )?.toBitmap(ICON_CELL_PX, ICON_CELL_PX)?.asImageBitmap()
-    }
+    val icon = rememberPackIcon(pipeline, ref, ICON_CELL_PX)
     val description = stringResource(R.string.change_icon_choice_description, ref.drawableName)
     Box(
         modifier =
