@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -27,10 +28,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.summon.summonCollectionAddChoices
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.designsystem.GlassWeight
+import com.riffle.core.domain.launcher.icons.IconPackDrawableRef
 import com.riffle.core.domain.launcher.summon.SummonCollection
 import com.riffle.core.domain.launcher.summon.SummonCollectionId
 import com.riffle.core.domain.launcher.summon.SummonSettings
@@ -38,6 +43,7 @@ import com.riffle.core.domain.launcher.summon.SummonSlot
 import com.riffle.core.domain.launcher.summon.collection
 import com.riffle.core.domain.launcher.summon.movedCollectionItem
 import com.riffle.core.domain.launcher.summon.renamedCollection
+import com.riffle.core.domain.launcher.summon.withCollectionIcon
 import com.riffle.core.domain.launcher.summon.withCollectionItem
 import com.riffle.core.domain.launcher.summon.withNewCollection
 import com.riffle.core.domain.launcher.summon.withoutCollection
@@ -45,6 +51,7 @@ import com.riffle.core.domain.launcher.summon.withoutCollectionItem
 import java.util.UUID
 
 private val EDITOR_MAX_HEIGHT = 420.dp
+private val ICON_DIALOG_MAX_HEIGHT = 640.dp
 
 /**
  * Settings › Summon › Collections: Summon's own folders. Each opens an editor to rename it, add, reorder and remove
@@ -107,6 +114,7 @@ private fun SummonCollectionEditor(
 ) {
     val id = collection.id
     var adding by rememberSaveable { mutableStateOf(false) }
+    var choosingIcon by rememberSaveable { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.settings_summon_collection_edit)) },
@@ -122,6 +130,17 @@ private fun SummonCollectionEditor(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                TextButton(onClick = { choosingIcon = true }) {
+                    Text(
+                        stringResource(
+                            if (collection.icon == null) {
+                                R.string.settings_summon_collection_icon_choose
+                            } else {
+                                R.string.settings_summon_collection_icon_change
+                            },
+                        ),
+                    )
+                }
                 collection.items.forEachIndexed { index, slot ->
                     CollectionItemRow(
                         name = label(slot),
@@ -143,6 +162,13 @@ private fun SummonCollectionEditor(
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_done)) } },
     )
+    if (choosingIcon) {
+        SummonCollectionIconDialog(
+            collection = collection,
+            onChoose = { set(summon.withCollectionIcon(id, it)) },
+            onDismiss = { choosingIcon = false },
+        )
+    }
     if (adding) {
         SummonAddDialog(
             title = stringResource(R.string.settings_summon_collection_add_to, collection.name),
@@ -150,6 +176,51 @@ private fun SummonCollectionEditor(
             label = label,
             onAdd = { set(summon.withCollectionItem(id, it)) },
         ) { adding = false }
+    }
+}
+
+/** An icon-pack icon for a collection, or none: then the ring previews its first apps. */
+@Composable
+private fun SummonCollectionIconDialog(
+    collection: SummonCollection,
+    onChoose: (IconPackDrawableRef?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        GlassSurface(
+            modifier = Modifier.fillMaxWidth().padding(RiffleSpacing.l).heightIn(max = ICON_DIALOG_MAX_HEIGHT),
+            weight = GlassWeight.Thick,
+            shape = LocalLauncherPanelShape.current,
+            tint = launcherPanelSurfaceColor(),
+            contentColor = launcherPanelContentColor(),
+        ) {
+            Column(Modifier.padding(RiffleSpacing.l), verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s)) {
+                Text(
+                    stringResource(R.string.settings_summon_collection_icon_title, collection.name),
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                IconPackChooser(
+                    pipeline = rememberAppIconPipeline(),
+                    preferredPack = collection.icon?.packPackage,
+                    selected = collection.icon,
+                    onChoose = { ref ->
+                        onChoose(ref)
+                        onDismiss()
+                    },
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Row {
+                    TextButton(
+                        enabled = collection.icon != null,
+                        onClick = {
+                            onChoose(null)
+                            onDismiss()
+                        },
+                    ) { Text(stringResource(R.string.settings_summon_collection_icon_reset)) }
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
+                }
+            }
+        }
     }
 }
 

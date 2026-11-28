@@ -1,5 +1,6 @@
 package com.riffle.app.launcher.summon
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -38,6 +39,8 @@ import com.riffle.app.launcher.LABEL_TEXT_SHADOW
 import com.riffle.app.launcher.LauncherAppIcon
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.rememberAppIconColor
+import com.riffle.app.launcher.rememberAppIconPipeline
+import com.riffle.app.launcher.rememberPackIcon
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.glance.GlanceWidgetKind
 import com.riffle.core.domain.launcher.summon.RingLayout
@@ -169,13 +172,22 @@ internal fun SlotGlyph(
 }
 
 private const val FOLDER_PREVIEW_COUNT = 4
+private const val FOLDER_PACK_ICON_PX = 144
 
-/** A folder's first apps in a 2×2; a collection holding only collections or glances shows its initial instead. */
+/**
+ * A collection's icon-pack icon when it has one; else its first apps in a 2×2, or its initial when it holds only
+ * collections or glances.
+ */
 @Composable
 private fun FolderGlyph(
     folder: SummonEntry.Folder,
     appIconLoader: AppIconLoader,
 ) {
+    val icon = folder.icon?.let { rememberPackIcon(rememberAppIconPipeline(), it, FOLDER_PACK_ICON_PX) }
+    if (icon != null) {
+        Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(SLOT_ICON_SIZE))
+        return
+    }
     if (folder.apps.isEmpty()) {
         Text(folder.label.take(1).uppercase(), style = MaterialTheme.typography.titleMedium)
         return

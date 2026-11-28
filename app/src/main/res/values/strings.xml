@@ -1559,6 +1559,10 @@
     <string name="settings_summon_collection_add">Add to this collection</string>
     <string name="settings_summon_collection_add_to">Add to %1$s</string>
     <string name="settings_summon_collection_delete">Delete collection</string>
+    <string name="settings_summon_collection_icon_choose">Choose an icon</string>
+    <string name="settings_summon_collection_icon_change">Change icon</string>
+    <string name="settings_summon_collection_icon_title">Icon for %1$s</string>
+    <string name="settings_summon_collection_icon_reset">Use its apps</string>
     <string name="settings_summon_collection_remove">Remove %1$s from this collection</string>
     <plurals name="settings_summon_collection_items">
         <item quantity="one">%1$d item</item>
