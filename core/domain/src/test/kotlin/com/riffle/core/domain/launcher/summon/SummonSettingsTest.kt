@@ -120,4 +120,12 @@ class SummonSettingsTest {
             )
         headers.forEach { header -> assertEquals(header, SummonSettings().copy(header = header).header) }
     }
+
+    @Test
+    fun theIconSizeDefaultsToTheTestedSizeAndIsClampedToItsRange() {
+        assertEquals(DEFAULT_SUMMON_ICON_SIZE_DP, SummonSettings().iconSizeDp)
+        assertEquals(SUMMON_ICON_SIZE_DP_RANGE.first, SummonSettings().withIconSize(1).iconSizeDp)
+        assertEquals(SUMMON_ICON_SIZE_DP_RANGE.last, SummonSettings().withIconSize(500).iconSizeDp)
+        assertEquals(50, SummonSettings().withIconSize(50).iconSizeDp)
+    }
 }

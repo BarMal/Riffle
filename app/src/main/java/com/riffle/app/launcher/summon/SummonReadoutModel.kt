@@ -1,6 +1,7 @@
 package com.riffle.app.launcher.summon
 
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
+import com.riffle.core.domain.launcher.summon.SummonKeepGesture
 import com.riffle.core.domain.launcher.summon.SummonPhase
 import com.riffle.core.domain.launcher.summon.SummonSlotRole
 import kotlin.math.pow
@@ -15,6 +16,8 @@ internal enum class SummonReadoutHint {
     RELEASE_TO_OPEN,
     OPEN_OR_KEEP,
     RELEASE_TO_KEEP,
+    REST_TO_KEEP,
+    SLIDE_TO_KEEP,
     OPEN_FOLDER,
     SHOW_FAVOURITES,
 }
@@ -32,26 +35,34 @@ internal data class SummonReadout(
 internal fun summonReadout(
     phase: SummonPhase.Open,
     model: SummonRingModel,
+    keep: SummonKeepGesture = SummonKeepGesture.PUSH_THROUGH,
 ): SummonReadout? {
     val favourite = phase.dockAim?.let { model.favourites.getOrNull(it) }
     val entry = favourite ?: phase.aim?.let { model.entry(phase.path, it) } ?: return null
     val group = (entry as? SummonEntry.App)?.notifications
-    val hint =
-        when {
-            favourite != null -> SummonReadoutHint.RELEASE_TO_OPEN
-            entry.role == SummonSlotRole.FOLDER -> SummonReadoutHint.OPEN_FOLDER
-            entry.role == SummonSlotRole.FAVOURITES -> SummonReadoutHint.SHOW_FAVOURITES
-            entry.role == SummonSlotRole.PREVIEW && phase.live -> SummonReadoutHint.RELEASE_TO_KEEP
-            entry.role == SummonSlotRole.PREVIEW -> SummonReadoutHint.OPEN_OR_KEEP
-            else -> SummonReadoutHint.RELEASE_TO_OPEN
-        }
+    val role = if (favourite != null) SummonSlotRole.APP else entry.role
     return SummonReadout(
         entry = entry,
         notifications = group?.notifications.orEmpty().take(READOUT_NOTIFICATIONS),
         notificationCount = group?.count ?: 0,
-        hint = hint,
+        hint = readoutHint(role, phase, keep),
     )
 }
+
+private fun readoutHint(
+    role: SummonSlotRole,
+    phase: SummonPhase.Open,
+    keep: SummonKeepGesture,
+): SummonReadoutHint =
+    when {
+        role == SummonSlotRole.FOLDER -> SummonReadoutHint.OPEN_FOLDER
+        role == SummonSlotRole.FAVOURITES -> SummonReadoutHint.SHOW_FAVOURITES
+        role != SummonSlotRole.PREVIEW -> SummonReadoutHint.RELEASE_TO_OPEN
+        phase.live || phase.overReadout -> SummonReadoutHint.RELEASE_TO_KEEP
+        keep == SummonKeepGesture.PUSH_THROUGH -> SummonReadoutHint.OPEN_OR_KEEP
+        phase.previewing -> SummonReadoutHint.SLIDE_TO_KEEP
+        else -> SummonReadoutHint.REST_TO_KEEP
+    }
 
 /** At the top, out of the thumb's way; at the bottom when the ring is held high enough to cover the top. */
 internal fun summonReadoutPlacement(

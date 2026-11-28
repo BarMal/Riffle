@@ -2,7 +2,9 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.glance.GlanceWidgetKind
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.summon.SUMMON_ICON_SIZE_DP_RANGE
 import com.riffle.core.domain.launcher.summon.SummonHeader
+import com.riffle.core.domain.launcher.summon.SummonKeepGesture
 import com.riffle.core.domain.launcher.summon.SummonSettings
 import com.riffle.core.domain.launcher.summon.SummonSlot
 import com.riffle.core.domain.launcher.summon.SummonTimings
@@ -24,6 +26,9 @@ internal fun encodeSummonSettings(settings: SummonSettings): JSONObject =
         .put("slotCount", settings.slotCount)
         .put("slots", JSONArray().apply { settings.slots.forEach { put(encodeSummonSlot(it)) } })
         .put("header", encodeSummonHeader(settings.header))
+        .put("showHints", settings.showHints)
+        .put("iconSizeDp", settings.iconSizeDp)
+        .put("keepGesture", settings.keepGesture.name)
         .put(
             "timings",
             JSONObject()
@@ -46,6 +51,10 @@ internal fun JSONObject.toSummonSettings(defaults: SummonSettings): SummonSettin
     return SummonSettings(
         slots = slots,
         header = optJSONObject("header")?.toSummonHeader() ?: defaults.header,
+        showHints = optBoolean("showHints", defaults.showHints),
+        iconSizeDp = optInt("iconSizeDp", defaults.iconSizeDp).coerceIn(SUMMON_ICON_SIZE_DP_RANGE),
+        keepGesture =
+            SummonKeepGesture.entries.firstOrNull { it.name == optString("keepGesture") } ?: defaults.keepGesture,
         timings =
             SummonTimings(
                 armMillis = timings?.optInt("armMillis", defaults.timings.armMillis) ?: defaults.timings.armMillis,

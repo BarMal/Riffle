@@ -33,15 +33,18 @@ import com.riffle.core.domain.launcher.summon.MAX_SUMMON_SLOT_COUNT
 import com.riffle.core.domain.launcher.summon.MIN_SUMMON_SLOT_COUNT
 import com.riffle.core.domain.launcher.summon.SUMMON_ACCEPT_MILLIS_RANGE
 import com.riffle.core.domain.launcher.summon.SUMMON_ARM_MILLIS_RANGE
+import com.riffle.core.domain.launcher.summon.SUMMON_ICON_SIZE_DP_RANGE
 import com.riffle.core.domain.launcher.summon.SUMMON_PREVIEW_MILLIS_RANGE
 import com.riffle.core.domain.launcher.summon.SUMMON_SLIDE_MILLIS_RANGE
 import com.riffle.core.domain.launcher.summon.SummonHeader
+import com.riffle.core.domain.launcher.summon.SummonKeepGesture
 import com.riffle.core.domain.launcher.summon.SummonSettings
 import com.riffle.core.domain.launcher.summon.SummonSlot
 
 private val PICKER_MAX_HEIGHT = 420.dp
 private const val TIMING_STEP = 25
 private const val SLIDE_STEP = 50
+private const val ICON_SIZE_STEP = 4
 
 /** Settings > Home: the row that opens Summon's page and says whether it is on. */
 @Composable
@@ -76,6 +79,7 @@ internal fun SettingsSummonPageContent(
     var adding by rememberSaveable { mutableStateOf(false) }
     var choosingHeader by rememberSaveable { mutableStateOf(false) }
     val label = rememberSummonSlotLabel(state.homeLayout, state.installedApps)
+    val context = LocalContext.current
 
     SettingsSection(title = stringResource(R.string.settings_page_summon)) {
         SettingsSwitchRow(
@@ -91,6 +95,14 @@ internal fun SettingsSummonPageContent(
             value = summon.slotCount,
             valueRange = MIN_SUMMON_SLOT_COUNT..MAX_SUMMON_SLOT_COUNT,
             onValueChange = { set(summon.withSlotCount(it)) },
+        )
+        SettingsSteppedSlider(
+            modifier = Modifier.settingAnchor(SettingKey.SUMMON_ICON_SIZE),
+            title = SettingKey.SUMMON_ICON_SIZE.label(),
+            value = summon.iconSizeDp,
+            values = SUMMON_ICON_SIZE_DP_RANGE step ICON_SIZE_STEP,
+            valueLabel = { context.getString(R.string.settings_summon_dp, it) },
+            onValueChange = { set(summon.withIconSize(it)) },
         )
     }
 
@@ -151,6 +163,26 @@ internal fun SettingsSummonPageContent(
             title = SettingKey.SUMMON_HEADER.label(),
             subtitle = headerLabel(summon.header, state.homeLayout),
             onClick = { choosingHeader = true },
+        )
+        SettingsSwitchRow(
+            modifier = Modifier.settingAnchor(SettingKey.SUMMON_KEEP),
+            title = SettingKey.SUMMON_KEEP.label(),
+            subtitle = stringResource(R.string.settings_summon_keep_subtitle),
+            checked = summon.keepGesture == SummonKeepGesture.REST_TO_LOCK,
+            onCheckedChange = { on ->
+                set(
+                    summon.copy(
+                        keepGesture = if (on) SummonKeepGesture.REST_TO_LOCK else SummonKeepGesture.PUSH_THROUGH,
+                    ),
+                )
+            },
+        )
+        SettingsSwitchRow(
+            modifier = Modifier.settingAnchor(SettingKey.SUMMON_HINTS),
+            title = SettingKey.SUMMON_HINTS.label(),
+            subtitle = stringResource(R.string.settings_summon_hints_subtitle),
+            checked = summon.showHints,
+            onCheckedChange = { on -> set(summon.copy(showHints = on)) },
         )
     }
 

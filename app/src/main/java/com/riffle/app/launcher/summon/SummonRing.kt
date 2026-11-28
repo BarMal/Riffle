@@ -47,9 +47,7 @@ import kotlin.math.roundToInt
 
 internal val SUMMON_SLOT_SIZE: Dp = 56.dp
 private val SLOT_ICON_SIZE: Dp = 36.dp
-private val GLOWING_ICON_SIZE: Dp = 44.dp
 private val FOLDER_ICON_SIZE: Dp = 18.dp
-internal val SUMMON_FAVOURITE_ICON_SIZE: Dp = 40.dp
 private val MIN_FAVOURITE_ICON_SIZE: Dp = 24.dp
 private val FAVOURITES_ROW_GAP: Dp = RiffleSpacing.m
 private val FAVOURITES_ROW_PADDING: Dp = RiffleSpacing.m
@@ -66,9 +64,10 @@ internal fun SummonRing(
     phase: SummonPhase.Open,
     model: SummonRingModel,
     appIconLoader: AppIconLoader,
-    reducedMotion: Boolean,
+    look: SummonRingLook,
     onDockIconPlaced: (Int, LayoutCoordinates) -> Unit,
-    hint: String,
+    /** What to do while nothing is aimed at; null when hints are off. */
+    hint: String?,
     heightPx: Float,
 ) {
     val entries = model.level(phase.path)
@@ -83,13 +82,13 @@ internal fun SummonRing(
             entry = entry,
             aimed = index == phase.aim,
             appIconLoader = appIconLoader,
-            reducedMotion = reducedMotion,
+            look = look,
             modifier = Modifier.offset { centre.minus(halfSlotPx) },
         )
     }
 
     // Once something is aimed at, the readout says what it is; until then, how to aim.
-    if (aimed == null && dockAimed == null) {
+    if (hint != null && aimed == null && dockAimed == null) {
         SummonLabel(hint = hint, centre = phase.layout.centre, radius = phase.layout.radius)
     }
 
@@ -100,7 +99,7 @@ internal fun SummonRing(
             ring = phase.layout,
             heightPx = heightPx,
             appIconLoader = appIconLoader,
-            reducedMotion = reducedMotion,
+            look = look,
             onIconPlaced = onDockIconPlaced,
         )
     }
@@ -111,14 +110,14 @@ private fun SummonSlot(
     entry: SummonEntry,
     aimed: Boolean,
     appIconLoader: AppIconLoader,
-    reducedMotion: Boolean,
+    look: SummonRingLook,
     modifier: Modifier,
 ) {
-    val look = animateSummonFocus(aimed, reducedMotion)
+    val state = animateSummonFocus(aimed, look.reducedMotion)
     val focus =
         Modifier.graphicsLayer {
-            scaleX = look.scale
-            scaleY = look.scale
+            scaleX = state.scale
+            scaleY = state.scale
         }
     when (entry) {
         // An app is its own light: the icon alone, glowing in its colour, with nothing drawn round it.
@@ -129,8 +128,7 @@ private fun SummonSlot(
                     entry.identity,
                     entry.label,
                     appIconLoader,
-                    Modifier.size(GLOWING_ICON_SIZE).summonGlow(glow) { look.glow },
-                    CircleShape,
+                    Modifier.size(look.iconSize).summonGlow(glow) { state.glow },
                 )
             }
         }
@@ -138,7 +136,7 @@ private fun SummonSlot(
         else -> {
             val glow = if (entry is SummonEntry.Favourites) FAVOURITES_STAR else Color.White
             GlassSurface(
-                modifier = modifier.size(SUMMON_SLOT_SIZE).then(focus).summonGlow(glow) { look.glow },
+                modifier = modifier.size(SUMMON_SLOT_SIZE).then(focus).summonGlow(glow) { state.glow },
                 weight = if (aimed) GlassWeight.Regular else GlassWeight.Thin,
                 shape = CircleShape,
                 edgeTint = if (aimed) glow else Color.Unspecified,
@@ -158,7 +156,7 @@ internal fun SlotGlyph(
 ) {
     when (entry) {
         is SummonEntry.App ->
-            LauncherAppIcon(entry.identity, entry.label, appIconLoader, Modifier.size(SLOT_ICON_SIZE), CircleShape)
+            LauncherAppIcon(entry.identity, entry.label, appIconLoader, Modifier.size(SLOT_ICON_SIZE))
         is SummonEntry.Folder ->
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 entry.apps.take(FOLDER_PREVIEW_COUNT).chunked(2).forEach { row ->
@@ -169,7 +167,6 @@ internal fun SlotGlyph(
                                 app.label,
                                 appIconLoader,
                                 Modifier.size(FOLDER_ICON_SIZE),
-                                CircleShape,
                             )
                         }
                     }
@@ -233,12 +230,12 @@ private fun SummonFavouritesRow(
     ring: RingLayout,
     heightPx: Float,
     appIconLoader: AppIconLoader,
-    reducedMotion: Boolean,
+    look: SummonRingLook,
     onIconPlaced: (Int, LayoutCoordinates) -> Unit,
 ) {
     val density = LocalDensity.current
     val gapPx = with(density) { FAVOURITES_GAP.toPx() }
-    val rowPx = with(density) { (SUMMON_FAVOURITE_ICON_SIZE + FAVOURITES_ROW_PADDING * 2).toPx() }
+    val rowPx = with(density) { (look.iconSize + FAVOURITES_ROW_PADDING * 2).toPx() }
     val under = ring.centre.y + ring.radius + gapPx
     // Under the ring when there is room, else over it: the Dock is where the thumb keeps going.
     val top = if (under + rowPx <= heightPx) under else ring.centre.y - ring.radius - gapPx - rowPx
@@ -250,14 +247,14 @@ private fun SummonFavouritesRow(
                 .padding(horizontal = RiffleSpacing.l),
         contentAlignment = Alignment.TopCenter,
     ) {
-        val iconSize = summonFavouriteIconSize(maxWidth, apps.size)
+        val iconSize = summonFavouriteIconSize(maxWidth, apps.size, look.iconSize)
         GlassSurface(weight = GlassWeight.Regular, shape = RoundedCornerShape(percent = 50)) {
             Row(
                 modifier = Modifier.padding(FAVOURITES_ROW_PADDING),
                 horizontalArrangement = Arrangement.spacedBy(FAVOURITES_ROW_GAP),
             ) {
                 apps.forEachIndexed { index, app ->
-                    val look = animateSummonFocus(index == aim, reducedMotion)
+                    val focus = animateSummonFocus(index == aim, look.reducedMotion)
                     val glow = summonGlowColor(rememberAppIconColor(app.identity, appIconLoader))
                     LauncherAppIcon(
                         app.identity,
@@ -266,11 +263,10 @@ private fun SummonFavouritesRow(
                         Modifier
                             .size(iconSize)
                             .graphicsLayer {
-                                scaleX = look.scale
-                                scaleY = look.scale
-                            }.summonGlow(glow) { look.glow }
+                                scaleX = focus.scale
+                                scaleY = focus.scale
+                            }.summonGlow(glow) { focus.glow }
                             .onGloballyPositioned { coordinates -> onIconPlaced(index, coordinates) },
-                        CircleShape,
                     )
                 }
             }
@@ -285,11 +281,18 @@ internal val FAVOURITES_STAR = Color(0xFFFFC857)
 internal fun summonFavouriteIconSize(
     availableWidth: Dp,
     count: Int,
+    fullSize: Dp,
 ): Dp {
-    if (count == 0) return SUMMON_FAVOURITE_ICON_SIZE
+    if (count == 0) return fullSize
     val fitting = (availableWidth - FAVOURITES_ROW_PADDING * 2 - FAVOURITES_ROW_GAP * (count - 1)) / count
-    return fitting.coerceIn(MIN_FAVOURITE_ICON_SIZE, SUMMON_FAVOURITE_ICON_SIZE)
+    return fitting.coerceIn(MIN_FAVOURITE_ICON_SIZE.coerceAtMost(fullSize), fullSize)
 }
+
+/** How the ring draws: its icons' size and whether motion is reduced. */
+internal data class SummonRingLook(
+    val iconSize: Dp,
+    val reducedMotion: Boolean,
+)
 
 /** The Favourites row's whole width with [count] icons of [iconSize]. */
 internal fun summonFavouritesRowWidth(

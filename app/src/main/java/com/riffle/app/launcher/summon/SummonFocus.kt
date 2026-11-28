@@ -12,13 +12,13 @@ import androidx.compose.ui.graphics.Color
 import com.riffle.app.launcher.designsystem.RiffleMotion
 
 internal const val SUMMON_FOCUSED_SCALE = 1.18f
-private const val REST_GLOW = 0.45f
-private const val FOCUSED_GLOW = 0.85f
+private const val REST_GLOW = 0.18f
+private const val FOCUSED_GLOW = 0.5f
 private const val GAIN_MILLIS = 180
 private const val LOSS_MILLIS = 280
-private const val GLOW_REACH = 0.95f
+private const val GLOW_REACH = 0.8f
 private const val GLOW_MID_STOP = 0.55f
-private const val GLOW_MID_ALPHA = 0.45f
+private const val GLOW_MID_ALPHA = 0.3f
 
 /** How big a ring item draws and how strongly it glows, 0..1. */
 @Immutable

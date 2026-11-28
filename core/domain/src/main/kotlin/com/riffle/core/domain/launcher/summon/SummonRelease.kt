@@ -20,6 +20,7 @@ internal object SummonRelease {
         val dockAim = phase.dockAim
         return when {
             phase.favouritesOpen && dockAim != null -> SummonEffect.LaunchFavourite(dockAim)
+            phase.overReadout && aim != null -> SummonEffect.KeepCard(phase.path, aim)
             aim != null -> onSlot(phase, aim, roles(phase.path)[aim])
             // A tap-and-hold released where it started: the menu, which is also how Settings is reached.
             !phase.leftCentre && phase.path.isEmpty() -> SummonEffect.MenuRequested

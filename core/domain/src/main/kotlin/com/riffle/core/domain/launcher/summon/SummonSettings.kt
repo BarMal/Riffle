@@ -67,6 +67,18 @@ data class SummonTimings(
         )
 }
 
+const val DEFAULT_SUMMON_ICON_SIZE_DP = 44
+val SUMMON_ICON_SIZE_DP_RANGE = 32..56
+
+/** How a card is kept open after letting go. */
+enum class SummonKeepGesture {
+    /** Push past the ring through a card's slot; letting go keeps it. */
+    PUSH_THROUGH,
+
+    /** Rest on a card's slot to lock it, slide onto the readout and let go there. */
+    REST_TO_LOCK,
+}
+
 /**
  * The experimental Summon Home (switched on by `FeatureSettings.summon`). [slots] is the user's order, clockwise from
  * the top; the ring shows the first [slotCount] of them. Slots past the count are kept so lowering and raising the
@@ -77,12 +89,19 @@ data class SummonSettings(
     val slots: List<SummonSlot> = emptyList(),
     val header: SummonHeader = SummonHeader.DEFAULT,
     val timings: SummonTimings = SummonTimings(),
+    /** The short lines that say what letting go will do (on the ring and the readout). */
+    val showHints: Boolean = true,
+    /** How big each app icon on the ring and the Favourites row draws; the touch target stays the slot's. */
+    val iconSizeDp: Int = DEFAULT_SUMMON_ICON_SIZE_DP,
+    val keepGesture: SummonKeepGesture = SummonKeepGesture.PUSH_THROUGH,
 ) {
     val ringSlots: List<SummonSlot> get() = slots.take(slotCount)
 
     /** These settings with a first ring built from [apps] when the user has none yet; otherwise unchanged. */
     fun seeded(apps: List<AppIdentity>): SummonSettings =
         if (slots.isNotEmpty()) this else copy(slots = defaultSummonSlots(apps, slotCount))
+
+    fun withIconSize(sizeDp: Int): SummonSettings = copy(iconSizeDp = sizeDp.coerceIn(SUMMON_ICON_SIZE_DP_RANGE))
 
     fun withSlotCount(count: Int): SummonSettings =
         copy(slotCount = count.coerceIn(MIN_SUMMON_SLOT_COUNT, MAX_SUMMON_SLOT_COUNT))

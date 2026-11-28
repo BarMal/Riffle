@@ -1534,6 +1534,9 @@
     <string name="settings_summon_nothing_to_add">Everything is already on the ring.</string>
     <string name="setting_summon_header">Top of the screen</string>
     <string name="setting_summon_header_keywords">summon clock date widget header top</string>
+    <string name="setting_summon_hints">Show hints</string>
+    <string name="setting_summon_hints_keywords">summon hints help tips text instructions</string>
+    <string name="settings_summon_hints_subtitle">Short lines on the ring and the readout saying what letting go will do</string>
     <string name="settings_summon_header_none">Nothing</string>
     <string name="settings_summon_header_clock">Clock</string>
     <string name="settings_summon_header_clock_and_date">Clock and date</string>
@@ -1545,6 +1548,14 @@
     <string name="setting_summon_timing_keywords">summon timing hold delay speed milliseconds haptic</string>
     <string name="setting_summon_timing_section">Timing</string>
     <string name="settings_summon_millis">%1$d ms</string>
+    <string name="settings_summon_dp">%1$d dp</string>
+    <string name="summon_hint_rest_to_keep">Let go to open · rest here to keep the card</string>
+    <string name="summon_hint_slide_to_keep">Slide onto this card and let go to keep it</string>
+    <string name="setting_summon_keep">Keep cards by resting</string>
+    <string name="setting_summon_keep_keywords">summon keep card pin rest slide push through readout</string>
+    <string name="settings_summon_keep_subtitle">On: rest on a card\'s slot, slide onto the readout and let go. Off: push past the ring through its slot.</string>
+    <string name="setting_summon_icon_size">Icon size</string>
+    <string name="setting_summon_icon_size_keywords">summon icon size bigger smaller ring</string>
     <string name="summon_favourites">Favourites</string>
     <string name="summon_surface_description">Home. Hold anywhere and aim to open an app; tap for the menu.</string>
     <string name="summon_open_app">Open %1$s</string>

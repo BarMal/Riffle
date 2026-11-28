@@ -20,6 +20,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.summon.RingLayout
 import com.riffle.core.domain.launcher.summon.RingPoint
+import com.riffle.core.domain.launcher.summon.SummonKeepGesture
 import com.riffle.core.domain.launcher.summon.SummonPhase
 import com.riffle.core.domain.launcher.summon.SummonSettings
 import com.riffle.core.domain.launcher.summon.SummonSlot
@@ -153,5 +154,15 @@ class SummonReadoutTest {
         assertEquals(1f, near)
         assertTrue(mid in 0.01f..0.99f)
         assertEquals(0f, far)
+    }
+
+    @Test
+    fun whenKeepingIsByRestingALockedCardSaysSlideOntoItAndOnItSaysLetGo() {
+        val rest = SummonKeepGesture.REST_TO_LOCK
+        assertEquals(SummonReadoutHint.REST_TO_KEEP, summonReadout(open(aim = 0), model, rest)!!.hint)
+        val locked = open(aim = 0).copy(previewing = true)
+        assertEquals(SummonReadoutHint.SLIDE_TO_KEEP, summonReadout(locked, model, rest)!!.hint)
+        val over = locked.copy(overReadout = true)
+        assertEquals(SummonReadoutHint.RELEASE_TO_KEEP, summonReadout(over, model, rest)!!.hint)
     }
 }

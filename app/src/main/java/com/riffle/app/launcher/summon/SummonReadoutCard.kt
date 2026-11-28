@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
@@ -64,8 +65,11 @@ internal fun SummonReadoutCard(
     readout: SummonReadout,
     placement: SummonReadoutPlacement,
     live: Boolean,
+    showHint: Boolean,
     appIconLoader: AppIconLoader,
     insets: PaddingValues,
+    /** Where the card is, so the gesture can tell when the finger is on it. */
+    onPlaced: (LayoutCoordinates) -> Unit = {},
 ) {
     val entry = readout.entry
     val app = entry as? SummonEntry.App
@@ -75,7 +79,7 @@ internal fun SummonReadoutCard(
         contentAlignment = if (placement == SummonReadoutPlacement.TOP) Alignment.TopCenter else Alignment.BottomCenter,
     ) {
         GlassSurface(
-            modifier = Modifier.widthIn(max = READOUT_MAX_WIDTH).fillMaxWidth(),
+            modifier = Modifier.widthIn(max = READOUT_MAX_WIDTH).fillMaxWidth().onGloballyPositioned(onPlaced),
             weight = GlassWeight.Thick,
             shape = RoundedCornerShape(28.dp),
             spotlight = true,
@@ -103,12 +107,14 @@ internal fun SummonReadoutCard(
                     is SummonEntry.Folder -> FolderApps(entry, appIconLoader)
                     is SummonEntry.App, is SummonEntry.Favourites -> Unit
                 }
-                GlowText(
-                    stringResource(readout.hint.label()),
-                    MaterialTheme.typography.labelMedium,
-                    light,
-                    summonReadoutGlow(HINT_DISTANCE_DP),
-                )
+                if (showHint) {
+                    GlowText(
+                        stringResource(readout.hint.label()),
+                        MaterialTheme.typography.labelMedium,
+                        light,
+                        summonReadoutGlow(HINT_DISTANCE_DP),
+                    )
+                }
             }
         }
     }
@@ -131,7 +137,6 @@ private fun ReadoutHeader(
                     entry.label,
                     appIconLoader,
                     iconModifier.size(READOUT_ICON_SIZE),
-                    CircleShape,
                 )
             else -> Box(iconModifier.size(READOUT_ICON_SIZE), Alignment.Center) { SlotGlyph(entry, appIconLoader) }
         }
@@ -160,7 +165,7 @@ private fun FolderApps(
         verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
     ) {
         folder.apps.take(FOLDER_APPS_SHOWN).forEach { app ->
-            LauncherAppIcon(app.identity, app.label, appIconLoader, Modifier.size(FOLDER_APP_ICON_SIZE), CircleShape)
+            LauncherAppIcon(app.identity, app.label, appIconLoader, Modifier.size(FOLDER_APP_ICON_SIZE))
         }
     }
 }
@@ -206,6 +211,8 @@ private fun SummonReadoutHint.label(): Int =
         SummonReadoutHint.RELEASE_TO_OPEN -> R.string.summon_hint_release_to_open
         SummonReadoutHint.OPEN_OR_KEEP -> R.string.summon_card_hint_preview
         SummonReadoutHint.RELEASE_TO_KEEP -> R.string.summon_card_hint_live
+        SummonReadoutHint.REST_TO_KEEP -> R.string.summon_hint_rest_to_keep
+        SummonReadoutHint.SLIDE_TO_KEEP -> R.string.summon_hint_slide_to_keep
         SummonReadoutHint.OPEN_FOLDER -> R.string.summon_hint_folder
         SummonReadoutHint.SHOW_FAVOURITES -> R.string.summon_hint_favourites
     }

@@ -42,6 +42,7 @@ import com.riffle.core.domain.launcher.settings.EffectiveFeatures
 import com.riffle.core.domain.launcher.summon.RingBounds
 import com.riffle.core.domain.launcher.summon.SummonEvent
 import com.riffle.core.domain.launcher.summon.SummonGestureConfig
+import com.riffle.core.domain.launcher.summon.SummonKeepGesture
 import com.riffle.core.domain.launcher.summon.SummonPhase
 import com.riffle.core.domain.launcher.summon.SummonTimings
 import kotlinx.coroutines.delay
@@ -70,7 +71,7 @@ internal fun SummonHome(
     val model = rememberSummonRingModel(state)
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val insets = WindowInsets.safeDrawing.asPaddingValues()
-        val config = rememberSummonGestureConfig(maxWidth, maxHeight, insets, settings.timings)
+        val config = rememberSummonGestureConfig(maxWidth, maxHeight, insets, settings.timings, settings.keepGesture)
         val heightPx = with(LocalDensity.current) { maxHeight.toPx() }
         val latest = rememberUpdatedState(SummonInputs(haptics, onAction, model, config))
         val controller =
@@ -152,18 +153,24 @@ private fun SummonOpenRing(
         phase = open,
         model = model,
         appIconLoader = appIconLoader,
-        reducedMotion = state.launcherSettings.motion.reducedMotion,
+        look =
+            SummonRingLook(
+                iconSize = state.launcherSettings.summon.iconSizeDp.dp,
+                reducedMotion = state.launcherSettings.motion.reducedMotion,
+            ),
         onDockIconPlaced = controller::placeDockIcon,
-        hint = ringHint(open),
+        hint = ringHint(open).takeIf { state.launcherSettings.summon.showHints },
         heightPx = heightPx,
     )
-    summonReadout(open, model)?.let { readout ->
+    summonReadout(open, model, state.launcherSettings.summon.keepGesture)?.let { readout ->
         SummonReadoutCard(
             readout = readout,
             placement = summonReadoutPlacement(open.layout.centre.y, heightPx),
-            live = open.live,
+            live = open.live || open.overReadout,
+            showHint = state.launcherSettings.summon.showHints,
             appIconLoader = appIconLoader,
             insets = insets,
+            onPlaced = controller::placeReadout,
         )
     }
 }
@@ -200,11 +207,12 @@ private fun rememberSummonGestureConfig(
     height: Dp,
     insets: PaddingValues,
     timings: SummonTimings,
+    keep: SummonKeepGesture,
 ): SummonGestureConfig {
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
     val touchSlop = LocalViewConfiguration.current.touchSlop
-    return remember(width, height, insets, timings, density, layoutDirection, touchSlop) {
+    return remember(width, height, insets, timings, keep, density, layoutDirection, touchSlop) {
         with(density) {
             val half = SUMMON_SLOT_SIZE.toPx() / 2f
             SummonGestureConfig(
@@ -221,6 +229,7 @@ private fun rememberSummonGestureConfig(
                 deadZone = DEAD_ZONE.toPx(),
                 pushThrough = PUSH_THROUGH.toPx(),
                 touchSlop = touchSlop,
+                keep = keep,
             )
         }
     }

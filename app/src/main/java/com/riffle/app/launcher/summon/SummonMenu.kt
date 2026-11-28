@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
@@ -105,7 +104,6 @@ internal fun SummonMenu(
                                     app.label,
                                     appIconLoader,
                                     Modifier.size(MENU_ICON_SIZE),
-                                    CircleShape,
                                 )
                             }
                         }

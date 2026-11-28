@@ -41,6 +41,7 @@ import com.riffle.core.domain.launcher.settings.SearchSettings
 import com.riffle.core.domain.launcher.settings.StreamSettings
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.summon.SUMMON_ARM_MILLIS_RANGE
+import com.riffle.core.domain.launcher.summon.SUMMON_ICON_SIZE_DP_RANGE
 import com.riffle.core.domain.launcher.summon.SummonTimings
 import com.riffle.core.domain.launcher.summon.summonSeedApps
 import com.riffle.core.domain.launcher.workspace.ReturnBehavior
@@ -172,11 +173,14 @@ class LauncherSettingsStateReducerTest {
             reducer.reduce(
                 on,
                 LauncherShellAction.SetSummonSettings(
-                    on.launcherSettings.summon.withSlotCount(5).copy(timings = SummonTimings(armMillis = 1)),
+                    on.launcherSettings.summon.withSlotCount(
+                        5,
+                    ).copy(timings = SummonTimings(armMillis = 1), iconSizeDp = 999),
                 ),
             )
         assertEquals(5, edited.launcherSettings.summon.slotCount)
         assertEquals(SUMMON_ARM_MILLIS_RANGE.first, edited.launcherSettings.summon.timings.armMillis)
+        assertEquals(SUMMON_ICON_SIZE_DP_RANGE.last, edited.launcherSettings.summon.iconSizeDp)
 
         // Off and on again keeps the user's ring rather than seeding a new one.
         val off = reducer.reduce(edited, LauncherShellAction.SetSummonMode(false))
